@@ -1,0 +1,186 @@
+import React from 'react'
+import { Series, Episode, VlcStateUpdate } from '../../../shared/types'
+import { formatTime } from '../utils/formatters'
+import {
+  Play,
+  SkipForward,
+  FolderPlus,
+  RefreshCw,
+  Trash2,
+  Tv,
+  CheckCircle2,
+  Radio,
+  Clock
+} from 'lucide-react'
+
+interface HeroBannerProps {
+  series: Series
+  activeVlcState: VlcStateUpdate | null
+  onPlayResume: () => void
+  onPlayNext: () => void
+  onAddSeason: () => void
+  onRescan: () => void
+  onDeleteSeries: () => void
+}
+
+export const HeroBanner: React.FC<HeroBannerProps> = ({
+  series,
+  activeVlcState,
+  onPlayResume,
+  onPlayNext,
+  onAddSeason,
+  onRescan,
+  onDeleteSeries
+}) => {
+  // Find current resume episode
+  let resumeEpisode: Episode | undefined
+  if (series.lastActiveEpisodeId) {
+    resumeEpisode = series.episodes.find((e) => e.id === series.lastActiveEpisodeId)
+  }
+  if (!resumeEpisode && series.episodes.length > 0) {
+    // Fallback to first unwatched episode
+    resumeEpisode = series.episodes.find((e) => !e.completed) || series.episodes[0]
+  }
+
+  const resumeIndex = resumeEpisode
+    ? series.episodes.findIndex((e) => e.id === resumeEpisode!.id)
+    : 0
+  const nextEpisode =
+    resumeIndex >= 0 && resumeIndex + 1 < series.episodes.length
+      ? series.episodes[resumeIndex + 1]
+      : null
+
+  const totalEpisodes = series.episodes.length
+  const completedEpisodes = series.episodes.filter((e) => e.completed).length
+  const completionPercent =
+    totalEpisodes > 0 ? Math.round((completedEpisodes / totalEpisodes) * 100) : 0
+
+  // Check if active VLC is currently playing this series
+  const isPlayingThisSeries =
+    activeVlcState?.isRunning && activeVlcState?.seriesId === series.id
+
+  const isCurrentEpAlmostDone =
+    resumeEpisode &&
+    ((resumeEpisode.completed) ||
+      (resumeEpisode.durationSec > 0 &&
+        resumeEpisode.timeSec / resumeEpisode.durationSec >= 0.85))
+
+  return (
+    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-900 via-zinc-900/90 to-zinc-950 border border-surface-border p-6 shadow-xl mb-6">
+      {/* Background ambient glow */}
+      <div className="absolute -right-20 -top-20 w-80 h-80 bg-bifrost-amber/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -left-20 -bottom-20 w-80 h-80 bg-amber-600/5 rounded-full blur-3xl pointer-events-none" />
+
+      <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        {/* Left Column: Title & Path & Meta */}
+        <div className="space-y-2 max-w-2xl">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider bg-bifrost-amber/15 text-bifrost-amber border border-bifrost-amber/30 flex items-center gap-1.5">
+              <Tv className="w-3.5 h-3.5" />
+              Series
+            </span>
+            {isPlayingThisSeries && (
+              <span className="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5 animate-pulse">
+                <Radio className="w-3.5 h-3.5" />
+                VLC Active
+              </span>
+            )}
+            <span className="text-xs text-zinc-400 font-mono">
+              {completedEpisodes} of {totalEpisodes} watched ({completionPercent}%)
+            </span>
+          </div>
+
+          <h2 className="text-2xl lg:text-3xl font-black text-zinc-100 tracking-tight leading-tight">
+            {series.title}
+          </h2>
+
+          <p
+            className="text-xs text-zinc-400 font-mono truncate max-w-lg"
+            title={series.rootPath}
+          >
+            {series.rootPath}
+          </p>
+
+          {/* Action buttons row */}
+          <div className="flex items-center gap-2 pt-1 flex-wrap">
+            <button
+              onClick={onAddSeason}
+              className="px-3 py-1.5 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-zinc-100 border border-zinc-700/60 text-xs font-medium flex items-center gap-1.5 transition-colors"
+            >
+              <FolderPlus className="w-3.5 h-3.5 text-bifrost-amber" />
+              + Add Season Folder
+            </button>
+            <button
+              onClick={onRescan}
+              title="Rescan folders for newly added episodes"
+              className="px-3 py-1.5 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-zinc-100 border border-zinc-700/60 text-xs font-medium flex items-center gap-1.5 transition-colors"
+            >
+              <RefreshCw className="w-3.5 h-3.5 text-zinc-400" />
+              Rescan
+            </button>
+            <button
+              onClick={onDeleteSeries}
+              title="Remove series from Heimdall"
+              className="px-2.5 py-1.5 rounded-lg bg-zinc-800/40 hover:bg-red-950/60 text-zinc-400 hover:text-red-300 border border-transparent hover:border-red-900/40 text-xs font-medium flex items-center gap-1.5 transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Right Column: Hero Resume CTA */}
+        {resumeEpisode && (
+          <div className="shrink-0 bg-zinc-950/70 border border-surface-border rounded-xl p-4 md:w-80 space-y-3 shadow-lg">
+            <div className="flex items-center justify-between text-xs text-zinc-400">
+              <span className="font-semibold uppercase tracking-wider text-[10px] text-bifrost-amber flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                Up Next / Left Off
+              </span>
+              <span className="font-mono text-zinc-400">
+                {formatTime(resumeEpisode.timeSec)} / {formatTime(resumeEpisode.durationSec)}
+              </span>
+            </div>
+
+            <div>
+              <div className="text-sm font-bold text-zinc-100 truncate" title={resumeEpisode.title}>
+                {resumeEpisode.seasonName} • Ep {resumeEpisode.episodeNumber ?? (resumeIndex + 1)}
+              </div>
+              <div
+                className="text-xs text-zinc-400 truncate font-mono mt-0.5"
+                title={resumeEpisode.fileName}
+              >
+                {resumeEpisode.fileName}
+              </div>
+            </div>
+
+            {/* Primary Continue Watching Button */}
+            <button
+              onClick={onPlayResume}
+              className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-bifrost-amber to-amber-600 hover:from-amber-400 hover:to-bifrost-amber text-zinc-950 font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-bifrost-amber/25 transition-all active:scale-[0.98]"
+            >
+              <Play className="w-4 h-4 fill-zinc-950" />
+              <span>
+                {resumeEpisode.timeSec > 0
+                  ? `Continue Watching (${formatTime(resumeEpisode.timeSec)})`
+                  : 'Start Watching in VLC'}
+              </span>
+            </button>
+
+            {/* Secondary Play Next Button if current is >85% done */}
+            {isCurrentEpAlmostDone && nextEpisode && (
+              <button
+                onClick={onPlayNext}
+                className="w-full py-2 px-3 rounded-lg bg-zinc-800/90 hover:bg-zinc-700 text-zinc-200 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors border border-zinc-700"
+              >
+                <SkipForward className="w-3.5 h-3.5 text-bifrost-amber" />
+                <span>
+                  Play Next (Ep {nextEpisode.episodeNumber ?? resumeIndex + 2}) from 0:00
+                </span>
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

@@ -1,0 +1,181 @@
+import { app } from 'electron'
+import * as path from 'path'
+import * as fs from 'fs'
+import { LibraryData, AppSettings, Series, Episode } from '../shared/types'
+
+const DEFAULT_SETTINGS: AppSettings = {
+  vlcPath: '',
+  completionThreshold: 0.9,
+  httpPort: 42120,
+  httpPassword: 'heimdall_secret'
+}
+
+export class StorageService {
+  private libraryPath: string
+  private settingsPath: string
+  private libraryData: LibraryData = { series: [] }
+  private settingsData: AppSettings = { ...DEFAULT_SETTINGS }
+
+  constructor() {
+    const userData = app.getPath('userData')
+    this.libraryPath = path.join(userData, 'library.json')
+    this.settingsPath = path.join(userData, 'settings.json')
+    this.init()
+  }
+
+  private init(): void {
+    this.loadSettings()
+    this.loadLibrary()
+  }
+
+  // Auto-detect VLC path if not already set or invalid
+  private detectVlcPath(): string {
+    const candidates = [
+      'C:\\Program Files\\VideoLAN\\VLC\\vlc.exe',
+      'C:\\Program Files (x86)\\VideoLAN\\VLC\\vlc.exe'
+    ]
+
+    for (const candidate of candidates) {
+      try {
+        if (fs.existsSync(candidate)) {
+          return candidate
+        }
+      } catch {
+        // ignore
+      }
+    }
+    return ''
+  }
+
+  private atomicWriteFileSync(filePath: string, content: string): void {
+    const tempPath = `${filePath}.${Date.now()}.${Math.random().toString(36).substring(2, 7)}.tmp`
+    try {
+      const dir = path.dirname(filePath)
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true })
+      }
+      fs.writeFileSync(tempPath, content, 'utf-8')
+      fs.renameSync(tempPath, filePath)
+    } catch (err) {
+      // If rename fails (e.g. cross-device or permission race), fallback to direct write
+      try {
+        if (fs.existsSync(tempPath)) {
+          fs.unlinkSync(tempPath)
+        }
+      } catch {
+        // ignore
+      }
+      fs.writeFileSync(filePath, content, 'utf-8')
+    }
+  }
+
+  private loadSettings(): void {
+    try {
+      if (fs.existsSync(this.settingsPath)) {
+        const raw = fs.readFileSync(this.settingsPath, 'utf-8')
+        this.settingsData = { ...DEFAULT_SETTINGS, ...JSON.parse(raw) }
+      } else {
+        this.settingsData = { ...DEFAULT_SETTINGS }
+      }
+    } catch (error) {
+      console.error('Failed to load settings:', error)
+      this.settingsData = { ...DEFAULT_SETTINGS }
+    }
+
+    if (!this.settingsData.vlcPath || !fs.existsSync(this.settingsData.vlcPath)) {
+      const detected = this.detectVlcPath()
+      if (detected) {
+        this.settingsData.vlcPath = detected
+        this.saveSettings(this.settingsData)
+      }
+    }
+  }
+
+  public getSettings(): AppSettings {
+    return { ...this.settingsData }
+  }
+
+  public saveSettings(newSettings: Partial<AppSettings>): AppSettings {
+    this.settingsData = { ...this.settingsData, ...newSettings }
+    this.atomicWriteFileSync(this.settingsPath, JSON.stringify(this.settingsData, null, 2))
+    return this.getSettings()
+  }
+
+  private loadLibrary(): void {
+    try {
+      if (fs.existsSync(this.libraryPath)) {
+        const raw = fs.readFileSync(this.libraryPath, 'utf-8')
+        this.libraryData = JSON.parse(raw)
+        if (!Array.isArray(this.libraryData.series)) {
+          this.libraryData.series = []
+        }
+      } else {
+        this.libraryData = { series: [] }
+      }
+    } catch (error) {
+      console.error('Failed to load library:', error)
+      this.libraryData = { series: [] }
+    }
+  }
+
+  public getLibrary(): LibraryData {
+    return { ...this.libraryData }
+  }
+
+  public saveLibrary(): void {
+    this.atomicWriteFileSync(this.libraryPath, JSON.stringify(this.libraryData, null, 2))
+  }
+
+  public getSeries(id: string): Series | undefined {
+    return this.libraryData.series.find((s) => s.id === id)
+  }
+
+  public addOrUpdateSeries(series: Series): void {
+    const index = this.libraryData.series.findIndex((s) => s.id === series.id)
+    if (index >= 0) {
+      this.libraryData.series[index] = series
+    } else {
+      this.libraryData.series.unshift(series)
+    }
+    this.saveLibrary()
+  }
+
+  public removeSeries(id: string): boolean {
+    const initialLen = this.libraryData.series.length
+    this.libraryData.series = this.libraryData.series.filter((s) => s.id !== id)
+    if (this.libraryData.series.length !== initialLen) {
+      this.saveLibrary()
+      return true
+    }
+    return false
+  }
+
+  public updateEpisodeProgress(
+    seriesId: string,
+    episodeId: string,
+    update: {
+      timeSec?: number
+      durationSec?: number
+      completed?: boolean
+      lastWatchedAt?: number | null
+    }
+  ): Episode | null {
+    const series = this.getSeries(seriesId)
+    if (!series) return null
+
+    const episode = series.episodes.find((e) => e.id === episodeId)
+    if (!episode) return null
+
+    if (update.timeSec !== undefined) episode.timeSec = update.timeSec
+    if (update.durationSec !== undefined && update.durationSec > 0)
+      episode.durationSec = update.durationSec
+    if (update.completed !== undefined) episode.completed = update.completed
+    if (update.lastWatchedAt !== undefined) episode.lastWatchedAt = update.lastWatchedAt
+
+    series.lastActiveEpisodeId = episodeId
+    series.updatedAt = Date.now()
+
+    this.saveLibrary()
+    return episode
+  }
+}
