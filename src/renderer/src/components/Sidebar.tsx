@@ -18,7 +18,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenSettings
 }) => {
   return (
-    <aside className="w-72 h-screen flex flex-col bg-surface border-r border-surface-border select-none">
+    <aside className="w-72 h-screen flex flex-col bg-surface border-r border-surface-border select-none shrink-0">
       {/* Brand Header */}
       <div className="p-5 border-b border-surface-border">
         <div className="flex items-center gap-3">
@@ -75,7 +75,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <button
                 key={series.id}
                 onClick={() => onSelectSeries(series.id)}
-                className={`w-full text-left p-3 rounded-xl transition-all relative overflow-hidden group ${
+                className={`w-full text-left p-2.5 rounded-xl transition-all relative overflow-hidden group flex items-center gap-3 ${
                   isSelected
                     ? 'bg-zinc-800/80 border border-bifrost-amber/40 shadow-md shadow-black/40'
                     : 'bg-zinc-900/40 hover:bg-zinc-900 border border-transparent hover:border-zinc-800'
@@ -84,31 +84,44 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {isSelected && (
                   <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-bifrost-amber to-amber-600" />
                 )}
-                <div className="flex items-start justify-between gap-2">
-                  <span
-                    className={`text-sm font-semibold truncate ${
-                      isSelected ? 'text-zinc-100' : 'text-zinc-300 group-hover:text-zinc-100'
-                    }`}
-                    title={series.title}
-                  >
-                    {series.title}
-                  </span>
-                  <span className="text-[10px] font-mono shrink-0 px-1.5 py-0.5 rounded bg-zinc-950/70 border border-zinc-800 text-zinc-400">
-                    {completedEpisodes}/{totalEpisodes}
-                  </span>
-                </div>
 
-                {/* Progress bar */}
-                <div className="mt-2.5 flex items-center gap-2">
-                  <div className="flex-1 h-1.5 bg-zinc-950 rounded-full overflow-hidden border border-zinc-800/60">
+                {/* Poster / Cover Icon */}
+                {series.coverImage ? (
+                  <img
+                    src={series.coverImage}
+                    alt={series.title}
+                    className="w-10 h-14 object-cover rounded-md shrink-0 border border-surface-border shadow-sm"
+                  />
+                ) : (
+                  <div className="w-10 h-14 bg-zinc-950 rounded-md shrink-0 border border-zinc-800 flex items-center justify-center">
+                    <Film className="w-4 h-4 text-zinc-600" />
+                  </div>
+                )}
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-1">
+                    <span
+                      className={`text-xs font-semibold truncate ${
+                        isSelected ? 'text-zinc-100' : 'text-zinc-300 group-hover:text-zinc-100'
+                      }`}
+                      title={series.aniListTitle || series.title}
+                    >
+                      {series.aniListTitle || series.title}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[10px] text-zinc-500 font-mono mt-1">
+                    <span>{completedEpisodes}/{totalEpisodes} watched</span>
+                    <span className="font-semibold text-zinc-400">{progressPercent}%</span>
+                  </div>
+
+                  {/* Progress bar */}
+                  <div className="mt-1.5 h-1 bg-zinc-950 rounded-full overflow-hidden border border-zinc-800/60">
                     <div
                       className="h-full bg-gradient-to-r from-amber-600 to-bifrost-amber rounded-full transition-all duration-300"
                       style={{ width: `${progressPercent}%` }}
                     />
                   </div>
-                  <span className="text-[10px] font-medium text-zinc-500 font-mono">
-                    {progressPercent}%
-                  </span>
                 </div>
               </button>
             )
@@ -126,7 +139,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <SettingsIcon className="w-4 h-4 text-zinc-400" />
             <span className="text-xs font-medium">Settings</span>
           </div>
-          <span className="text-[10px] text-zinc-600 font-mono">v1.0.0</span>
+          <span className="text-[10px] text-zinc-600 font-mono">v1.1.0</span>
         </button>
       </div>
     </aside>

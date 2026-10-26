@@ -8,9 +8,10 @@ import {
   RefreshCw,
   Trash2,
   Tv,
-  CheckCircle2,
   Radio,
-  Clock
+  Clock,
+  Sparkles,
+  ExternalLink
 } from 'lucide-react'
 
 interface HeroBannerProps {
@@ -21,6 +22,7 @@ interface HeroBannerProps {
   onAddSeason: () => void
   onRescan: () => void
   onDeleteSeries: () => void
+  onOpenAniListSearch: () => void
 }
 
 export const HeroBanner: React.FC<HeroBannerProps> = ({
@@ -30,7 +32,8 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
   onPlayNext,
   onAddSeason,
   onRescan,
-  onDeleteSeries
+  onDeleteSeries,
+  onOpenAniListSearch
 }) => {
   // Find current resume episode
   let resumeEpisode: Episode | undefined
@@ -38,7 +41,6 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
     resumeEpisode = series.episodes.find((e) => e.id === series.lastActiveEpisodeId)
   }
   if (!resumeEpisode && series.episodes.length > 0) {
-    // Fallback to first unwatched episode
     resumeEpisode = series.episodes.find((e) => !e.completed) || series.episodes[0]
   }
 
@@ -55,76 +57,115 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
   const completionPercent =
     totalEpisodes > 0 ? Math.round((completedEpisodes / totalEpisodes) * 100) : 0
 
-  // Check if active VLC is currently playing this series
   const isPlayingThisSeries =
     activeVlcState?.isRunning && activeVlcState?.seriesId === series.id
 
   const isCurrentEpAlmostDone =
     resumeEpisode &&
-    ((resumeEpisode.completed) ||
+    (resumeEpisode.completed ||
       (resumeEpisode.durationSec > 0 &&
         resumeEpisode.timeSec / resumeEpisode.durationSec >= 0.85))
 
   return (
     <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-900 via-zinc-900/90 to-zinc-950 border border-surface-border p-6 shadow-xl mb-6">
-      {/* Background ambient glow */}
+      {/* Background Banner Backdrop if linked to AniList */}
+      {series.bannerImage && (
+        <div
+          className="absolute inset-0 bg-cover bg-center opacity-15 filter blur-[2px] pointer-events-none"
+          style={{ backgroundImage: `url(${series.bannerImage})` }}
+        />
+      )}
+
+      {/* Ambient glows */}
       <div className="absolute -right-20 -top-20 w-80 h-80 bg-bifrost-amber/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -left-20 -bottom-20 w-80 h-80 bg-amber-600/5 rounded-full blur-3xl pointer-events-none" />
 
       <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-        {/* Left Column: Title & Path & Meta */}
-        <div className="space-y-2 max-w-2xl">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider bg-bifrost-amber/15 text-bifrost-amber border border-bifrost-amber/30 flex items-center gap-1.5">
-              <Tv className="w-3.5 h-3.5" />
-              Series
-            </span>
-            {isPlayingThisSeries && (
-              <span className="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5 animate-pulse">
-                <Radio className="w-3.5 h-3.5" />
-                VLC Active
+        {/* Left Column: Cover Art + Info */}
+        <div className="flex items-start gap-5 max-w-2xl">
+          {/* AniList Cover Poster */}
+          {series.coverImage && (
+            <div className="relative shrink-0 hidden sm:block">
+              <img
+                src={series.coverImage}
+                alt={series.title}
+                className="w-24 h-36 object-cover rounded-xl border border-surface-border shadow-xl ring-1 ring-white/10"
+              />
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider bg-bifrost-amber/15 text-bifrost-amber border border-bifrost-amber/30 flex items-center gap-1.5">
+                <Tv className="w-3.5 h-3.5" />
+                Series
               </span>
-            )}
-            <span className="text-xs text-zinc-400 font-mono">
-              {completedEpisodes} of {totalEpisodes} watched ({completionPercent}%)
-            </span>
-          </div>
 
-          <h2 className="text-2xl lg:text-3xl font-black text-zinc-100 tracking-tight leading-tight">
-            {series.title}
-          </h2>
+              {isPlayingThisSeries && (
+                <span className="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5 animate-pulse">
+                  <Radio className="w-3.5 h-3.5" />
+                  VLC Active
+                </span>
+              )}
 
-          <p
-            className="text-xs text-zinc-400 font-mono truncate max-w-lg"
-            title={series.rootPath}
-          >
-            {series.rootPath}
-          </p>
+              {series.aniListId ? (
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-sky-500/15 text-sky-400 border border-sky-500/30 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3" />
+                  AniList Linked
+                </span>
+              ) : null}
 
-          {/* Action buttons row */}
-          <div className="flex items-center gap-2 pt-1 flex-wrap">
-            <button
-              onClick={onAddSeason}
-              className="px-3 py-1.5 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-zinc-100 border border-zinc-700/60 text-xs font-medium flex items-center gap-1.5 transition-colors"
+              <span className="text-xs text-zinc-400 font-mono">
+                {completedEpisodes} of {totalEpisodes} watched ({completionPercent}%)
+              </span>
+            </div>
+
+            <h2 className="text-2xl lg:text-3xl font-black text-zinc-100 tracking-tight leading-tight">
+              {series.aniListTitle || series.title}
+            </h2>
+
+            <p
+              className="text-xs text-zinc-400 font-mono truncate max-w-lg"
+              title={series.rootPath}
             >
-              <FolderPlus className="w-3.5 h-3.5 text-bifrost-amber" />
-              + Add Season Folder
-            </button>
-            <button
-              onClick={onRescan}
-              title="Rescan folders for newly added episodes"
-              className="px-3 py-1.5 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-zinc-100 border border-zinc-700/60 text-xs font-medium flex items-center gap-1.5 transition-colors"
-            >
-              <RefreshCw className="w-3.5 h-3.5 text-zinc-400" />
-              Rescan
-            </button>
-            <button
-              onClick={onDeleteSeries}
-              title="Remove series from Heimdall"
-              className="px-2.5 py-1.5 rounded-lg bg-zinc-800/40 hover:bg-red-950/60 text-zinc-400 hover:text-red-300 border border-transparent hover:border-red-900/40 text-xs font-medium flex items-center gap-1.5 transition-colors"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
+              {series.rootPath}
+            </p>
+
+            {/* Action buttons row */}
+            <div className="flex items-center gap-2 pt-1 flex-wrap">
+              <button
+                onClick={onOpenAniListSearch}
+                className="px-3 py-1.5 rounded-lg bg-sky-950/60 hover:bg-sky-900/60 text-sky-200 border border-sky-800/50 text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-sky-400" />
+                {series.aniListId ? 'Match / Change AniList' : 'Match AniList'}
+              </button>
+
+              <button
+                onClick={onAddSeason}
+                className="px-3 py-1.5 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-zinc-100 border border-zinc-700/60 text-xs font-medium flex items-center gap-1.5 transition-colors"
+              >
+                <FolderPlus className="w-3.5 h-3.5 text-bifrost-amber" />
+                + Add Season
+              </button>
+
+              <button
+                onClick={onRescan}
+                title="Rescan folders for newly added episodes"
+                className="px-3 py-1.5 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-zinc-100 border border-zinc-700/60 text-xs font-medium flex items-center gap-1.5 transition-colors"
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-zinc-400" />
+                Rescan
+              </button>
+
+              <button
+                onClick={onDeleteSeries}
+                title="Remove series from Heimdall"
+                className="px-2.5 py-1.5 rounded-lg bg-zinc-800/40 hover:bg-red-950/60 text-zinc-400 hover:text-red-300 border border-transparent hover:border-red-900/40 text-xs font-medium flex items-center gap-1.5 transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         </div>
 

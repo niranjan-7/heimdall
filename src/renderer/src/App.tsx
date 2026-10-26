@@ -1,17 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { Series, Episode, LibraryData, AppSettings, VlcStateUpdate } from '../../shared/types'
+import { Series, Episode, LibraryData, VlcStateUpdate, AppNotification } from '../../shared/types'
 import { Sidebar } from './components/Sidebar'
 import { HeroBanner } from './components/HeroBanner'
 import { EpisodeGrid } from './components/EpisodeGrid'
 import { SettingsModal } from './components/SettingsModal'
-import { Eye, AlertCircle, Film, Sparkles } from 'lucide-react'
+import { AniListSearchModal } from './components/AniListSearchModal'
+import { Eye, AlertCircle, Film, CheckCircle2, Info } from 'lucide-react'
 
 export const App: React.FC = () => {
   const [library, setLibrary] = useState<LibraryData>({ series: [] })
   const [selectedSeriesId, setSelectedSeriesId] = useState<string | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [aniListModalOpen, setAniListModalOpen] = useState(false)
   const [activeVlcState, setActiveVlcState] = useState<VlcStateUpdate | null>(null)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [notification, setNotification] = useState<AppNotification | null>(null)
 
   // Load Library on initial mount
   const loadLibrary = useCallback(async () => {
@@ -30,12 +32,11 @@ export const App: React.FC = () => {
     loadLibrary()
   }, [loadLibrary])
 
-  // Setup VLC telemetry listeners
+  // Setup listeners
   useEffect(() => {
     const unsubProgress = window.api.onVlcProgressUpdate((update: VlcStateUpdate) => {
       setActiveVlcState(update)
 
-      // Live update episode progress in state
       if (update.seriesId && update.episodeId) {
         setLibrary((prev) => {
           const nextSeries = prev.series.map((s) => {
@@ -67,19 +68,45 @@ export const App: React.FC = () => {
       loadLibrary()
     })
 
+    const unsubThumb = window.api.onThumbnailGenerated(({ seriesId, episodeId }) => {
+      setLibrary((prev) => ({
+        series: prev.series.map((s) => {
+          if (s.id !== seriesId) return s
+          return {
+            ...s,
+            episodes: s.episodes.map((ep) =>
+              ep.id === episodeId ? { ...ep, hasThumbnail: true } : ep
+            )
+          }
+        })
+      }))
+    })
+
+    const unsubNotification = window.api.onNotification((notif) => {
+      setNotification(notif)
+      setTimeout(() => setNotification(null), 5000)
+    })
+
+    const unsubSeriesUpdated = window.api.onSeriesUpdated((updatedSeries) => {
+      setLibrary((prev) => ({
+        series: prev.series.map((s) => (s.id === updatedSeries.id ? updatedSeries : s))
+      }))
+    })
+
     return () => {
       unsubProgress()
       unsubStopped()
+      unsubThumb()
+      unsubNotification()
+      unsubSeriesUpdated()
     }
   }, [loadLibrary])
 
-  // Active series object
   const currentSeries = library.series.find((s) => s.id === selectedSeriesId) || null
 
-  // Error toast helper
-  const showError = (msg: string) => {
-    setErrorMessage(msg)
-    setTimeout(() => setErrorMessage(null), 6000)
+  const showToast = (type: 'success' | 'info' | 'error', message: string) => {
+    setNotification({ type, message })
+    setTimeout(() => setNotification(null), 5000)
   }
 
   // Handlers
@@ -91,8 +118,9 @@ export const App: React.FC = () => {
       const newSeries = await window.api.addSeries(folder)
       await loadLibrary()
       setSelectedSeriesId(newSeries.id)
+      showToast('info', `Imported "${newSeries.title}" (${newSeries.episodes.length} episodes)`)
     } catch (err: any) {
-      showError(err.message || 'Failed to add series folder')
+      showToast('error', err.message || 'Failed to add series folder')
     }
   }
 
@@ -105,8 +133,9 @@ export const App: React.FC = () => {
       const updated = await window.api.addSeasonToSeries(currentSeries.id, folder)
       await loadLibrary()
       setSelectedSeriesId(updated.id)
+      showToast('success', `Added season to "${updated.title}"`)
     } catch (err: any) {
-      showError(err.message || 'Failed to add season folder')
+      showToast('error', err.message || 'Failed to add season folder')
     }
   }
 
@@ -116,8 +145,9 @@ export const App: React.FC = () => {
       const updated = await window.api.rescanSeries(currentSeries.id)
       await loadLibrary()
       setSelectedSeriesId(updated.id)
+      showToast('info', `Rescanned "${updated.title}"`)
     } catch (err: any) {
-      showError(err.message || 'Failed to rescan series')
+      showToast('error', err.message || 'Failed to rescan series')
     }
   }
 
@@ -133,8 +163,9 @@ export const App: React.FC = () => {
       const data = await window.api.getLibrary()
       setLibrary(data)
       setSelectedSeriesId(data.series.length > 0 ? data.series[0].id : null)
+      showToast('info', 'Series removed from library')
     } catch (err: any) {
-      showError(err.message || 'Failed to remove series')
+      showToast('error', err.message || 'Failed to remove series')
     }
   }
 
@@ -142,7 +173,7 @@ export const App: React.FC = () => {
     if (!currentSeries) return
     const res = await window.api.playVlc(currentSeries.id, undefined, { advanceIfCompleted: true })
     if (!res.success && res.message) {
-      showError(res.message)
+      showToast('error', res.message)
     }
   }
 
@@ -157,7 +188,7 @@ export const App: React.FC = () => {
       const nextEp = currentSeries.episodes[nextIndex]
       const res = await window.api.playVlc(currentSeries.id, nextEp.id, { startTime: 0 })
       if (!res.success && res.message) {
-        showError(res.message)
+        showToast('error', res.message)
       }
     }
   }
@@ -166,7 +197,7 @@ export const App: React.FC = () => {
     if (!currentSeries) return
     const res = await window.api.playVlc(currentSeries.id, episodeId)
     if (!res.success && res.message) {
-      showError(res.message)
+      showToast('error', res.message)
     }
   }
 
@@ -184,6 +215,13 @@ export const App: React.FC = () => {
     await loadLibrary()
   }
 
+  const handleSeriesLinked = (updatedSeries: Series) => {
+    setLibrary((prev) => ({
+      series: prev.series.map((s) => (s.id === updatedSeries.id ? updatedSeries : s))
+    }))
+    showToast('success', `Linked "${updatedSeries.title}" to AniList`)
+  }
+
   return (
     <div className="flex h-screen bg-background text-zinc-100 overflow-hidden font-sans">
       {/* Left Sidebar */}
@@ -197,11 +235,25 @@ export const App: React.FC = () => {
 
       {/* Main Content Area */}
       <main className="flex-1 h-screen overflow-y-auto flex flex-col p-6 lg:p-8 relative">
-        {/* Error Toast Notification */}
-        {errorMessage && (
-          <div className="fixed top-5 right-5 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl bg-red-950/90 border border-red-800 text-red-200 text-xs shadow-2xl backdrop-blur-md animate-in slide-in-from-top-3">
-            <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-            <span>{errorMessage}</span>
+        {/* Floating Notification Toast */}
+        {notification && (
+          <div
+            className={`fixed top-5 right-5 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-2xl backdrop-blur-md animate-in slide-in-from-top-3 border ${
+              notification.type === 'error'
+                ? 'bg-red-950/90 border-red-800 text-red-200'
+                : notification.type === 'success'
+                  ? 'bg-emerald-950/90 border-emerald-800 text-emerald-200'
+                  : 'bg-zinc-900/90 border-surface-border text-zinc-200'
+            }`}
+          >
+            {notification.type === 'error' ? (
+              <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+            ) : notification.type === 'success' ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            ) : (
+              <Info className="w-4 h-4 text-bifrost-amber shrink-0" />
+            )}
+            <span className="text-xs font-medium">{notification.message}</span>
           </div>
         )}
 
@@ -216,6 +268,7 @@ export const App: React.FC = () => {
               onAddSeason={handleAddSeason}
               onRescan={handleRescan}
               onDeleteSeries={handleDeleteSeries}
+              onOpenAniListSearch={() => setAniListModalOpen(true)}
             />
 
             {/* Episode Grid with Season Tabs & Filters */}
@@ -257,6 +310,16 @@ export const App: React.FC = () => {
         onClose={() => setSettingsOpen(false)}
         onSaved={() => {}}
       />
+
+      {/* AniList Match Modal */}
+      {currentSeries && (
+        <AniListSearchModal
+          isOpen={aniListModalOpen}
+          series={currentSeries}
+          onClose={() => setAniListModalOpen(false)}
+          onLinked={handleSeriesLinked}
+        />
+      )}
     </div>
   )
 }

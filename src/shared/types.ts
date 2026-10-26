@@ -10,6 +10,26 @@ export interface Episode {
   durationSec: number
   completed: boolean
   lastWatchedAt: number | null
+  hasThumbnail?: boolean
+}
+
+export interface AniListMediaInfo {
+  id: number
+  title: {
+    romaji?: string
+    english?: string
+    native?: string
+  }
+  coverImage?: {
+    large?: string
+    extraLarge?: string
+  }
+  bannerImage?: string
+  episodes?: number
+  seasonYear?: number
+  format?: string
+  status?: string
+  description?: string
 }
 
 export interface Series {
@@ -21,6 +41,10 @@ export interface Series {
   lastActiveEpisodeId: string | null
   createdAt: number
   updatedAt: number
+  aniListId?: number | null
+  coverImage?: string | null
+  bannerImage?: string | null
+  aniListTitle?: string | null
 }
 
 export interface LibraryData {
@@ -32,6 +56,16 @@ export interface AppSettings {
   completionThreshold: number
   httpPort: number
   httpPassword: string
+  // Feature 5: Discord Rich Presence
+  enableDiscordRPC: boolean
+  discordClientId: string
+  // Feature 6: AniList Scrobbler
+  aniListToken?: string
+  aniListUsername?: string
+  aniListAvatar?: string
+  enableAniListScrobble: boolean
+  // Feature 2: Thumbnails
+  enableThumbnails: boolean
 }
 
 export interface VlcStateUpdate {
@@ -47,3 +81,8 @@ export interface VlcStateUpdate {
 }
 
 export type FilterStatus = 'all' | 'unwatched' | 'in_progress' | 'completed'
+
+export interface AppNotification {
+  type: 'success' | 'info' | 'error'
+  message: string
+}

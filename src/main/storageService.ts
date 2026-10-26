@@ -7,7 +7,11 @@ const DEFAULT_SETTINGS: AppSettings = {
   vlcPath: '',
   completionThreshold: 0.9,
   httpPort: 42120,
-  httpPassword: 'heimdall_secret'
+  httpPassword: 'heimdall_secret',
+  enableDiscordRPC: true,
+  discordClientId: '1343981881774346332',
+  enableAniListScrobble: true,
+  enableThumbnails: true
 }
 
 export class StorageService {
@@ -56,8 +60,7 @@ export class StorageService {
       }
       fs.writeFileSync(tempPath, content, 'utf-8')
       fs.renameSync(tempPath, filePath)
-    } catch (err) {
-      // If rename fails (e.g. cross-device or permission race), fallback to direct write
+    } catch {
       try {
         if (fs.existsSync(tempPath)) {
           fs.unlinkSync(tempPath)
@@ -158,6 +161,7 @@ export class StorageService {
       durationSec?: number
       completed?: boolean
       lastWatchedAt?: number | null
+      hasThumbnail?: boolean
     }
   ): Episode | null {
     const series = this.getSeries(seriesId)
@@ -171,6 +175,7 @@ export class StorageService {
       episode.durationSec = update.durationSec
     if (update.completed !== undefined) episode.completed = update.completed
     if (update.lastWatchedAt !== undefined) episode.lastWatchedAt = update.lastWatchedAt
+    if (update.hasThumbnail !== undefined) episode.hasThumbnail = update.hasThumbnail
 
     series.lastActiveEpisodeId = episodeId
     series.updatedAt = Date.now()

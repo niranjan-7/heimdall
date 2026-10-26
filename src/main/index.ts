@@ -1,22 +1,43 @@
-import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, dialog, protocol, net } from 'electron'
 import { join } from 'path'
+import { pathToFileURL } from 'url'
+import * as fs from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { StorageService } from './storageService'
 import { SyncWorker } from './syncWorker'
 import { VlcController } from './vlcController'
+import { ThumbnailService } from './thumbnailService'
+import { DiscordService } from './discordService'
+import { AniListService } from './anilistService'
 import { scanSeriesFolders } from './folderScanner'
 import { Series } from '../shared/types'
+
+// Register privileged custom scheme for video thumbnails
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'heimdall-thumb',
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      bypassCSP: true
+    }
+  }
+])
 
 let mainWindow: BrowserWindow | null = null
 let storageService: StorageService
 let syncWorker: SyncWorker
 let vlcController: VlcController
+let thumbnailService: ThumbnailService
+let discordService: DiscordService
+let anilistService: AniListService
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 850,
-    minWidth: 1024,
+    width: 1320,
+    height: 880,
+    minWidth: 1040,
     minHeight: 700,
     show: false,
     autoHideMenuBar: true,
@@ -47,6 +68,22 @@ function createWindow(): void {
   }
 }
 
+function registerCustomProtocols(): void {
+  protocol.handle('heimdall-thumb', async (request) => {
+    try {
+      const parsed = new URL(request.url)
+      const episodeId = decodeURIComponent(parsed.pathname.replace(/^\/+/, ''))
+      const thumbPath = thumbnailService.getThumbnailPath(episodeId)
+      if (fs.existsSync(thumbPath)) {
+        return await net.fetch(pathToFileURL(thumbPath).toString())
+      }
+    } catch (e) {
+      console.error('Thumbnail protocol error:', e)
+    }
+    return new Response('Not found', { status: 404 })
+  })
+}
+
 function registerIpcHandlers(): void {
   // Storage
   ipcMain.handle('storage:get-library', () => {
@@ -57,8 +94,15 @@ function registerIpcHandlers(): void {
     return storageService.getSettings()
   })
 
-  ipcMain.handle('storage:save-settings', (_event, settings) => {
-    return storageService.saveSettings(settings)
+  ipcMain.handle('storage:save-settings', async (_event, settings) => {
+    const updated = storageService.saveSettings(settings)
+    // Update Discord RPC if settings changed
+    if (updated.enableDiscordRPC) {
+      discordService.connect().catch(() => {})
+    } else {
+      discordService.disconnect()
+    }
+    return updated
   })
 
   // Dialogs
@@ -100,7 +144,27 @@ function registerIpcHandlers(): void {
       createdAt: Date.now(),
       updatedAt: Date.now()
     }
+
     storageService.addOrUpdateSeries(newSeries)
+
+    // Trigger background thumbnail extraction
+    thumbnailService.queueSeries(newSeries)
+
+    // Automatically attempt AniList match in the background
+    anilistService.searchAnime(title).then((results) => {
+      if (results.length > 0) {
+        const top = results[0]
+        newSeries.aniListId = top.id
+        newSeries.coverImage = top.coverImage?.extraLarge || top.coverImage?.large
+        newSeries.bannerImage = top.bannerImage
+        newSeries.aniListTitle = top.title.english || top.title.romaji
+        storageService.addOrUpdateSeries(newSeries)
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('series:updated', newSeries)
+        }
+      }
+    })
+
     return newSeries
   })
 
@@ -116,6 +180,8 @@ function registerIpcHandlers(): void {
     series.episodes = episodes
     series.updatedAt = Date.now()
     storageService.addOrUpdateSeries(series)
+
+    thumbnailService.queueSeries(series)
     return series
   })
 
@@ -132,11 +198,68 @@ function registerIpcHandlers(): void {
     series.episodes = episodes
     series.updatedAt = Date.now()
     storageService.addOrUpdateSeries(series)
+
+    thumbnailService.queueSeries(series)
     return series
   })
 
   ipcMain.handle('series:remove', (_event, seriesId: string) => {
     return storageService.removeSeries(seriesId)
+  })
+
+  // AniList Integration IPC
+  ipcMain.handle('anilist:search', async (_event, query: string) => {
+    return await anilistService.searchAnime(query)
+  })
+
+  ipcMain.handle('anilist:validate-token', async (_event, token: string) => {
+    return await anilistService.validateToken(token)
+  })
+
+  ipcMain.handle(
+    'anilist:link-series',
+    async (
+      _event,
+      seriesId: string,
+      media: {
+        id: number
+        title?: string
+        coverImage?: string
+        bannerImage?: string
+      }
+    ) => {
+      const series = storageService.getSeries(seriesId)
+      if (!series) throw new Error('Series not found')
+
+      series.aniListId = media.id
+      series.coverImage = media.coverImage || null
+      series.bannerImage = media.bannerImage || null
+      series.aniListTitle = media.title || null
+      series.updatedAt = Date.now()
+      storageService.addOrUpdateSeries(series)
+      return series
+    }
+  )
+
+  ipcMain.handle('anilist:unlink-series', async (_event, seriesId: string) => {
+    const series = storageService.getSeries(seriesId)
+    if (!series) throw new Error('Series not found')
+
+    series.aniListId = null
+    series.coverImage = null
+    series.bannerImage = null
+    series.aniListTitle = null
+    series.updatedAt = Date.now()
+    storageService.addOrUpdateSeries(series)
+    return series
+  })
+
+  // Thumbnails IPC
+  ipcMain.handle('thumbnails:queue-series', async (_event, seriesId: string) => {
+    const series = storageService.getSeries(seriesId)
+    if (series) {
+      thumbnailService.queueSeries(series)
+    }
   })
 
   // Episode Operations
@@ -192,11 +315,36 @@ app.whenReady().then(() => {
 
   // Initialize services
   storageService = new StorageService()
-  syncWorker = new SyncWorker(storageService, () => mainWindow)
+  discordService = new DiscordService(storageService)
+  anilistService = new AniListService()
+  thumbnailService = new ThumbnailService(storageService)
+  syncWorker = new SyncWorker(storageService, discordService, anilistService, () => mainWindow)
   vlcController = new VlcController(storageService, syncWorker)
 
+  // Listen for generated thumbnails and notify renderer
+  thumbnailService.setCallback((seriesId, episodeId) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('thumbnail:generated', { seriesId, episodeId })
+    }
+  })
+
+  // Connect Discord RPC
+  discordService.connect().catch(() => {})
+
+  // Register custom protocol for thumbnails
+  registerCustomProtocols()
+
+  // Register all IPC handlers
   registerIpcHandlers()
+
+  // Create UI Window
   createWindow()
+
+  // Queue thumbnail generation for existing series in library
+  const lib = storageService.getLibrary()
+  for (const s of lib.series) {
+    thumbnailService.queueSeries(s)
+  }
 
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
@@ -210,6 +358,9 @@ app.on('window-all-closed', () => {
 })
 
 app.on('before-quit', async () => {
+  if (discordService) {
+    discordService.disconnect()
+  }
   if (vlcController) {
     await vlcController.stopCurrentProcess()
   }

@@ -2,17 +2,29 @@ import { BrowserWindow } from 'electron'
 import * as path from 'path'
 import { Series, Episode, VlcStateUpdate, AppSettings } from '../shared/types'
 import { StorageService } from './storageService'
+import { DiscordService } from './discordService'
+import { AniListService } from './anilistService'
 
 export class SyncWorker {
   private timer: NodeJS.Timeout | null = null
   private storageService: StorageService
+  private discordService: DiscordService
+  private anilistService: AniListService
   private activeSeries: Series | null = null
   private activeEpisode: Episode | null = null
   private getMainWindow: () => BrowserWindow | null
   private consecutiveErrors = 0
+  private scrobbledEpisodeIds = new Set<string>()
 
-  constructor(storageService: StorageService, getMainWindow: () => BrowserWindow | null) {
+  constructor(
+    storageService: StorageService,
+    discordService: DiscordService,
+    anilistService: AniListService,
+    getMainWindow: () => BrowserWindow | null
+  ) {
     this.storageService = storageService
+    this.discordService = discordService
+    this.anilistService = anilistService
     this.getMainWindow = getMainWindow
   }
 
@@ -21,11 +33,18 @@ export class SyncWorker {
     this.activeSeries = series
     this.activeEpisode = initialEpisode
     this.consecutiveErrors = 0
+    this.scrobbledEpisodeIds.clear()
+
+    // Mark initially completed episodes as already scrobbled so we don't duplicate
+    series.episodes.forEach((e) => {
+      if (e.completed) {
+        this.scrobbledEpisodeIds.add(e.id)
+      }
+    })
 
     // Poll every 1500ms
     this.timer = setInterval(() => {
-      this.pollVlcStatus().catch((err) => {
-        // Silently tolerate initial connection attempts while VLC launches
+      this.pollVlcStatus().catch(() => {
         this.consecutiveErrors++
       })
     }, 1500)
@@ -39,6 +58,9 @@ export class SyncWorker {
 
     // Flush any pending changes to library
     this.storageService.saveLibrary()
+
+    // Clear Discord Rich Presence
+    this.discordService.clearActivity().catch(() => {})
 
     // Notify renderer that VLC is stopped
     const win = this.getMainWindow()
@@ -114,6 +136,16 @@ export class SyncWorker {
       const threshold = settings.completionThreshold || 0.9
       isCompleted = duration > 0 ? currentTime / duration >= threshold : false
 
+      // Check if newly completed and auto-scrobble to AniList
+      if (
+        (isCompleted || currentEp.completed) &&
+        !this.scrobbledEpisodeIds.has(currentEp.id) &&
+        currentEp.episodeNumber !== null
+      ) {
+        this.scrobbledEpisodeIds.add(currentEp.id)
+        this.triggerAniListScrobble(this.activeSeries, currentEp, settings)
+      }
+
       // Update episode in storage
       this.storageService.updateEpisodeProgress(this.activeSeries.id, currentEp.id, {
         timeSec: currentTime,
@@ -121,6 +153,20 @@ export class SyncWorker {
         completed: isCompleted || currentEp.completed,
         lastWatchedAt: Date.now()
       })
+    }
+
+    // Update Discord Rich Presence
+    if (currentEp) {
+      this.discordService
+        .updateActivity({
+          seriesTitle: this.activeSeries.title,
+          episodeNumber: currentEp.episodeNumber,
+          currentTime,
+          duration,
+          isPlaying: state === 'playing',
+          coverImage: this.activeSeries.coverImage
+        })
+        .catch(() => {})
     }
 
     // Emit live IPC event to React renderer
@@ -141,10 +187,45 @@ export class SyncWorker {
     }
   }
 
+  private async triggerAniListScrobble(
+    series: Series,
+    episode: Episode,
+    settings: AppSettings
+  ): Promise<void> {
+    if (
+      !settings.enableAniListScrobble ||
+      !settings.aniListToken ||
+      !series.aniListId ||
+      episode.episodeNumber === null
+    ) {
+      return
+    }
+
+    const res = await this.anilistService.scrobbleProgress(
+      series.aniListId,
+      episode.episodeNumber,
+      settings.aniListToken
+    )
+
+    const win = this.getMainWindow()
+    if (win && !win.isDestroyed()) {
+      if (res.success) {
+        win.webContents.send('app:notification', {
+          type: 'success',
+          message: `🎉 Scrobbled Episode ${episode.episodeNumber} to AniList!`
+        })
+      } else if (res.error) {
+        win.webContents.send('app:notification', {
+          type: 'error',
+          message: `AniList scrobble failed: ${res.error}`
+        })
+      }
+    }
+  }
+
   private matchEpisode(vlcFilename: string, vlcUrl: string): Episode | null {
     if (!this.activeSeries) return null
 
-    // Decode URL if present (e.g. file:///C:/path/to/ep.mkv)
     let decodedUrl = ''
     try {
       if (vlcUrl) {
