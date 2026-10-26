@@ -44,6 +44,32 @@ export class VlcDriver implements IMediaPlayerDriver {
     return this.currentSubDelay
   }
 
+  public async togglePause(): Promise<boolean> {
+    if (!this.isRunning()) return false
+    try {
+      const settings = this.storageService.getSettings()
+      const auth = 'Basic ' + Buffer.from(':' + settings.httpPassword).toString('base64')
+      const url = `http://127.0.0.1:${settings.httpPort}/requests/status.json?command=pl_pause`
+      const res = await fetch(url, { headers: { Authorization: auth }, signal: AbortSignal.timeout(600) })
+      return res.ok
+    } catch {
+      return false
+    }
+  }
+
+  public async seek(timeSec: number): Promise<boolean> {
+    if (!this.isRunning()) return false
+    try {
+      const settings = this.storageService.getSettings()
+      const auth = 'Basic ' + Buffer.from(':' + settings.httpPassword).toString('base64')
+      const url = `http://127.0.0.1:${settings.httpPort}/requests/status.json?command=seek&val=${Math.floor(timeSec)}`
+      const res = await fetch(url, { headers: { Authorization: auth }, signal: AbortSignal.timeout(600) })
+      return res.ok
+    } catch {
+      return false
+    }
+  }
+
   public async stop(): Promise<void> {
     if (this.currentProcess) {
       try {

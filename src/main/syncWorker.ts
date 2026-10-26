@@ -17,6 +17,7 @@ export class SyncWorker {
   private getMainWindow: () => BrowserWindow | null
   private consecutiveErrors = 0
   private scrobbledEpisodeIds = new Set<string>()
+  private onStateChange?: (update: VlcStateUpdate | null) => void
 
   constructor(
     storageService: StorageService,
@@ -28,6 +29,10 @@ export class SyncWorker {
     this.discordService = discordService
     this.anilistService = anilistService
     this.getMainWindow = getMainWindow
+  }
+
+  public setOnStateChange(cb: (update: VlcStateUpdate | null) => void): void {
+    this.onStateChange = cb
   }
 
   public start(series: Series, initialEpisode: Episode, playerType: MediaPlayerType = 'vlc'): void {
@@ -79,6 +84,7 @@ export class SyncWorker {
 
     this.storageService.saveLibrary()
     this.discordService.clearActivity().catch(() => {})
+    this.onStateChange?.(null)
 
     const win = this.getMainWindow()
     if (win && !win.isDestroyed()) {
@@ -183,23 +189,25 @@ export class SyncWorker {
         })
         .catch(() => {})
 
+      const update: VlcStateUpdate = {
+        isRunning: true,
+        seriesId: null,
+        movieId: movie.id,
+        episodeId: null,
+        filePath: movie.primaryFilePath,
+        filename: movie.fileName,
+        state,
+        currentTime,
+        duration,
+        completed: movie.completed || isCompleted,
+        playerType
+      }
+
       const win = this.getMainWindow()
       if (win && !win.isDestroyed()) {
-        const update: VlcStateUpdate = {
-          isRunning: true,
-          seriesId: null,
-          movieId: movie.id,
-          episodeId: null,
-          filePath: movie.primaryFilePath,
-          filename: movie.fileName,
-          state,
-          currentTime,
-          duration,
-          completed: movie.completed || isCompleted,
-          playerType
-        }
         win.webContents.send('vlc:progress-update', update)
       }
+      this.onStateChange?.(update)
       return
     }
 
@@ -248,23 +256,25 @@ export class SyncWorker {
         .catch(() => {})
     }
 
+    const update: VlcStateUpdate = {
+      isRunning: true,
+      seriesId: this.activeSeries.id,
+      movieId: null,
+      episodeId: currentEp ? currentEp.id : null,
+      filePath: currentEp ? currentEp.filePath : null,
+      filename: currentEp ? currentEp.fileName : filename,
+      state,
+      currentTime,
+      duration,
+      completed: currentEp ? currentEp.completed || isCompleted : false,
+      playerType
+    }
+
     const win = this.getMainWindow()
     if (win && !win.isDestroyed()) {
-      const update: VlcStateUpdate = {
-        isRunning: true,
-        seriesId: this.activeSeries.id,
-        movieId: null,
-        episodeId: currentEp ? currentEp.id : null,
-        filePath: currentEp ? currentEp.filePath : null,
-        filename: currentEp ? currentEp.fileName : filename,
-        state,
-        currentTime,
-        duration,
-        completed: currentEp ? currentEp.completed || isCompleted : false,
-        playerType
-      }
       win.webContents.send('vlc:progress-update', update)
     }
+    this.onStateChange?.(update)
   }
 
   private async triggerAniListScrobble(

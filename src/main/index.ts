@@ -11,6 +11,7 @@ import { DiscordService } from './discordService'
 import { AniListService } from './anilistService'
 import { SubtitleSyncService } from './subtitleSyncService'
 import { SubtitleDownloadService } from './subtitleDownloadService'
+import { RemoteServer } from './remoteServer'
 import { TmdbService } from './tmdbService'
 import { scanSeriesFolders } from './folderScanner'
 import { scanMoviesFolder } from './movieScanner'
@@ -38,6 +39,7 @@ let discordService: DiscordService
 let anilistService: AniListService
 let subtitleSyncService: SubtitleSyncService
 let subtitleDownloadService: SubtitleDownloadService
+let remoteServer: RemoteServer
 let tmdbService: TmdbService
 
 function createWindow(): void {
@@ -409,6 +411,11 @@ function registerIpcHandlers(): void {
     return await anilistService.validateToken(token)
   })
 
+  // Module 5: Mobile Remote IPC
+  ipcMain.handle('remote:get-info', async () => {
+    return await remoteServer.getServerInfo()
+  })
+
   ipcMain.handle(
     'anilist:link-series',
     async (
@@ -516,6 +523,12 @@ app.whenReady().then(() => {
   subtitleSyncService = new SubtitleSyncService(storageService, vlcController)
   subtitleDownloadService = new SubtitleDownloadService(storageService, subtitleSyncService)
   tmdbService = new TmdbService()
+  remoteServer = new RemoteServer(storageService, vlcController, thumbnailService)
+  remoteServer.start()
+
+  syncWorker.setOnStateChange((state) => {
+    remoteServer.broadcastState(state)
+  })
 
   thumbnailService.setCallback((id, isMovie) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -547,6 +560,9 @@ app.on('window-all-closed', () => {
 })
 
 app.on('before-quit', async () => {
+  if (remoteServer) {
+    remoteServer.stop()
+  }
   if (discordService) {
     discordService.disconnect()
   }

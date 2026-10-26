@@ -19,7 +19,9 @@ const DEFAULT_SETTINGS: AppSettings = {
   enableDiscordRPC: true,
   discordClientId: '1343981881774346332',
   enableAniListScrobble: true,
-  enableThumbnails: true
+  enableThumbnails: true,
+  enableRemoteServer: true,
+  remotePort: 42125
 }
 
 export class StorageService {

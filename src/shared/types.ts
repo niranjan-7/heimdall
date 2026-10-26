@@ -122,6 +122,17 @@ export interface AppSettings {
   enableAniListScrobble: boolean
   enableThumbnails: boolean
   tmdbApiKey?: string
+  enableRemoteServer?: boolean
+  remotePort?: number
+}
+
+export interface RemoteServerInfo {
+  enabled: boolean
+  port: number
+  localIp: string
+  url: string
+  qrCodeDataUrl: string
+  connectedClients: number
 }
 
 export interface SubtitleDownloadResult {

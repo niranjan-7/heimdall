@@ -78,6 +78,14 @@ if (typeof window !== 'undefined' && !window.api) {
       message: 'Desktop app required'
     }),
     scanLocalSubtitles: async () => ({ found: false }),
+    getRemoteServerInfo: async () => ({
+      enabled: true,
+      port: 42125,
+      localIp: '192.168.1.100',
+      url: 'http://192.168.1.100:42125',
+      qrCodeDataUrl: '',
+      connectedClients: 0
+    }),
     searchAniList: async () => [],
     validateAniListToken: async () => ({ success: false }),
     linkAniListMedia: async () => ({} as any),

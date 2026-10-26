@@ -7,7 +7,8 @@ import {
   Film,
   Sparkles,
   Tv,
-  Clapperboard
+  Clapperboard,
+  Smartphone
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -21,6 +22,7 @@ interface SidebarProps {
   onSelectMovie: (movieId: string) => void
   onAddFolder: () => void
   onOpenSettings: () => void
+  onOpenMobileRemote?: () => void
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -33,7 +35,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectSeries,
   onSelectMovie,
   onAddFolder,
-  onOpenSettings
+  onOpenSettings,
+  onOpenMobileRemote
 }) => {
   return (
     <aside className="w-72 h-screen flex flex-col bg-surface border-r border-surface-border select-none shrink-0">
@@ -250,8 +253,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
       </div>
 
-      {/* Footer / Settings Bar */}
-      <div className="p-3 border-t border-surface-border bg-zinc-950/40">
+      {/* Footer / Mobile Remote & Settings Bar */}
+      <div className="p-3 border-t border-surface-border bg-zinc-950/40 space-y-1">
+        {onOpenMobileRemote && (
+          <button
+            onClick={onOpenMobileRemote}
+            className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-amber-500/10 text-zinc-400 hover:text-amber-300 transition-colors group"
+          >
+            <div className="flex items-center gap-2.5">
+              <Smartphone className="w-4 h-4 text-amber-500 group-hover:scale-110 transition-transform" />
+              <span className="text-xs font-medium text-zinc-300 group-hover:text-amber-200">Mobile Remote</span>
+            </div>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 font-bold border border-amber-500/30">QR</span>
+          </button>
+        )}
+
         <button
           onClick={onOpenSettings}
           className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-zinc-800/60 text-zinc-400 hover:text-zinc-200 transition-colors"

@@ -50,6 +50,26 @@ export class MpvDriver implements IMediaPlayerDriver {
     return this.currentSubDelay
   }
 
+  public async togglePause(): Promise<boolean> {
+    if (!this.socket || this.socket.destroyed) return false
+    try {
+      this.socket.write(JSON.stringify({ command: ['cycle', 'pause'] }) + '\n')
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  public async seek(timeSec: number): Promise<boolean> {
+    if (!this.socket || this.socket.destroyed) return false
+    try {
+      this.socket.write(JSON.stringify({ command: ['seek', Math.floor(timeSec), 'absolute'] }) + '\n')
+      return true
+    } catch {
+      return false
+    }
+  }
+
   public async stop(): Promise<void> {
     if (this.socket && !this.socket.destroyed) {
       try {

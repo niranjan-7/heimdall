@@ -23,6 +23,8 @@ export interface IMediaPlayerDriver {
   stop(): Promise<void>
   setSubtitleDelay(delaySec: number): Promise<boolean>
   getSubtitleDelay(): number
+  togglePause(): Promise<boolean>
+  seek(timeSec: number): Promise<boolean>
 }
 
 export interface IMediaPlayerController {
@@ -40,4 +42,6 @@ export interface IMediaPlayerController {
   stopCurrentProcess(): Promise<void>
   setSubtitleDelay(delaySec: number): Promise<boolean>
   getSubtitleDelay(): number
+  togglePause(): Promise<boolean>
+  seek(timeSec: number): Promise<boolean>
 }

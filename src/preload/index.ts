@@ -9,7 +9,8 @@ import {
   AniListMediaInfo,
   TmdbMovieSearchResult,
   AppNotification,
-  SubtitleDownloadResult
+  SubtitleDownloadResult,
+  RemoteServerInfo
 } from '../shared/types'
 
 export interface IElectronAPI {
@@ -90,6 +91,9 @@ export interface IElectronAPI {
     filePath: string,
     lang?: string
   ) => Promise<{ found: boolean; path?: string }>
+
+  // Module 5: Mobile Remote
+  getRemoteServerInfo: () => Promise<RemoteServerInfo>
 
   // Feature 6: AniList
   searchAniList: (query: string) => Promise<AniListMediaInfo[]>
@@ -174,6 +178,9 @@ const api: IElectronAPI = {
     ipcRenderer.invoke('subtitles:download-movie', movieId, lang),
   scanLocalSubtitles: (filePath, lang) =>
     ipcRenderer.invoke('subtitles:scan-local', filePath, lang),
+
+  // Mobile Remote
+  getRemoteServerInfo: () => ipcRenderer.invoke('remote:get-info'),
 
   searchAniList: (query) => ipcRenderer.invoke('anilist:search', query),
   validateAniListToken: (token) => ipcRenderer.invoke('anilist:validate-token', token),

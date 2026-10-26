@@ -8,6 +8,7 @@ import { MovieGrid } from './components/MovieGrid'
 import { SettingsModal } from './components/SettingsModal'
 import { AniListSearchModal } from './components/AniListSearchModal'
 import { MovieMatchModal } from './components/MovieMatchModal'
+import { MobileRemoteModal } from './components/MobileRemoteModal'
 import { Eye, AlertCircle, Film, CheckCircle2, Info, Clapperboard } from 'lucide-react'
 
 export const App: React.FC = () => {
@@ -17,6 +18,7 @@ export const App: React.FC = () => {
   const [selectedMovieId, setSelectedMovieId] = useState<string | null>(null)
 
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [mobileRemoteOpen, setMobileRemoteOpen] = useState(false)
   const [aniListModalOpen, setAniListModalOpen] = useState(false)
   const [matchingMovie, setMatchingMovie] = useState<Movie | null>(null)
 
@@ -328,6 +330,7 @@ export const App: React.FC = () => {
         }}
         onAddFolder={viewMode === 'series' ? handleAddSeries : handleAddMoviesFolder}
         onOpenSettings={() => setSettingsOpen(true)}
+        onOpenMobileRemote={() => setMobileRemoteOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -451,6 +454,12 @@ export const App: React.FC = () => {
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}
         onSaved={() => {}}
+      />
+
+      {/* Mobile Remote Pairing Modal */}
+      <MobileRemoteModal
+        isOpen={mobileRemoteOpen}
+        onClose={() => setMobileRemoteOpen(false)}
       />
 
       {/* AniList Match Modal */}

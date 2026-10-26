@@ -58,6 +58,20 @@ export class PlayerManager implements IMediaPlayerController {
     return this.vlcDriver.getSubtitleDelay() || this.mpvDriver.getSubtitleDelay()
   }
 
+  public async togglePause(): Promise<boolean> {
+    if (this.activeDriver && this.activeDriver.isRunning()) {
+      return await this.activeDriver.togglePause()
+    }
+    return false
+  }
+
+  public async seek(timeSec: number): Promise<boolean> {
+    if (this.activeDriver && this.activeDriver.isRunning()) {
+      return await this.activeDriver.seek(timeSec)
+    }
+    return false
+  }
+
   private resolveDriver(): { driver: IMediaPlayerDriver | null; error?: string } {
     const settings = this.storageService.getSettings()
     const preferred = settings.preferredPlayer || 'vlc'
