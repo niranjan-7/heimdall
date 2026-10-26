@@ -42,8 +42,8 @@ export const Navbar: React.FC = () => {
 
         {/* Desktop Links */}
         <div className="hidden md:flex items-center gap-6 text-xs font-medium text-zinc-400">
-          <a href="#features" className="hover:text-zinc-100 transition-colors">
-            Features
+          <a href="#story-showcase" className="hover:text-zinc-100 transition-colors">
+            Workflow
           </a>
           <a href="#auto-sync" className="hover:text-zinc-100 transition-colors flex items-center gap-1">
             <Sparkles className="w-3 h-3 text-bifrost-amber" />
@@ -92,11 +92,11 @@ export const Navbar: React.FC = () => {
       {mobileMenuOpen && (
         <div className="md:hidden mt-2 p-4 rounded-2xl glass-panel space-y-3 animate-in fade-in slide-in-from-top-2">
           <a
-            href="#features"
+            href="#story-showcase"
             onClick={() => setMobileMenuOpen(false)}
             className="block py-2 text-xs font-medium text-zinc-300"
           >
-            Features
+            Workflow
           </a>
           <a
             href="#auto-sync"

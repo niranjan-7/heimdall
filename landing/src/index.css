@@ -15,6 +15,28 @@
   color-scheme: dark;
 }
 
+/* Lenis Smooth Scroll Core Rules */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+.lenis.lenis-scrolling iframe {
+  pointer-events: none;
+}
+
 body {
   margin: 0;
   padding: 0;
@@ -22,6 +44,12 @@ body {
   color: #fafafa;
   overflow-x: hidden;
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+}
+
+/* Hardware-accelerated GPU classes */
+.transform-gpu {
+  transform: translate3d(0, 0, 0);
+  will-change: transform, opacity;
 }
 
 /* Custom Glassmorphism */

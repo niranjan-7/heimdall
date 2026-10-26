@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import { Sparkles, Sliders, Waves, CheckCircle2, RotateCcw, AlertTriangle, Play, Pause } from 'lucide-react'
+import { MotionReveal } from './MotionReveal'
 
 export const AutoSyncDemo: React.FC = () => {
   const [offsetMs, setOffsetMs] = useState<number>(1850)
@@ -8,6 +9,7 @@ export const AutoSyncDemo: React.FC = () => {
   const [isSynced, setIsSynced] = useState<boolean>(false)
   const [isPlaying, setIsPlaying] = useState<boolean>(true)
   const [playhead, setPlayhead] = useState<number>(0)
+  const shouldReduceMotion = useReducedMotion()
 
   // Simulated audio playback ticker
   useEffect(() => {
@@ -52,6 +54,30 @@ export const AutoSyncDemo: React.FC = () => {
   // In our visual timeline, 1000ms = 12% shift
   const subtitleShiftPercent = (offsetMs / 1000) * 12
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.12
+      }
+    }
+  }
+
+  const cardVariants = {
+    hidden: { y: 30, opacity: 0, scale: 0.96 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      scale: 1,
+      transition: {
+        type: 'spring' as const,
+        stiffness: 100,
+        damping: 20
+      }
+    }
+  }
+
   return (
     <section id="auto-sync" className="py-24 relative overflow-hidden">
       {/* Background radial glow */}
@@ -59,28 +85,42 @@ export const AutoSyncDemo: React.FC = () => {
       <div className="absolute top-1/3 right-1/4 w-[400px] h-[300px] bg-bifrost-cyan/10 rounded-full blur-[130px] pointer-events-none" />
 
       <div className="max-w-6xl mx-auto px-6">
-        {/* Section Header */}
+        {/* Section Header with Masked Upward Slide-In */}
         <div className="text-center max-w-3xl mx-auto space-y-4 mb-16">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full glass-card border-bifrost-amber/30 text-bifrost-amber text-xs font-semibold">
-            <Waves className="w-3.5 h-3.5 text-bifrost-amber" />
-            <span>Module 1 • Intelligent Waveform Correlation</span>
-          </div>
-          <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
-            Fix Subtitle Desync in <span className="bg-gradient-to-r from-bifrost-amber to-amber-400 bg-clip-text text-transparent">One Click</span>.
-          </h2>
-          <p className="text-zinc-400 text-sm sm:text-base leading-relaxed">
-            Never fiddle with VLC’s <kbd className="px-1.5 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-300 font-mono text-xs">G</kbd> and <kbd className="px-1.5 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-300 font-mono text-xs">H</kbd> keys again. Heimdall extracts speech envelopes from the film’s audio track and cross-correlates timestamps to snap subtitles into atomic alignment.
-          </p>
+          <MotionReveal>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full glass-card border-bifrost-amber/30 text-bifrost-amber text-xs font-semibold">
+              <Waves className="w-3.5 h-3.5 text-bifrost-amber" />
+              <span>Module 1 • Intelligent Waveform Correlation</span>
+            </div>
+          </MotionReveal>
+
+          <MotionReveal delay={0.1}>
+            <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
+              Fix Subtitle Desync in <span className="bg-gradient-to-r from-bifrost-amber to-amber-400 bg-clip-text text-transparent">One Click</span>.
+            </h2>
+          </MotionReveal>
+
+          <MotionReveal delay={0.2}>
+            <p className="text-zinc-400 text-sm sm:text-base leading-relaxed">
+              Never fiddle with VLC’s <kbd className="px-1.5 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-300 font-mono text-xs">G</kbd> and <kbd className="px-1.5 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-300 font-mono text-xs">H</kbd> keys again. Heimdall extracts speech envelopes from the film’s audio track and cross-correlates timestamps to snap subtitles into atomic alignment.
+            </p>
+          </MotionReveal>
         </div>
 
-        {/* Interactive Visualizer Canvas */}
-        <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-white/10 relative shadow-2xl backdrop-blur-2xl">
+        {/* Interactive Visualizer Canvas with Spring Entrance */}
+        <motion.div
+          initial={shouldReduceMotion ? { opacity: 0 } : { y: 35, opacity: 0, scale: 0.98 }}
+          whileInView={{ y: 0, opacity: 1, scale: 1 }}
+          viewport={{ once: true, margin: '-80px' }}
+          transition={{ type: 'spring', stiffness: 100, damping: 20 }}
+          className="glass-panel p-6 sm:p-8 rounded-3xl border border-white/10 relative shadow-2xl backdrop-blur-2xl transform-gpu"
+        >
           {/* Top Bar / Status */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-white/5">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setIsPlaying(!isPlaying)}
-                className="w-10 h-10 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 flex items-center justify-center transition-colors border border-white/5"
+                className="w-10 h-10 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 flex items-center justify-center transition-colors border border-white/5 cursor-pointer"
               >
                 {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
               </button>
@@ -129,7 +169,7 @@ export const AutoSyncDemo: React.FC = () => {
               <button
                 onClick={resetDemo}
                 title="Reset to desynced state"
-                className="p-2 rounded-xl bg-zinc-800/80 hover:bg-zinc-700 text-zinc-400 hover:text-white transition-colors"
+                className="p-2 rounded-xl bg-zinc-800/80 hover:bg-zinc-700 text-zinc-400 hover:text-white transition-colors cursor-pointer"
               >
                 <RotateCcw className="w-4 h-4" />
               </button>
@@ -245,7 +285,7 @@ export const AutoSyncDemo: React.FC = () => {
                     ? 'bg-zinc-800 text-zinc-400 cursor-default border border-white/5'
                     : isScanning
                     ? 'bg-bifrost-amber/60 text-zinc-950 cursor-wait'
-                    : 'bg-gradient-to-r from-bifrost-amber to-amber-600 hover:from-amber-400 hover:to-bifrost-amber text-zinc-950 shadow-bifrost-amber/20 hover:scale-105 active:scale-95'
+                    : 'bg-gradient-to-r from-bifrost-amber to-amber-600 hover:from-amber-400 hover:to-bifrost-amber text-zinc-950 shadow-bifrost-amber/20 hover:scale-105 active:scale-95 cursor-pointer'
                 }`}
               >
                 <Sparkles className={`w-4 h-4 ${isScanning ? 'animate-spin' : ''}`} />
@@ -266,13 +306,13 @@ export const AutoSyncDemo: React.FC = () => {
               <span className="text-xs text-zinc-400 font-medium mr-1">Micro-Nudge:</span>
               <button
                 onClick={() => nudge(-250)}
-                className="px-2.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-mono font-medium border border-white/5 transition-all hover:scale-105 active:scale-95"
+                className="px-2.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-mono font-medium border border-white/5 transition-all hover:scale-105 active:scale-95 cursor-pointer"
               >
                 -250ms
               </button>
               <button
                 onClick={() => nudge(-50)}
-                className="px-2.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-mono font-medium border border-white/5 transition-all hover:scale-105 active:scale-95"
+                className="px-2.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-mono font-medium border border-white/5 transition-all hover:scale-105 active:scale-95 cursor-pointer"
               >
                 -50ms
               </button>
@@ -281,23 +321,29 @@ export const AutoSyncDemo: React.FC = () => {
               </div>
               <button
                 onClick={() => nudge(50)}
-                className="px-2.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-mono font-medium border border-white/5 transition-all hover:scale-105 active:scale-95"
+                className="px-2.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-mono font-medium border border-white/5 transition-all hover:scale-105 active:scale-95 cursor-pointer"
               >
                 +50ms
               </button>
               <button
                 onClick={() => nudge(250)}
-                className="px-2.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-mono font-medium border border-white/5 transition-all hover:scale-105 active:scale-95"
+                className="px-2.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-mono font-medium border border-white/5 transition-all hover:scale-105 active:scale-95 cursor-pointer"
               >
                 +250ms
               </button>
             </div>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Feature Highlights Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-          <div className="glass-card p-6 rounded-2xl border border-white/5 space-y-2">
+        {/* Feature Highlights Grid with Staggered Spring Cascade */}
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: '-80px' }}
+          className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8"
+        >
+          <motion.div variants={cardVariants} className="glass-card p-6 rounded-2xl border border-white/5 space-y-2 transform-gpu">
             <h4 className="text-white font-bold text-base flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-bifrost-amber" />
               Speech Envelope FFT
@@ -305,9 +351,9 @@ export const AutoSyncDemo: React.FC = () => {
             <p className="text-zinc-400 text-xs leading-relaxed">
               Extracts high-energy vocal frequencies (300Hz - 3.4kHz) from local media files without requiring cloud transcription APIs.
             </p>
-          </div>
+          </motion.div>
 
-          <div className="glass-card p-6 rounded-2xl border border-white/5 space-y-2">
+          <motion.div variants={cardVariants} className="glass-card p-6 rounded-2xl border border-white/5 space-y-2 transform-gpu">
             <h4 className="text-white font-bold text-base flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-bifrost-cyan" />
               Cross-Correlation Peak
@@ -315,9 +361,9 @@ export const AutoSyncDemo: React.FC = () => {
             <p className="text-zinc-400 text-xs leading-relaxed">
               Calculates Pearson correlation between audio voice energy and subtitle text timestamps to detect exact drift to the millisecond.
             </p>
-          </div>
+          </motion.div>
 
-          <div className="glass-card p-6 rounded-2xl border border-white/5 space-y-2">
+          <motion.div variants={cardVariants} className="glass-card p-6 rounded-2xl border border-white/5 space-y-2 transform-gpu">
             <h4 className="text-white font-bold text-base flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-purple-400" />
               Zero Video Re-encoding
@@ -325,8 +371,8 @@ export const AutoSyncDemo: React.FC = () => {
             <p className="text-zinc-400 text-xs leading-relaxed">
               Dispatches non-destructive real-time offset commands straight to VLC HTTP API or mpv IPC socket instantly during playback.
             </p>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </div>
     </section>
   )

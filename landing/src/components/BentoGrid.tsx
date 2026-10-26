@@ -1,31 +1,76 @@
 import React from 'react'
+import { motion, useReducedMotion } from 'framer-motion'
 import { Film, Download, ShieldCheck, Gamepad2, Sparkles } from 'lucide-react'
+import { MotionReveal } from './MotionReveal'
 
 export const BentoGrid: React.FC = () => {
+  const shouldReduceMotion = useReducedMotion()
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.12
+      }
+    }
+  }
+
+  const cardVariants = {
+    hidden: { y: 40, opacity: 0, scale: 0.96 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      scale: 1,
+      transition: {
+        type: 'spring' as const,
+        stiffness: 100,
+        damping: 20
+      }
+    }
+  }
+
   return (
     <section id="features" className="py-24 relative overflow-hidden">
       {/* Background radial glow */}
       <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-bifrost-amber/5 rounded-full blur-[160px] pointer-events-none" />
 
       <div className="max-w-6xl mx-auto px-6">
-        {/* Section Header */}
+        {/* Section Header with Masked Upward Slide-In */}
         <div className="text-center max-w-3xl mx-auto space-y-4 mb-16">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full glass-card border-bifrost-amber/30 text-bifrost-amber text-xs font-semibold">
-            <Sparkles className="w-3.5 h-3.5 text-bifrost-amber" />
-            <span>Built For Cinephiles & Power Users</span>
-          </div>
-          <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
-            Engineered with <span className="bg-gradient-to-r from-bifrost-amber via-amber-300 to-amber-500 bg-clip-text text-transparent">Zero Compromises</span>.
-          </h2>
-          <p className="text-zinc-400 text-sm sm:text-base leading-relaxed">
-            Every feature in Heimdall was built to elevate local playback without cloud friction, tracking cookies, or subscription paywalls.
-          </p>
+          <MotionReveal>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full glass-card border-bifrost-amber/30 text-bifrost-amber text-xs font-semibold">
+              <Sparkles className="w-3.5 h-3.5 text-bifrost-amber" />
+              <span>Built For Cinephiles & Power Users</span>
+            </div>
+          </MotionReveal>
+
+          <MotionReveal delay={0.1}>
+            <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
+              Engineered with <span className="bg-gradient-to-r from-bifrost-amber via-amber-300 to-amber-500 bg-clip-text text-transparent">Zero Compromises</span>.
+            </h2>
+          </MotionReveal>
+
+          <MotionReveal delay={0.2}>
+            <p className="text-zinc-400 text-sm sm:text-base leading-relaxed">
+              Every feature in Heimdall was built to elevate local playback without cloud friction, tracking cookies, or subscription paywalls.
+            </p>
+          </MotionReveal>
         </div>
 
-        {/* 6-Tile Bento Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* 6-Tile Bento Grid with Staggered Spring Cascade */}
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: '-80px' }}
+          className="grid grid-cols-1 md:grid-cols-3 gap-6"
+        >
           {/* Tile 1: Dedicated Movies & TV Library (2 Columns Wide) */}
-          <div className="md:col-span-2 glass-panel p-8 rounded-3xl border border-white/10 relative overflow-hidden flex flex-col justify-between group hover:border-bifrost-amber/40 transition-all duration-300 shadow-xl">
+          <motion.div
+            variants={shouldReduceMotion ? undefined : cardVariants}
+            className="md:col-span-2 glass-panel p-8 rounded-3xl border border-white/10 relative overflow-hidden flex flex-col justify-between group hover:border-bifrost-amber/40 transition-all duration-300 shadow-xl transform-gpu"
+          >
             <div className="space-y-4 z-10">
               <div className="w-10 h-10 rounded-2xl bg-bifrost-amber/15 border border-bifrost-amber/30 text-bifrost-amber flex items-center justify-center">
                 <Film className="w-5 h-5" />
@@ -78,10 +123,13 @@ export const BentoGrid: React.FC = () => {
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Tile 2: Smart 64KB Hash Subtitle Downloader */}
-          <div className="glass-panel p-8 rounded-3xl border border-white/10 relative overflow-hidden flex flex-col justify-between group hover:border-bifrost-cyan/40 transition-all duration-300 shadow-xl">
+          <motion.div
+            variants={shouldReduceMotion ? undefined : cardVariants}
+            className="glass-panel p-8 rounded-3xl border border-white/10 relative overflow-hidden flex flex-col justify-between group hover:border-bifrost-cyan/40 transition-all duration-300 shadow-xl transform-gpu"
+          >
             <div className="space-y-4">
               <div className="w-10 h-10 rounded-2xl bg-bifrost-cyan/15 border border-bifrost-cyan/30 text-bifrost-cyan flex items-center justify-center">
                 <Download className="w-5 h-5" />
@@ -109,10 +157,13 @@ export const BentoGrid: React.FC = () => {
                 Saved to: ./Subs/Oppenheimer.srt
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Tile 3: Discord Rich Presence & AniList Scrobbler */}
-          <div className="glass-panel p-8 rounded-3xl border border-white/10 relative overflow-hidden flex flex-col justify-between group hover:border-purple-500/40 transition-all duration-300 shadow-xl">
+          <motion.div
+            variants={shouldReduceMotion ? undefined : cardVariants}
+            className="glass-panel p-8 rounded-3xl border border-white/10 relative overflow-hidden flex flex-col justify-between group hover:border-purple-500/40 transition-all duration-300 shadow-xl transform-gpu"
+          >
             <div className="space-y-4">
               <div className="w-10 h-10 rounded-2xl bg-purple-500/15 border border-purple-500/30 text-purple-400 flex items-center justify-center">
                 <Gamepad2 className="w-5 h-5" />
@@ -143,10 +194,13 @@ export const BentoGrid: React.FC = () => {
                 <div className="text-[10px] text-zinc-400 font-mono">Ep 14 • 18:42 left</div>
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Tile 4: 100% Offline & Zero Telemetry (2 Columns Wide) */}
-          <div className="md:col-span-2 glass-panel p-8 rounded-3xl border border-white/10 relative overflow-hidden flex flex-col justify-between group hover:border-emerald-500/40 transition-all duration-300 shadow-xl">
+          <motion.div
+            variants={shouldReduceMotion ? undefined : cardVariants}
+            className="md:col-span-2 glass-panel p-8 rounded-3xl border border-white/10 relative overflow-hidden flex flex-col justify-between group hover:border-emerald-500/40 transition-all duration-300 shadow-xl transform-gpu"
+          >
             <div className="space-y-4 z-10">
               <div className="w-10 h-10 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center">
                 <ShieldCheck className="w-5 h-5" />
@@ -175,8 +229,8 @@ export const BentoGrid: React.FC = () => {
                 <p className="text-white font-bold">MIT Open Source</p>
               </div>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </div>
     </section>
   )

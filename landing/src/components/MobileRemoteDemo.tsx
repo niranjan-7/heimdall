@@ -1,12 +1,24 @@
-import React, { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import React, { useState, useEffect, useRef } from 'react'
+import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion'
 import { Smartphone, Wifi, Play, Pause, Volume2, FastForward, Rewind, MessageSquare, Sparkles } from 'lucide-react'
+import { MotionReveal } from './MotionReveal'
 
 export const MobileRemoteDemo: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState<boolean>(true)
   const [progress, setProgress] = useState<number>(42)
   const [volume, setVolume] = useState<number>(75)
   const [subOffset, setSubOffset] = useState<number>(0)
+  const sectionRef = useRef<HTMLElement>(null)
+  const shouldReduceMotion = useReducedMotion()
+
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ['start end', 'end start']
+  })
+
+  // Subtle parallax on the phone container
+  const rawPhoneY = useTransform(scrollYProgress, [0, 1], [30, -30])
+  const phoneY = shouldReduceMotion ? 0 : rawPhoneY
 
   // Subtle playhead increment
   useEffect(() => {
@@ -22,37 +34,48 @@ export const MobileRemoteDemo: React.FC = () => {
   }
 
   return (
-    <section id="mobile-remote" className="py-24 relative overflow-hidden">
+    <section ref={sectionRef} id="mobile-remote" className="py-24 relative overflow-hidden">
       {/* Background radial glow */}
       <div className="absolute top-1/2 left-1/3 -translate-y-1/2 w-[600px] h-[400px] bg-bifrost-amber/10 rounded-full blur-[150px] pointer-events-none" />
 
       <div className="max-w-6xl mx-auto px-6">
-        {/* Section Header */}
+        {/* Section Header with Masked Upward Slide-In */}
         <div className="text-center max-w-3xl mx-auto space-y-4 mb-16">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full glass-card border-bifrost-amber/30 text-bifrost-amber text-xs font-semibold">
-            <Smartphone className="w-3.5 h-3.5 text-bifrost-amber" />
-            <span>Module 5 • PWA Couch Remote</span>
-          </div>
-          <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
-            Control Your TV or PC <br />
-            <span className="bg-gradient-to-r from-bifrost-amber via-amber-300 to-amber-500 bg-clip-text text-transparent">
-              Right from the Couch.
-            </span>
-          </h2>
-          <p className="text-zinc-400 text-sm sm:text-base leading-relaxed">
-            No keyboard reach. No App Store download. Heimdall spins up a lightning-fast local web server. Just point your phone’s camera at the QR code and control playback, volume, and subtitle offsets instantly.
-          </p>
+          <MotionReveal>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full glass-card border-bifrost-amber/30 text-bifrost-amber text-xs font-semibold">
+              <Smartphone className="w-3.5 h-3.5 text-bifrost-amber" />
+              <span>Module 5 • PWA Couch Remote</span>
+            </div>
+          </MotionReveal>
+
+          <MotionReveal delay={0.1}>
+            <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
+              Control Your TV or PC <br />
+              <span className="bg-gradient-to-r from-bifrost-amber via-amber-300 to-amber-500 bg-clip-text text-transparent">
+                Right from the Couch.
+              </span>
+            </h2>
+          </MotionReveal>
+
+          <MotionReveal delay={0.2}>
+            <p className="text-zinc-400 text-sm sm:text-base leading-relaxed">
+              No keyboard reach. No App Store download. Heimdall spins up a lightning-fast local web server. Just point your phone’s camera at the QR code and control playback, volume, and subtitle offsets instantly.
+            </p>
+          </MotionReveal>
         </div>
 
         {/* Content Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-          {/* Left: 3D-styled Phone Mockup */}
-          <div className="lg:col-span-6 flex justify-center">
+          {/* Left: 3D-styled Phone Mockup with Parallax */}
+          <motion.div
+            style={{ y: phoneY }}
+            className="lg:col-span-6 flex justify-center transform-gpu"
+          >
             <motion.div
               initial={{ rotateY: -10, rotateX: 5 }}
               whileHover={{ rotateY: 0, rotateX: 0 }}
               transition={{ type: 'spring', stiffness: 100, damping: 20 }}
-              className="relative w-[310px] sm:w-[340px] rounded-[48px] p-3.5 bg-gradient-to-b from-zinc-700 via-zinc-900 to-zinc-950 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8),0_0_40px_rgba(245,158,11,0.15)] border-2 border-zinc-700/60"
+              className="relative w-[310px] sm:w-[340px] rounded-[48px] p-3.5 bg-gradient-to-b from-zinc-700 via-zinc-900 to-zinc-950 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8),0_0_40px_rgba(245,158,11,0.15)] border-2 border-zinc-700/60 cursor-pointer"
             >
               {/* Dynamic Island / Notch */}
               <div className="absolute top-6 left-1/2 -translate-x-1/2 w-24 h-5 bg-black rounded-full z-30 flex items-center justify-end px-3">
@@ -122,21 +145,21 @@ export const MobileRemoteDemo: React.FC = () => {
                 <div className="flex items-center justify-between px-2 mb-6">
                   <button
                     onClick={() => setProgress((p) => Math.max(0, p - 5))}
-                    className="p-3 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-white/5 active:scale-95 transition-all"
+                    className="p-3 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-white/5 active:scale-95 transition-all cursor-pointer"
                   >
                     <Rewind className="w-4 h-4" />
                   </button>
 
                   <button
                     onClick={() => setIsPlaying(!isPlaying)}
-                    className="w-14 h-14 rounded-2xl bg-gradient-to-r from-bifrost-amber to-amber-600 text-zinc-950 flex items-center justify-center shadow-lg shadow-bifrost-amber/30 active:scale-90 transition-all"
+                    className="w-14 h-14 rounded-2xl bg-gradient-to-r from-bifrost-amber to-amber-600 text-zinc-950 flex items-center justify-center shadow-lg shadow-bifrost-amber/30 active:scale-90 transition-all cursor-pointer"
                   >
                     {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-0.5" />}
                   </button>
 
                   <button
                     onClick={() => setProgress((p) => Math.min(100, p + 5))}
-                    className="p-3 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-white/5 active:scale-95 transition-all"
+                    className="p-3 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-white/5 active:scale-95 transition-all cursor-pointer"
                   >
                     <FastForward className="w-4 h-4" />
                   </button>
@@ -156,25 +179,25 @@ export const MobileRemoteDemo: React.FC = () => {
                   <div className="grid grid-cols-4 gap-1.5">
                     <button
                       onClick={() => nudgeSub(-250)}
-                      className="py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-mono font-medium active:scale-95 transition-transform"
+                      className="py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-mono font-medium active:scale-95 transition-transform cursor-pointer"
                     >
                       -250ms
                     </button>
                     <button
                       onClick={() => nudgeSub(-50)}
-                      className="py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-mono font-medium active:scale-95 transition-transform"
+                      className="py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-mono font-medium active:scale-95 transition-transform cursor-pointer"
                     >
                       -50ms
                     </button>
                     <button
                       onClick={() => nudgeSub(50)}
-                      className="py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-mono font-medium active:scale-95 transition-transform"
+                      className="py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-mono font-medium active:scale-95 transition-transform cursor-pointer"
                     >
                       +50ms
                     </button>
                     <button
                       onClick={() => nudgeSub(250)}
-                      className="py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-mono font-medium active:scale-95 transition-transform"
+                      className="py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-mono font-medium active:scale-95 transition-transform cursor-pointer"
                     >
                       +250ms
                     </button>
@@ -198,10 +221,16 @@ export const MobileRemoteDemo: React.FC = () => {
                 </div>
               </div>
             </motion.div>
-          </div>
+          </motion.div>
 
-          {/* Right: Feature Highlights & QR Scanner Card */}
-          <div className="lg:col-span-6 space-y-8">
+          {/* Right: Feature Highlights & QR Scanner Card with Spring Entrance */}
+          <motion.div
+            initial={shouldReduceMotion ? { opacity: 0 } : { y: 35, opacity: 0 }}
+            whileInView={{ y: 0, opacity: 1 }}
+            viewport={{ once: true, margin: '-80px' }}
+            transition={{ type: 'spring', stiffness: 100, damping: 20, delay: 0.1 }}
+            className="lg:col-span-6 space-y-8 transform-gpu"
+          >
             <div className="space-y-4">
               <h3 className="text-2xl sm:text-3xl font-extrabold text-white">
                 Zero Configuration. Just Scan & Lean Back.
@@ -282,7 +311,7 @@ export const MobileRemoteDemo: React.FC = () => {
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
     </section>

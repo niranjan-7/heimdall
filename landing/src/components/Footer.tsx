@@ -1,16 +1,25 @@
 import React from 'react'
+import { motion, useReducedMotion } from 'framer-motion'
 import { Download, Heart, Sparkles, ExternalLink } from 'lucide-react'
 import { GithubIcon } from './Icons'
 
 export const Footer: React.FC = () => {
+  const shouldReduceMotion = useReducedMotion()
+
   return (
     <footer className="relative border-t border-white/5 pt-20 pb-12 overflow-hidden bg-zinc-950">
       {/* Background glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[250px] bg-bifrost-amber/10 rounded-full blur-[140px] pointer-events-none" />
 
       <div className="max-w-6xl mx-auto px-6">
-        {/* Bottom CTA Card */}
-        <div className="glass-panel p-8 sm:p-12 rounded-3xl border border-white/10 relative overflow-hidden text-center space-y-6 mb-16 shadow-2xl">
+        {/* Bottom CTA Card with Spring Entrance */}
+        <motion.div
+          initial={shouldReduceMotion ? { opacity: 0 } : { y: 35, opacity: 0, scale: 0.98 }}
+          whileInView={{ y: 0, opacity: 1, scale: 1 }}
+          viewport={{ once: true, margin: '-80px' }}
+          transition={{ type: 'spring', stiffness: 100, damping: 20 }}
+          className="glass-panel p-8 sm:p-12 rounded-3xl border border-white/10 relative overflow-hidden text-center space-y-6 mb-16 shadow-2xl transform-gpu"
+        >
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full glass-card border-bifrost-amber/30 text-bifrost-amber text-xs font-semibold">
             <Sparkles className="w-3.5 h-3.5" />
             <span>Open Source Desktop Companion</span>
@@ -28,7 +37,7 @@ export const Footer: React.FC = () => {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
             <a
               href="https://github.com/niranjan-7/heimdall/releases/download/v1.2.0/Heimdall.Setup.1.2.0.exe"
-              className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-bifrost-amber to-amber-600 hover:from-amber-400 hover:to-bifrost-amber text-zinc-950 font-extrabold text-sm flex items-center justify-center gap-2.5 shadow-xl shadow-bifrost-amber/25 hover:shadow-bifrost-amber/40 transition-all hover:scale-105 active:scale-95"
+              className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-bifrost-amber to-amber-600 hover:from-amber-400 hover:to-bifrost-amber text-zinc-950 font-extrabold text-sm flex items-center justify-center gap-2.5 shadow-xl shadow-bifrost-amber/25 hover:shadow-bifrost-amber/40 transition-all hover:scale-105 active:scale-95 cursor-pointer"
             >
               <Download className="w-4 h-4 stroke-[2.5]" />
               Download for Windows (.exe)
@@ -38,7 +47,7 @@ export const Footer: React.FC = () => {
               href="https://github.com/niranjan-7/heimdall"
               target="_blank"
               rel="noreferrer"
-              className="w-full sm:w-auto px-6 py-3.5 rounded-2xl glass-panel hover:bg-zinc-900 text-zinc-200 hover:text-white font-semibold text-sm flex items-center justify-center gap-2 transition-all hover:border-white/20"
+              className="w-full sm:w-auto px-6 py-3.5 rounded-2xl glass-panel hover:bg-zinc-900 text-zinc-200 hover:text-white font-semibold text-sm flex items-center justify-center gap-2 transition-all hover:border-white/20 cursor-pointer"
             >
               <GithubIcon className="w-4 h-4" />
               View on GitHub
@@ -52,7 +61,7 @@ export const Footer: React.FC = () => {
             <span>•</span>
             <span>Linux (.AppImage)</span>
           </div>
-        </div>
+        </motion.div>
 
         {/* Footer Navigation & Copyright */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-8 border-t border-white/5 text-xs text-zinc-400">
@@ -65,6 +74,9 @@ export const Footer: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-6 font-medium">
+            <a href="#story-showcase" className="hover:text-white transition-colors">
+              Workflow
+            </a>
             <a href="#auto-sync" className="hover:text-white transition-colors">
               Auto-Sync
             </a>

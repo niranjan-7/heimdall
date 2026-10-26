@@ -1,10 +1,12 @@
 import React, { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { Tv, Sparkles, Cpu, Layers, Activity, Check, Gauge } from 'lucide-react'
+import { MotionReveal } from './MotionReveal'
 
 export const DualPlayerDemo: React.FC = () => {
   const [activeEngine, setActiveEngine] = useState<'mpv' | 'vlc'>('mpv')
   const [anime4kEnabled, setAnime4kEnabled] = useState<boolean>(true)
+  const shouldReduceMotion = useReducedMotion()
 
   return (
     <section id="dual-engine" className="py-24 relative overflow-hidden bg-zinc-950/40">
@@ -12,51 +14,67 @@ export const DualPlayerDemo: React.FC = () => {
       <div className="absolute top-1/2 right-1/4 -translate-y-1/2 w-[500px] h-[350px] bg-bifrost-cyan/10 rounded-full blur-[140px] pointer-events-none" />
 
       <div className="max-w-6xl mx-auto px-6">
-        {/* Section Header */}
+        {/* Section Header with Masked Upward Slide-In */}
         <div className="text-center max-w-3xl mx-auto space-y-4 mb-16">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full glass-card border-bifrost-cyan/30 text-bifrost-cyan text-xs font-semibold">
-            <Tv className="w-3.5 h-3.5 text-bifrost-cyan" />
-            <span>Module 3 • Dual Media Player Architecture</span>
-          </div>
-          <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
-            mpv or VLC. <span className="bg-gradient-to-r from-bifrost-cyan to-blue-400 bg-clip-text text-transparent">Your Setup, Your Choice</span>.
-          </h2>
-          <p className="text-zinc-400 text-sm sm:text-base leading-relaxed">
-            Heimdall doesn't lock you into a single player. Whether you want the ultra-low latency shader pipeline of <strong>mpv</strong> or the rock-solid universal codec compatibility of <strong>VLC</strong>, Heimdall binds to both effortlessly.
-          </p>
+          <MotionReveal>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full glass-card border-bifrost-cyan/30 text-bifrost-cyan text-xs font-semibold">
+              <Tv className="w-3.5 h-3.5 text-bifrost-cyan" />
+              <span>Module 3 • Dual Media Player Architecture</span>
+            </div>
+          </MotionReveal>
+
+          <MotionReveal delay={0.1}>
+            <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
+              mpv or VLC. <span className="bg-gradient-to-r from-bifrost-cyan to-blue-400 bg-clip-text text-transparent">Your Setup, Your Choice</span>.
+            </h2>
+          </MotionReveal>
+
+          <MotionReveal delay={0.2}>
+            <p className="text-zinc-400 text-sm sm:text-base leading-relaxed">
+              Heimdall doesn't lock you into a single player. Whether you want the ultra-low latency shader pipeline of <strong>mpv</strong> or the rock-solid universal codec compatibility of <strong>VLC</strong>, Heimdall binds to both effortlessly.
+            </p>
+          </MotionReveal>
 
           {/* Engine Selector Segmented Control */}
-          <div className="flex items-center justify-center pt-4">
-            <div className="p-1.5 rounded-2xl glass-panel border border-white/10 flex items-center gap-1 shadow-xl">
-              <button
-                onClick={() => setActiveEngine('mpv')}
-                className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${
-                  activeEngine === 'mpv'
-                    ? 'bg-bifrost-cyan text-zinc-950 shadow-lg shadow-bifrost-cyan/20 scale-105'
-                    : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                <Cpu className="w-4 h-4" />
-                <span>mpv Player (Modern & Shaders)</span>
-              </button>
+          <MotionReveal delay={0.3}>
+            <div className="flex items-center justify-center pt-4">
+              <div className="p-1.5 rounded-2xl glass-panel border border-white/10 flex items-center gap-1 shadow-xl">
+                <button
+                  onClick={() => setActiveEngine('mpv')}
+                  className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 cursor-pointer ${
+                    activeEngine === 'mpv'
+                      ? 'bg-bifrost-cyan text-zinc-950 shadow-lg shadow-bifrost-cyan/20 scale-105'
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  <Cpu className="w-4 h-4" />
+                  <span>mpv Player (Modern & Shaders)</span>
+                </button>
 
-              <button
-                onClick={() => setActiveEngine('vlc')}
-                className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${
-                  activeEngine === 'vlc'
-                    ? 'bg-bifrost-amber text-zinc-950 shadow-lg shadow-bifrost-amber/20 scale-105'
-                    : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                <Tv className="w-4 h-4" />
-                <span>VLC Media Player (Classic & Robust)</span>
-              </button>
+                <button
+                  onClick={() => setActiveEngine('vlc')}
+                  className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 cursor-pointer ${
+                    activeEngine === 'vlc'
+                      ? 'bg-bifrost-amber text-zinc-950 shadow-lg shadow-bifrost-amber/20 scale-105'
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  <Tv className="w-4 h-4" />
+                  <span>VLC Media Player (Classic & Robust)</span>
+                </button>
+              </div>
             </div>
-          </div>
+          </MotionReveal>
         </div>
 
-        {/* Engine Showcase Card */}
-        <div className="glass-panel rounded-3xl border border-white/10 p-6 sm:p-10 shadow-2xl relative overflow-hidden backdrop-blur-2xl">
+        {/* Engine Showcase Card with Spring Entrance */}
+        <motion.div
+          initial={shouldReduceMotion ? { opacity: 0 } : { y: 35, opacity: 0, scale: 0.98 }}
+          whileInView={{ y: 0, opacity: 1, scale: 1 }}
+          viewport={{ once: true, margin: '-80px' }}
+          transition={{ type: 'spring', stiffness: 100, damping: 20 }}
+          className="glass-panel rounded-3xl border border-white/10 p-6 sm:p-10 shadow-2xl relative overflow-hidden backdrop-blur-2xl transform-gpu"
+        >
           <AnimatePresence mode="wait">
             {activeEngine === 'mpv' ? (
               <motion.div
@@ -154,7 +172,7 @@ export const DualPlayerDemo: React.FC = () => {
                         </div>
                         <button
                           onClick={() => setAnime4kEnabled(!anime4kEnabled)}
-                          className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
+                          className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
                             anime4kEnabled
                               ? 'bg-bifrost-cyan text-zinc-950 shadow-md shadow-bifrost-cyan/30'
                               : 'bg-zinc-800 text-zinc-400 hover:text-white'
@@ -314,7 +332,7 @@ export const DualPlayerDemo: React.FC = () => {
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
+        </motion.div>
       </div>
     </section>
   )

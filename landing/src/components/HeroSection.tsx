@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import React, { useState, useEffect, useRef } from 'react'
+import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion'
 import confetti from 'canvas-confetti'
 import { Download, Sparkles, Shield, Zap, ChevronRight, CheckCircle2, Play } from 'lucide-react'
 import { InteractiveAppMockup } from './InteractiveAppMockup'
 
 export const HeroSection: React.FC = () => {
   const [detectedOs, setDetectedOs] = useState<'windows' | 'mac' | 'linux'>('windows')
+  const containerRef = useRef<HTMLElement>(null)
+  const shouldReduceMotion = useReducedMotion()
 
   useEffect(() => {
     const userAgent = window.navigator.userAgent.toLowerCase()
@@ -18,6 +20,26 @@ export const HeroSection: React.FC = () => {
     }
   }, [])
 
+  // Parallax & Scroll Exit via Framer Motion useScroll
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ['start start', 'end start']
+  })
+
+  // Transform specs:
+  // Headline scale: 1 -> 0.92, opacity: 1 -> 0
+  // Visual mockup parallax: y: [0, -80]
+  // Aurora background: y: [0, 120]
+  const rawHeadlineScale = useTransform(scrollYProgress, [0, 0.7], [1, 0.92])
+  const rawHeadlineOpacity = useTransform(scrollYProgress, [0, 0.6], [1, 0])
+  const rawMockupY = useTransform(scrollYProgress, [0, 1], [0, -80])
+  const rawAuroraY = useTransform(scrollYProgress, [0, 1], [0, 120])
+
+  const headlineScale = shouldReduceMotion ? 1 : rawHeadlineScale
+  const headlineOpacity = shouldReduceMotion ? 1 : rawHeadlineOpacity
+  const mockupY = shouldReduceMotion ? 0 : rawMockupY
+  const auroraY = shouldReduceMotion ? 0 : rawAuroraY
+
   const handleDownloadClick = () => {
     confetti({
       particleCount: 80,
@@ -28,18 +50,37 @@ export const HeroSection: React.FC = () => {
   }
 
   const osLabels = {
-    windows: { name: 'Windows (.exe)', link: 'https://github.com/niranjan-7/heimdall/releases/download/v1.2.0/Heimdall.Setup.1.2.0.exe' },
+    windows: {
+      name: 'Windows (.exe)',
+      link: 'https://github.com/niranjan-7/heimdall/releases/download/v1.2.0/Heimdall.Setup.1.2.0.exe'
+    },
     mac: { name: 'macOS (.dmg)', link: 'https://github.com/niranjan-7/heimdall/releases/latest' },
     linux: { name: 'Linux (.AppImage)', link: 'https://github.com/niranjan-7/heimdall/releases/latest' }
   }
 
   return (
-    <section className="relative min-h-screen pt-32 pb-20 overflow-hidden flex flex-col items-center justify-center">
-      {/* Background Aurora Glow */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-gradient-to-tr from-bifrost-amber/20 via-bifrost-cyan/15 to-bifrost-violet/10 rounded-full blur-[120px] pointer-events-none animate-glow" />
-      <div className="absolute top-1/3 left-1/3 w-[450px] h-[300px] bg-bifrost-amber/15 rounded-full blur-[100px] pointer-events-none" />
+    <section
+      ref={containerRef}
+      className="relative min-h-screen pt-32 pb-20 overflow-hidden flex flex-col items-center justify-center"
+    >
+      {/* Background Aurora Glow with Layered Parallax */}
+      <motion.div
+        style={{ y: auroraY }}
+        className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-gradient-to-tr from-bifrost-amber/20 via-bifrost-cyan/15 to-bifrost-violet/10 rounded-full blur-[120px] pointer-events-none transform-gpu"
+      />
+      <motion.div
+        style={{ y: auroraY }}
+        className="absolute top-1/3 left-1/3 w-[450px] h-[300px] bg-bifrost-amber/15 rounded-full blur-[100px] pointer-events-none transform-gpu"
+      />
 
-      <div className="relative max-w-5xl mx-auto px-6 text-center space-y-6">
+      {/* Hero Content (Headline, Subtitle, CTA with Scroll Exit scaling & fade) */}
+      <motion.div
+        style={{
+          scale: headlineScale,
+          opacity: headlineOpacity
+        }}
+        className="relative max-w-5xl mx-auto px-6 text-center space-y-6 transform-gpu"
+      >
         {/* Release Tag Pill */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -56,7 +97,7 @@ export const HeroSection: React.FC = () => {
         <motion.h1
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1 }}
+          transition={{ type: 'spring', stiffness: 100, damping: 20, delay: 0.1 }}
           className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight text-white leading-[1.08]"
         >
           The All-Seeing Watchman for <br />
@@ -69,7 +110,7 @@ export const HeroSection: React.FC = () => {
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
+          transition={{ type: 'spring', stiffness: 100, damping: 20, delay: 0.2 }}
           className="max-w-2xl mx-auto text-base sm:text-lg text-zinc-400 font-normal leading-relaxed"
         >
           Zero manual tracking. Heimdall connects directly to your local players with{' '}
@@ -82,7 +123,7 @@ export const HeroSection: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
+          transition={{ type: 'spring', stiffness: 100, damping: 20, delay: 0.3 }}
           className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4"
         >
           <a
@@ -95,11 +136,11 @@ export const HeroSection: React.FC = () => {
           </a>
 
           <a
-            href="#auto-sync"
+            href="#story-showcase"
             className="w-full sm:w-auto px-6 py-3.5 rounded-2xl glass-panel hover:bg-zinc-900/90 text-zinc-200 hover:text-white font-semibold text-sm flex items-center justify-center gap-2 transition-all hover:border-white/20"
           >
             <Play className="w-4 h-4 text-bifrost-amber" />
-            See Live Demo
+            Explore The Experience
           </a>
         </motion.div>
 
@@ -123,12 +164,15 @@ export const HeroSection: React.FC = () => {
             <span>0ms IPC Telemetry</span>
           </div>
         </motion.div>
-      </div>
+      </motion.div>
 
-      {/* 3D Tilt Application Mockup Showcase */}
-      <div className="w-full max-w-6xl mx-auto px-4 mt-14">
+      {/* 3D Tilt Application Mockup Showcase with Parallax Shift */}
+      <motion.div
+        style={{ y: mockupY }}
+        className="w-full max-w-6xl mx-auto px-4 mt-12 transform-gpu"
+      >
         <InteractiveAppMockup />
-      </div>
+      </motion.div>
     </section>
   )
 }
