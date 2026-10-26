@@ -44,7 +44,7 @@ function createWindow(): void {
     height: 900,
     minWidth: 1040,
     minHeight: 720,
-    show: false,
+    show: true,
     autoHideMenuBar: true,
     title: 'Heimdall',
     backgroundColor: '#09090b',
@@ -58,6 +58,7 @@ function createWindow(): void {
   mainWindow.on('ready-to-show', () => {
     if (mainWindow) {
       mainWindow.show()
+      mainWindow.focus()
     }
   })
 
