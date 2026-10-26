@@ -1,6 +1,7 @@
 import React from 'react'
 import { Series, Episode, VlcStateUpdate } from '../../../shared/types'
 import { formatTime } from '../utils/formatters'
+import { SubtitleSyncWidget } from './SubtitleSyncWidget'
 import {
   Play,
   SkipForward,
@@ -10,8 +11,7 @@ import {
   Tv,
   Radio,
   Clock,
-  Sparkles,
-  ExternalLink
+  Sparkles
 } from 'lucide-react'
 
 interface HeroBannerProps {
@@ -23,6 +23,8 @@ interface HeroBannerProps {
   onRescan: () => void
   onDeleteSeries: () => void
   onOpenAniListSearch: () => void
+  onNotification: (type: 'success' | 'info' | 'error', message: string) => void
+  onDelayUpdated: () => void
 }
 
 export const HeroBanner: React.FC<HeroBannerProps> = ({
@@ -33,7 +35,9 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
   onAddSeason,
   onRescan,
   onDeleteSeries,
-  onOpenAniListSearch
+  onOpenAniListSearch,
+  onNotification,
+  onDelayUpdated
 }) => {
   // Find current resume episode
   let resumeEpisode: Episode | undefined
@@ -67,7 +71,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
         resumeEpisode.timeSec / resumeEpisode.durationSec >= 0.85))
 
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-900 via-zinc-900/90 to-zinc-950 border border-surface-border p-6 shadow-xl mb-6">
+    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-900 via-zinc-900/90 to-zinc-950 border border-surface-border p-6 shadow-xl mb-6 space-y-5">
       {/* Background Banner Backdrop if linked to AniList */}
       {series.bannerImage && (
         <div
@@ -222,6 +226,18 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
           </div>
         )}
       </div>
+
+      {/* Module 1: Subtitle Sync Engine Widget */}
+      {resumeEpisode && (
+        <div className="relative z-10 pt-1">
+          <SubtitleSyncWidget
+            series={series}
+            activeEpisode={resumeEpisode}
+            onNotification={onNotification}
+            onDelayUpdated={onDelayUpdated}
+          />
+        </div>
+      )}
     </div>
   )
 }

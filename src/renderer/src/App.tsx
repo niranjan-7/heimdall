@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { Series, Episode, LibraryData, VlcStateUpdate, AppNotification } from '../../shared/types'
+import { Series, LibraryData, VlcStateUpdate, AppNotification } from '../../shared/types'
 import { Sidebar } from './components/Sidebar'
 import { HeroBanner } from './components/HeroBanner'
 import { EpisodeGrid } from './components/EpisodeGrid'
@@ -259,7 +259,7 @@ export const App: React.FC = () => {
 
         {currentSeries ? (
           <div>
-            {/* Top Hero Section */}
+            {/* Top Hero Section with Subtitle Sync Engine */}
             <HeroBanner
               series={currentSeries}
               activeVlcState={activeVlcState}
@@ -269,6 +269,8 @@ export const App: React.FC = () => {
               onRescan={handleRescan}
               onDeleteSeries={handleDeleteSeries}
               onOpenAniListSearch={() => setAniListModalOpen(true)}
+              onNotification={showToast}
+              onDelayUpdated={loadLibrary}
             />
 
             {/* Episode Grid with Season Tabs & Filters */}

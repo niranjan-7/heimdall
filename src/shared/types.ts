@@ -11,6 +11,7 @@ export interface Episode {
   completed: boolean
   lastWatchedAt: number | null
   hasThumbnail?: boolean
+  subDelaySec?: number
 }
 
 export interface AniListMediaInfo {
@@ -45,6 +46,7 @@ export interface Series {
   coverImage?: string | null
   bannerImage?: string | null
   aniListTitle?: string | null
+  defaultSubDelaySec?: number
 }
 
 export interface LibraryData {
@@ -56,15 +58,12 @@ export interface AppSettings {
   completionThreshold: number
   httpPort: number
   httpPassword: string
-  // Feature 5: Discord Rich Presence
   enableDiscordRPC: boolean
   discordClientId: string
-  // Feature 6: AniList Scrobbler
   aniListToken?: string
   aniListUsername?: string
   aniListAvatar?: string
   enableAniListScrobble: boolean
-  // Feature 2: Thumbnails
   enableThumbnails: boolean
 }
 
@@ -78,6 +77,7 @@ export interface VlcStateUpdate {
   currentTime: number
   duration: number
   completed: boolean
+  subDelaySec?: number
 }
 
 export type FilterStatus = 'all' | 'unwatched' | 'in_progress' | 'completed'

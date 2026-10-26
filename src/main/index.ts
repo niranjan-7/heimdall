@@ -9,6 +9,7 @@ import { VlcController } from './vlcController'
 import { ThumbnailService } from './thumbnailService'
 import { DiscordService } from './discordService'
 import { AniListService } from './anilistService'
+import { SubtitleSyncService } from './subtitleSyncService'
 import { scanSeriesFolders } from './folderScanner'
 import { Series } from '../shared/types'
 
@@ -32,6 +33,7 @@ let vlcController: VlcController
 let thumbnailService: ThumbnailService
 let discordService: DiscordService
 let anilistService: AniListService
+let subtitleSyncService: SubtitleSyncService
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -96,7 +98,6 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle('storage:save-settings', async (_event, settings) => {
     const updated = storageService.saveSettings(settings)
-    // Update Discord RPC if settings changed
     if (updated.enableDiscordRPC) {
       discordService.connect().catch(() => {})
     } else {
@@ -146,11 +147,8 @@ function registerIpcHandlers(): void {
     }
 
     storageService.addOrUpdateSeries(newSeries)
-
-    // Trigger background thumbnail extraction
     thumbnailService.queueSeries(newSeries)
 
-    // Automatically attempt AniList match in the background
     anilistService.searchAnime(title).then((results) => {
       if (results.length > 0) {
         const top = results[0]
@@ -205,6 +203,38 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle('series:remove', (_event, seriesId: string) => {
     return storageService.removeSeries(seriesId)
+  })
+
+  // Module 1: Subtitle Sync IPC
+  ipcMain.handle('subsync:auto-sync', async (_event, seriesId: string, episodeId: string) => {
+    return await subtitleSyncService.autoSyncEpisode(seriesId, episodeId)
+  })
+
+  ipcMain.handle(
+    'subsync:nudge',
+    async (
+      _event,
+      seriesId: string,
+      episodeId: string,
+      deltaSec: number,
+      applyToSeason: boolean
+    ) => {
+      return await subtitleSyncService.nudgeSubtitleDelay(
+        seriesId,
+        episodeId,
+        deltaSec,
+        applyToSeason
+      )
+    }
+  )
+
+  ipcMain.handle('subsync:reset', async (_event, seriesId: string, episodeId: string) => {
+    await subtitleSyncService.resetSubtitleDelay(seriesId, episodeId)
+    return { currentDelay: 0 }
+  })
+
+  ipcMain.handle('subsync:get-delay', () => {
+    return vlcController.getSubtitleDelay()
   })
 
   // AniList Integration IPC
@@ -320,27 +350,19 @@ app.whenReady().then(() => {
   thumbnailService = new ThumbnailService(storageService)
   syncWorker = new SyncWorker(storageService, discordService, anilistService, () => mainWindow)
   vlcController = new VlcController(storageService, syncWorker)
+  subtitleSyncService = new SubtitleSyncService(storageService, vlcController)
 
-  // Listen for generated thumbnails and notify renderer
   thumbnailService.setCallback((seriesId, episodeId) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('thumbnail:generated', { seriesId, episodeId })
     }
   })
 
-  // Connect Discord RPC
   discordService.connect().catch(() => {})
-
-  // Register custom protocol for thumbnails
   registerCustomProtocols()
-
-  // Register all IPC handlers
   registerIpcHandlers()
-
-  // Create UI Window
   createWindow()
 
-  // Queue thumbnail generation for existing series in library
   const lib = storageService.getLibrary()
   for (const s of lib.series) {
     thumbnailService.queueSeries(s)

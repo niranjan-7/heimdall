@@ -8,6 +8,7 @@ export class VlcController {
   private currentProcess: ChildProcess | null = null
   private storageService: StorageService
   private syncWorker: SyncWorker
+  private currentSubDelay = 0
 
   constructor(storageService: StorageService, syncWorker: SyncWorker) {
     this.storageService = storageService
@@ -16,6 +17,29 @@ export class VlcController {
 
   public isRunning(): boolean {
     return this.currentProcess !== null && !this.currentProcess.killed
+  }
+
+  public async setSubtitleDelay(delaySec: number): Promise<boolean> {
+    this.currentSubDelay = delaySec
+    if (!this.isRunning()) return true
+
+    try {
+      const settings = this.storageService.getSettings()
+      const auth = 'Basic ' + Buffer.from(':' + settings.httpPassword).toString('base64')
+      const url = `http://127.0.0.1:${settings.httpPort}/requests/status.json?command=subdelay&val=${delaySec}`
+
+      const res = await fetch(url, {
+        headers: { Authorization: auth },
+        signal: AbortSignal.timeout(1000)
+      })
+      return res.ok
+    } catch {
+      return false
+    }
+  }
+
+  public getSubtitleDelay(): number {
+    return this.currentSubDelay
   }
 
   public async stopCurrentProcess(): Promise<void> {
@@ -41,6 +65,7 @@ export class VlcController {
       }
 
       this.currentProcess = null
+      this.currentSubDelay = 0
     }
   }
 
@@ -95,6 +120,10 @@ export class VlcController {
     const remainingEpisodes = series.episodes.slice(startIndex)
     const playlistPaths = remainingEpisodes.map((e) => e.filePath)
 
+    // Retrieve saved subtitle delay
+    const subDelay = targetEpisode.subDelaySec ?? series.defaultSubDelaySec ?? 0
+    this.currentSubDelay = subDelay
+
     const vlcArgs = [
       ...playlistPaths,
       `--start-time=${Math.max(0, Math.floor(startTime))}`,
@@ -102,6 +131,10 @@ export class VlcController {
       `--http-port=${settings.httpPort}`,
       `--http-password=${settings.httpPassword}`
     ]
+
+    if (subDelay !== 0) {
+      vlcArgs.push(`--sub-delay=${subDelay}`)
+    }
 
     try {
       const child = spawn(settings.vlcPath, vlcArgs, {
@@ -120,7 +153,7 @@ export class VlcController {
         this.currentProcess = null
       })
 
-      child.on('close', (code) => {
+      child.on('close', () => {
         this.syncWorker.stop()
         this.currentProcess = null
       })

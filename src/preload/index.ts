@@ -31,6 +31,22 @@ export interface IElectronAPI {
     options?: { advanceIfCompleted?: boolean; startTime?: number }
   ) => Promise<{ success: boolean; message?: string }>
   stopVlc: () => Promise<void>
+  // Module 1: Subtitle Sync
+  autoSyncSubtitle: (
+    seriesId: string,
+    episodeId: string
+  ) => Promise<{ success: boolean; offsetSec: number; message: string }>
+  nudgeSubtitleDelay: (
+    seriesId: string,
+    episodeId: string,
+    deltaSec: number,
+    applyToSeason: boolean
+  ) => Promise<{ currentDelay: number }>
+  resetSubtitleDelay: (
+    seriesId: string,
+    episodeId: string
+  ) => Promise<{ currentDelay: number }>
+  getSubtitleDelay: () => Promise<number>
   // Feature 6: AniList
   searchAniList: (query: string) => Promise<AniListMediaInfo[]>
   validateAniListToken: (
@@ -73,6 +89,15 @@ const api: IElectronAPI = {
   playVlc: (seriesId, episodeId, options) =>
     ipcRenderer.invoke('vlc:play', seriesId, episodeId, options),
   stopVlc: () => ipcRenderer.invoke('vlc:stop'),
+
+  // Subtitle Sync
+  autoSyncSubtitle: (seriesId, episodeId) =>
+    ipcRenderer.invoke('subsync:auto-sync', seriesId, episodeId),
+  nudgeSubtitleDelay: (seriesId, episodeId, deltaSec, applyToSeason) =>
+    ipcRenderer.invoke('subsync:nudge', seriesId, episodeId, deltaSec, applyToSeason),
+  resetSubtitleDelay: (seriesId, episodeId) =>
+    ipcRenderer.invoke('subsync:reset', seriesId, episodeId),
+  getSubtitleDelay: () => ipcRenderer.invoke('subsync:get-delay'),
 
   searchAniList: (query) => ipcRenderer.invoke('anilist:search', query),
   validateAniListToken: (token) => ipcRenderer.invoke('anilist:validate-token', token),
