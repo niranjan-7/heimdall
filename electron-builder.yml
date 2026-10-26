@@ -28,3 +28,38 @@ nsis:
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: Heimdall
+mac:
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+    - target: zip
+      arch:
+        - x64
+        - arm64
+  category: public.app-category.video
+  identity: null
+  hardenedRuntime: false
+  gatekeeperAssess: false
+dmg:
+  title: "Heimdall ${version}"
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+linux:
+  target:
+    - target: AppImage
+      arch:
+        - x64
+    - target: deb
+      arch:
+        - x64
+  category: Video;AudioVideo;Player;
+  executableName: heimdall
+  synopsis: VLC and mpv Watch-History & Automated Subtitle Companion
+  description: All-seeing media companion with real-time telemetry, AniList auto-scrobbling, and audio-to-speech subtitle auto-sync.
