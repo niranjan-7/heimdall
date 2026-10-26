@@ -2,6 +2,7 @@ import React from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { Film, Download, ShieldCheck, Gamepad2, Sparkles } from 'lucide-react'
 import { MotionReveal } from './MotionReveal'
+import { TiltCard } from './TiltCard'
 
 export const BentoGrid: React.FC = () => {
   const shouldReduceMotion = useReducedMotion()
@@ -58,7 +59,7 @@ export const BentoGrid: React.FC = () => {
           </MotionReveal>
         </div>
 
-        {/* 6-Tile Bento Grid with Staggered Spring Cascade */}
+        {/* 4-Tile Bento Grid with Staggered 3D Spring Cascade & 3D Tilt Cards */}
         <motion.div
           variants={containerVariants}
           initial="hidden"
@@ -67,9 +68,10 @@ export const BentoGrid: React.FC = () => {
           className="grid grid-cols-1 md:grid-cols-3 gap-6"
         >
           {/* Tile 1: Dedicated Movies & TV Library (2 Columns Wide) */}
-          <motion.div
+          <TiltCard
             variants={shouldReduceMotion ? undefined : cardVariants}
-            className="md:col-span-2 glass-panel p-8 rounded-3xl border border-white/10 relative overflow-hidden flex flex-col justify-between group hover:border-bifrost-amber/40 transition-all duration-300 shadow-xl transform-gpu"
+            accentColor="rgba(245, 158, 11, 0.2)"
+            className="md:col-span-2 hover:border-bifrost-amber/40 shadow-xl"
           >
             <div className="space-y-4 z-10">
               <div className="w-10 h-10 rounded-2xl bg-bifrost-amber/15 border border-bifrost-amber/30 text-bifrost-amber flex items-center justify-center">
@@ -123,12 +125,13 @@ export const BentoGrid: React.FC = () => {
                 </div>
               </div>
             </div>
-          </motion.div>
+          </TiltCard>
 
           {/* Tile 2: Smart 64KB Hash Subtitle Downloader */}
-          <motion.div
+          <TiltCard
             variants={shouldReduceMotion ? undefined : cardVariants}
-            className="glass-panel p-8 rounded-3xl border border-white/10 relative overflow-hidden flex flex-col justify-between group hover:border-bifrost-cyan/40 transition-all duration-300 shadow-xl transform-gpu"
+            accentColor="rgba(6, 182, 212, 0.22)"
+            className="hover:border-bifrost-cyan/40 shadow-xl"
           >
             <div className="space-y-4">
               <div className="w-10 h-10 rounded-2xl bg-bifrost-cyan/15 border border-bifrost-cyan/30 text-bifrost-cyan flex items-center justify-center">
@@ -157,12 +160,13 @@ export const BentoGrid: React.FC = () => {
                 Saved to: ./Subs/Oppenheimer.srt
               </div>
             </div>
-          </motion.div>
+          </TiltCard>
 
           {/* Tile 3: Discord Rich Presence & AniList Scrobbler */}
-          <motion.div
+          <TiltCard
             variants={shouldReduceMotion ? undefined : cardVariants}
-            className="glass-panel p-8 rounded-3xl border border-white/10 relative overflow-hidden flex flex-col justify-between group hover:border-purple-500/40 transition-all duration-300 shadow-xl transform-gpu"
+            accentColor="rgba(168, 85, 247, 0.22)"
+            className="hover:border-purple-500/40 shadow-xl"
           >
             <div className="space-y-4">
               <div className="w-10 h-10 rounded-2xl bg-purple-500/15 border border-purple-500/30 text-purple-400 flex items-center justify-center">
@@ -194,12 +198,13 @@ export const BentoGrid: React.FC = () => {
                 <div className="text-[10px] text-zinc-400 font-mono">Ep 14 • 18:42 left</div>
               </div>
             </div>
-          </motion.div>
+          </TiltCard>
 
           {/* Tile 4: 100% Offline & Zero Telemetry (2 Columns Wide) */}
-          <motion.div
+          <TiltCard
             variants={shouldReduceMotion ? undefined : cardVariants}
-            className="md:col-span-2 glass-panel p-8 rounded-3xl border border-white/10 relative overflow-hidden flex flex-col justify-between group hover:border-emerald-500/40 transition-all duration-300 shadow-xl transform-gpu"
+            accentColor="rgba(16, 185, 129, 0.2)"
+            className="md:col-span-2 hover:border-emerald-500/40 shadow-xl"
           >
             <div className="space-y-4 z-10">
               <div className="w-10 h-10 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center">
@@ -229,7 +234,7 @@ export const BentoGrid: React.FC = () => {
                 <p className="text-white font-bold">MIT Open Source</p>
               </div>
             </div>
-          </motion.div>
+          </TiltCard>
         </motion.div>
       </div>
     </section>

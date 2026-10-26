@@ -16,9 +16,14 @@ export const MobileRemoteDemo: React.FC = () => {
     offset: ['start end', 'end start']
   })
 
-  // Subtle parallax on the phone container
-  const rawPhoneY = useTransform(scrollYProgress, [0, 1], [30, -30])
+  // Opposing Scroll Parallax: Left phone floats upward faster, Right rises steadily
+  const rawPhoneY = useTransform(scrollYProgress, [0, 1], [50, -30])
+  const rawPhoneRotateZ = useTransform(scrollYProgress, [0, 1], [-2, 0])
+  const rawRightY = useTransform(scrollYProgress, [0, 1], [30, 0])
+
   const phoneY = shouldReduceMotion ? 0 : rawPhoneY
+  const phoneRotateZ = shouldReduceMotion ? 0 : rawPhoneRotateZ
+  const rightY = shouldReduceMotion ? 0 : rawRightY
 
   // Subtle playhead increment
   useEffect(() => {
@@ -64,11 +69,11 @@ export const MobileRemoteDemo: React.FC = () => {
           </MotionReveal>
         </div>
 
-        {/* Content Layout */}
+        {/* Content Layout with Opposing Parallax */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-          {/* Left: 3D-styled Phone Mockup with Parallax */}
+          {/* Left: 3D-styled Phone Mockup with Parallax Lift */}
           <motion.div
-            style={{ y: phoneY }}
+            style={{ y: phoneY, rotateZ: phoneRotateZ }}
             className="lg:col-span-6 flex justify-center transform-gpu"
           >
             <motion.div
@@ -99,74 +104,70 @@ export const MobileRemoteDemo: React.FC = () => {
                 {/* Remote App Header */}
                 <div className="flex items-center justify-between pb-3 border-b border-white/5">
                   <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-lg bg-bifrost-amber/20 border border-bifrost-amber/40 flex items-center justify-center">
-                      <span className="text-[10px] font-black text-bifrost-amber">H</span>
+                    <div className="w-6 h-6 rounded-lg bg-bifrost-amber flex items-center justify-center font-bold text-zinc-950 text-xs">
+                      H
                     </div>
-                    <span className="text-xs font-bold tracking-wider text-zinc-200">COUCH REMOTE</span>
+                    <span className="text-xs font-bold font-mono tracking-wider">HEIMDALL REMOTE</span>
                   </div>
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[10px] font-medium flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    Live
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-semibold">
+                    0ms SSE
                   </span>
                 </div>
 
-                {/* Now Playing Poster Card */}
-                <div className="my-5 relative rounded-2xl overflow-hidden aspect-[16/10] bg-zinc-900 border border-white/10 group shadow-lg">
-                  <img
-                    src="https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=800&q=80"
-                    alt="Now Playing"
-                    className="w-full h-full object-cover opacity-80"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
-                  <div className="absolute bottom-3 left-3 right-3 space-y-0.5">
-                    <span className="px-2 py-0.5 rounded bg-bifrost-amber/90 text-zinc-950 text-[9px] font-extrabold tracking-wide">
-                      MPV ENGINE
-                    </span>
-                    <h5 className="text-sm font-extrabold text-white truncate">Dune: Part Two (2024)</h5>
-                    <p className="text-[10px] text-zinc-300">2160p HDR • Dolby Atmos • 02:46:12</p>
+                {/* Now Playing Banner */}
+                <div className="my-5 p-3.5 rounded-2xl bg-zinc-900/90 border border-white/5 space-y-2">
+                  <div className="text-[10px] font-mono text-zinc-400 flex items-center justify-between">
+                    <span>NOW PLAYING • mpv</span>
+                    <span className="text-bifrost-cyan">4K HDR</span>
                   </div>
+                  <div className="text-sm font-bold text-white truncate">Dune: Part Two (2024)</div>
+                  <div className="text-xs text-zinc-400 truncate">Chapter 14 — Worm Ride</div>
                 </div>
 
-                {/* Progress Scrubber */}
-                <div className="space-y-1 mb-5">
-                  <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden relative cursor-pointer">
+                {/* Playback Scrubber */}
+                <div className="space-y-1.5 my-4">
+                  <div className="h-2 bg-zinc-800 rounded-full overflow-hidden relative cursor-pointer">
                     <div
-                      className="h-full bg-gradient-to-r from-bifrost-amber to-amber-400 rounded-full transition-all duration-300"
+                      className="h-full bg-gradient-to-r from-bifrost-amber to-amber-300 rounded-full relative"
                       style={{ width: `${progress}%` }}
                     />
                   </div>
-                  <div className="flex justify-between text-[10px] text-zinc-500 font-mono">
-                    <span>01:10:24</span>
+                  <div className="flex justify-between text-[10px] font-mono text-zinc-500">
+                    <span>01:14:28</span>
                     <span>02:46:12</span>
                   </div>
                 </div>
 
                 {/* Playback Controls */}
-                <div className="flex items-center justify-between px-2 mb-6">
+                <div className="flex items-center justify-center gap-6 my-6">
                   <button
-                    onClick={() => setProgress((p) => Math.max(0, p - 5))}
-                    className="p-3 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-white/5 active:scale-95 transition-all cursor-pointer"
+                    onClick={() => setProgress((prev) => Math.max(0, prev - 5))}
+                    className="p-2 rounded-full bg-zinc-900 text-zinc-300 hover:text-white active:scale-90 transition-transform cursor-pointer"
                   >
-                    <Rewind className="w-4 h-4" />
+                    <Rewind className="w-5 h-5" />
                   </button>
 
                   <button
                     onClick={() => setIsPlaying(!isPlaying)}
-                    className="w-14 h-14 rounded-2xl bg-gradient-to-r from-bifrost-amber to-amber-600 text-zinc-950 flex items-center justify-center shadow-lg shadow-bifrost-amber/30 active:scale-90 transition-all cursor-pointer"
+                    className="w-14 h-14 rounded-full bg-gradient-to-tr from-bifrost-amber to-amber-500 text-zinc-950 flex items-center justify-center shadow-lg shadow-bifrost-amber/30 active:scale-95 transition-transform cursor-pointer"
                   >
-                    {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-0.5" />}
+                    {isPlaying ? (
+                      <Pause className="w-6 h-6 fill-zinc-950" />
+                    ) : (
+                      <Play className="w-6 h-6 fill-zinc-950 ml-1" />
+                    )}
                   </button>
 
                   <button
-                    onClick={() => setProgress((p) => Math.min(100, p + 5))}
-                    className="p-3 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-white/5 active:scale-95 transition-all cursor-pointer"
+                    onClick={() => setProgress((prev) => Math.min(100, prev + 5))}
+                    className="p-2 rounded-full bg-zinc-900 text-zinc-300 hover:text-white active:scale-90 transition-transform cursor-pointer"
                   >
-                    <FastForward className="w-4 h-4" />
+                    <FastForward className="w-5 h-5" />
                   </button>
                 </div>
 
-                {/* Subtitle Nudge Strip on Phone */}
-                <div className="p-3 rounded-2xl bg-zinc-900/80 border border-white/5 space-y-2 mb-4">
+                {/* Subtitle Sync Micro-Controls */}
+                <div className="p-3 rounded-2xl bg-zinc-900/60 border border-white/5 space-y-2 mb-4">
                   <div className="flex items-center justify-between text-[11px] text-zinc-400">
                     <span className="flex items-center gap-1.5 font-medium">
                       <MessageSquare className="w-3 h-3 text-bifrost-amber" />
@@ -223,8 +224,9 @@ export const MobileRemoteDemo: React.FC = () => {
             </motion.div>
           </motion.div>
 
-          {/* Right: Feature Highlights & QR Scanner Card with Spring Entrance */}
+          {/* Right: Feature Highlights & QR Scanner Card with Steady Parallax & Laser Sweep */}
           <motion.div
+            style={{ y: rightY }}
             initial={shouldReduceMotion ? { opacity: 0 } : { y: 35, opacity: 0 }}
             whileInView={{ y: 0, opacity: 1 }}
             viewport={{ once: true, margin: '-80px' }}
@@ -240,11 +242,23 @@ export const MobileRemoteDemo: React.FC = () => {
               </p>
             </div>
 
-            {/* QR Connection Card */}
-            <div className="glass-panel p-6 rounded-3xl border border-white/10 flex flex-col sm:flex-row items-center gap-6 shadow-xl">
-              <div className="p-3 rounded-2xl bg-white text-zinc-950 shadow-md flex-shrink-0">
+            {/* QR Connection Card with Looping Laser Effect */}
+            <div className="glass-panel p-6 rounded-3xl border border-white/10 flex flex-col sm:flex-row items-center gap-6 shadow-xl relative overflow-hidden">
+              {/* QR Container with Laser Scanline */}
+              <div className="relative p-3 rounded-2xl bg-white text-zinc-950 shadow-md flex-shrink-0 overflow-hidden">
+                {/* Looping Vertical Amber Laser Scan-Line */}
+                <motion.div
+                  animate={
+                    shouldReduceMotion
+                      ? {}
+                      : { top: ['0%', '92%', '0%'] }
+                  }
+                  transition={{ repeat: Infinity, duration: 2.4, ease: 'easeInOut' }}
+                  className="absolute left-0 right-0 h-[2.5px] bg-gradient-to-r from-transparent via-amber-500 to-transparent shadow-[0_0_10px_rgba(245,158,11,0.95)] z-20 pointer-events-none"
+                />
+
                 {/* SVG QR Code Illustration */}
-                <div className="w-28 h-28 flex flex-col justify-between p-1 bg-white">
+                <div className="w-28 h-28 flex flex-col justify-between p-1 bg-white relative z-10">
                   <div className="flex justify-between">
                     <div className="w-7 h-7 border-4 border-black rounded-sm flex items-center justify-center">
                       <div className="w-2.5 h-2.5 bg-black rounded-2xs" />
@@ -253,63 +267,48 @@ export const MobileRemoteDemo: React.FC = () => {
                       <div className="w-2.5 h-2.5 bg-black rounded-2xs" />
                     </div>
                   </div>
-                  <div className="flex items-center justify-center gap-1">
-                    <div className="w-2 h-2 bg-black" />
-                    <div className="w-3 h-1 bg-black" />
-                    <div className="w-1.5 h-3 bg-black" />
-                    <div className="w-2.5 h-2.5 bg-bifrost-amber rounded-xs" />
+                  <div className="flex items-center justify-center">
+                    <div className="w-6 h-6 bg-black rounded-sm flex items-center justify-center text-white text-[9px] font-bold">
+                      H
+                    </div>
                   </div>
-                  <div className="flex justify-between items-end">
+                  <div className="flex justify-between">
                     <div className="w-7 h-7 border-4 border-black rounded-sm flex items-center justify-center">
                       <div className="w-2.5 h-2.5 bg-black rounded-2xs" />
                     </div>
-                    <div className="grid grid-cols-2 gap-1">
-                      <div className="w-2 h-2 bg-black" />
-                      <div className="w-2 h-2 bg-black" />
+                    <div className="w-7 h-7 grid grid-cols-2 gap-1 p-1">
+                      <div className="bg-black rounded-2xs" />
+                      <div className="bg-black rounded-2xs" />
+                      <div className="bg-black rounded-2xs" />
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-2 text-center sm:text-left">
-                <span className="px-2.5 py-0.5 rounded-full bg-bifrost-amber/20 text-bifrost-amber text-[11px] font-bold">
-                  LOCAL WI-FI ONLY
-                </span>
-                <h4 className="text-white font-bold text-base">Point Phone Camera Here</h4>
-                <p className="text-zinc-400 text-xs">
-                  Connects via Server-Sent Events (SSE). Seamlessly updates seek position and volume in real-time with 0% cloud dependence.
+              {/* Instructions */}
+              <div className="space-y-3 text-center sm:text-left">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-xs font-mono font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                  LAN Server Listening: 42125
+                </div>
+                <div className="text-white font-bold text-sm">
+                  1. Scan with iPhone or Android Camera
+                </div>
+                <p className="text-zinc-400 text-xs leading-relaxed">
+                  Opens the zero-install progressive web app immediately. No App Store logins, no Bluetooth pairing headaches.
                 </p>
-                <div className="pt-1 text-[11px] font-mono text-zinc-500">
-                  http://192.168.x.x:42125
+                <div className="text-[11px] font-mono text-zinc-500">
+                  Fallback URL: <span className="text-zinc-300">http://192.168.1.100:42125</span>
                 </div>
               </div>
             </div>
 
-            {/* List of 3 Key Advantages */}
-            <div className="space-y-4">
-              <div className="flex items-start gap-3.5">
-                <div className="w-8 h-8 rounded-xl bg-bifrost-amber/15 border border-bifrost-amber/30 text-bifrost-amber flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <Sparkles className="w-4 h-4" />
-                </div>
-                <div>
-                  <h5 className="text-white font-bold text-sm">Instant Progressive Web App (PWA)</h5>
-                  <p className="text-zinc-400 text-xs mt-0.5 leading-relaxed">
-                    Add it to your home screen with one tap for a true fullscreen native app experience on iOS and Android.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3.5">
-                <div className="w-8 h-8 rounded-xl bg-bifrost-cyan/15 border border-bifrost-cyan/30 text-bifrost-cyan flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <Wifi className="w-4 h-4" />
-                </div>
-                <div>
-                  <h5 className="text-white font-bold text-sm">Zero Network Latency</h5>
-                  <p className="text-zinc-400 text-xs mt-0.5 leading-relaxed">
-                    Commands execute locally over your LAN router in under 5 milliseconds. No spinning wheels.
-                  </p>
-                </div>
-              </div>
+            {/* Privacy Guarantee Pill */}
+            <div className="p-4 rounded-2xl bg-zinc-900/60 border border-white/5 flex items-center gap-3 text-xs text-zinc-300">
+              <Sparkles className="w-4 h-4 text-bifrost-amber flex-shrink-0" />
+              <span>
+                <strong>100% Zero-Cloud Architecture.</strong> The remote connection only communicates within your local private subnet.
+              </span>
             </div>
           </motion.div>
         </div>

@@ -35,30 +35,42 @@ export const DualPlayerDemo: React.FC = () => {
             </p>
           </MotionReveal>
 
-          {/* Engine Selector Segmented Control */}
+          {/* Engine Selector Segmented Control with layoutId Gliding Highlight */}
           <MotionReveal delay={0.3}>
             <div className="flex items-center justify-center pt-4">
-              <div className="p-1.5 rounded-2xl glass-panel border border-white/10 flex items-center gap-1 shadow-xl">
+              <div className="p-1.5 rounded-2xl glass-panel border border-white/10 flex items-center gap-1 shadow-xl relative">
+                {/* mpv button */}
                 <button
                   onClick={() => setActiveEngine('mpv')}
-                  className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 cursor-pointer ${
-                    activeEngine === 'mpv'
-                      ? 'bg-bifrost-cyan text-zinc-950 shadow-lg shadow-bifrost-cyan/20 scale-105'
-                      : 'text-zinc-400 hover:text-white'
+                  className={`relative px-6 py-2.5 rounded-xl font-bold text-sm transition-colors flex items-center gap-2 cursor-pointer z-10 ${
+                    activeEngine === 'mpv' ? 'text-zinc-950 font-black' : 'text-zinc-400 hover:text-white'
                   }`}
                 >
+                  {activeEngine === 'mpv' && (
+                    <motion.div
+                      layoutId="engineActiveTab"
+                      className="absolute inset-0 bg-bifrost-cyan rounded-xl shadow-lg shadow-bifrost-cyan/30 -z-10"
+                      transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+                    />
+                  )}
                   <Cpu className="w-4 h-4" />
-                  <span>mpv Player (Modern & Shaders)</span>
+                  <span>mpv Player (Modern Enthusiast)</span>
                 </button>
 
+                {/* VLC button */}
                 <button
                   onClick={() => setActiveEngine('vlc')}
-                  className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 cursor-pointer ${
-                    activeEngine === 'vlc'
-                      ? 'bg-bifrost-amber text-zinc-950 shadow-lg shadow-bifrost-amber/20 scale-105'
-                      : 'text-zinc-400 hover:text-white'
+                  className={`relative px-6 py-2.5 rounded-xl font-bold text-sm transition-colors flex items-center gap-2 cursor-pointer z-10 ${
+                    activeEngine === 'vlc' ? 'text-zinc-950 font-black' : 'text-zinc-400 hover:text-white'
                   }`}
                 >
+                  {activeEngine === 'vlc' && (
+                    <motion.div
+                      layoutId="engineActiveTab"
+                      className="absolute inset-0 bg-bifrost-amber rounded-xl shadow-lg shadow-bifrost-amber/30 -z-10"
+                      transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+                    />
+                  )}
                   <Tv className="w-4 h-4" />
                   <span>VLC Media Player (Classic & Robust)</span>
                 </button>
@@ -67,7 +79,7 @@ export const DualPlayerDemo: React.FC = () => {
           </MotionReveal>
         </div>
 
-        {/* Engine Showcase Card with Spring Entrance */}
+        {/* Engine Showcase Card with Spring Entrance & AnimatePresence Morph */}
         <motion.div
           initial={shouldReduceMotion ? { opacity: 0 } : { y: 35, opacity: 0, scale: 0.98 }}
           whileInView={{ y: 0, opacity: 1, scale: 1 }}
@@ -79,10 +91,10 @@ export const DualPlayerDemo: React.FC = () => {
             {activeEngine === 'mpv' ? (
               <motion.div
                 key="mpv"
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -15 }}
-                transition={{ duration: 0.3 }}
+                initial={{ opacity: 0, x: 20, scale: 0.98 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: -20, scale: 0.98 }}
+                transition={{ duration: 0.28, ease: 'easeOut' }}
                 className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center"
               >
                 {/* Left Specs */}
@@ -149,7 +161,7 @@ export const DualPlayerDemo: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Right Interactive mpv Pipeline Preview */}
+                {/* Right Interactive mpv Pipeline Preview with Anime4K split divider sweep */}
                 <div className="lg:col-span-5">
                   <div className="glass-card rounded-2xl border border-bifrost-cyan/20 p-5 space-y-4 bg-zinc-950/80 shadow-xl">
                     <div className="flex items-center justify-between pb-3 border-b border-white/5 text-xs">
@@ -182,8 +194,8 @@ export const DualPlayerDemo: React.FC = () => {
                         </button>
                       </div>
 
-                      {/* Simulated Screen rendering */}
-                      <div className="relative h-40 rounded-lg overflow-hidden border border-white/10 bg-zinc-900 flex items-center justify-center">
+                      {/* Screen rendering with split divider sweep */}
+                      <div className="relative h-44 rounded-lg overflow-hidden border border-white/10 bg-zinc-900 flex items-center justify-center">
                         <div
                           className={`w-full h-full bg-cover bg-center transition-all duration-300 ${
                             anime4kEnabled ? 'contrast-110 saturate-110 brightness-105' : 'blur-[0.6px]'
@@ -192,6 +204,21 @@ export const DualPlayerDemo: React.FC = () => {
                             backgroundImage: `url('https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=800&q=80')`
                           }}
                         />
+
+                        {/* Animated Anime4K Shader Suite Split Comparison Divider */}
+                        {anime4kEnabled && (
+                          <motion.div
+                            initial={shouldReduceMotion ? { left: '50%' } : { left: '15%' }}
+                            animate={{ left: '50%' }}
+                            transition={{ duration: 1.2, delay: 0.3, ease: 'easeOut' }}
+                            className="absolute top-0 bottom-0 w-0.5 bg-bifrost-cyan shadow-[0_0_12px_rgba(6,182,212,0.9)] z-20 pointer-events-none"
+                          >
+                            <div className="absolute top-1/2 -translate-y-1/2 -left-3.5 w-7 h-7 rounded-full bg-bifrost-cyan text-zinc-950 font-mono text-[9px] font-bold flex items-center justify-center shadow-md">
+                              4K
+                            </div>
+                          </motion.div>
+                        )}
+
                         <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/70 backdrop-blur-md text-[10px] font-mono text-white border border-white/10">
                           {anime4kEnabled ? 'GLSL SHADER: Anime4K v4.0.1 (High)' : 'Source: 1080p Native'}
                         </div>
@@ -212,10 +239,10 @@ export const DualPlayerDemo: React.FC = () => {
             ) : (
               <motion.div
                 key="vlc"
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -15 }}
-                transition={{ duration: 0.3 }}
+                initial={{ opacity: 0, x: 20, scale: 0.98 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: -20, scale: 0.98 }}
+                transition={{ duration: 0.28, ease: 'easeOut' }}
                 className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center"
               >
                 {/* Left Specs */}
@@ -252,80 +279,60 @@ export const DualPlayerDemo: React.FC = () => {
 
                     <div className="p-4 rounded-2xl bg-zinc-900/60 border border-white/5 space-y-1.5">
                       <div className="flex items-center gap-2 text-white font-semibold text-sm">
-                        <Sparkles className="w-4 h-4 text-bifrost-amber" />
-                        <span>Background Polling</span>
+                        <Check className="w-4 h-4 text-bifrost-amber" />
+                        <span>Auto-Detect Web API</span>
                       </div>
                       <p className="text-zinc-400 text-xs">
-                        Graceful retry connection loop auto-attaches to VLC when opened and goes to sleep when closed.
+                        Discovers local VLC port 8080 automatically. No complicated config file editing needed.
                       </p>
                     </div>
 
                     <div className="p-4 rounded-2xl bg-zinc-900/60 border border-white/5 space-y-1.5">
                       <div className="flex items-center gap-2 text-white font-semibold text-sm">
-                        <Gauge className="w-4 h-4 text-bifrost-amber" />
-                        <span>Lightweight & Rock Solid</span>
+                        <Check className="w-4 h-4 text-bifrost-amber" />
+                        <span>Seamless Scrobbling</span>
                       </div>
                       <p className="text-zinc-400 text-xs">
-                        Ultra-low CPU overhead. Heimdall’s watcher consumes &lt; 0.1% CPU in the background while VLC plays.
+                        Polls playback state via lightweight HTTP GET requests and pushes watch status to Discord and AniList.
                       </p>
                     </div>
 
                     <div className="p-4 rounded-2xl bg-zinc-900/60 border border-white/5 space-y-1.5">
                       <div className="flex items-center gap-2 text-white font-semibold text-sm">
-                        <Layers className="w-4 h-4 text-bifrost-amber" />
-                        <span>Subtitle Track Switching</span>
+                        <Check className="w-4 h-4 text-bifrost-amber" />
+                        <span>Hardware Decoding</span>
                       </div>
                       <p className="text-zinc-400 text-xs">
-                        Switch audio languages or subtitle streams directly from Heimdall or your phone remote without touching the mouse.
+                        Leverages VLC’s DXVA2 / D3D11 hardware acceleration to play heavy 4K HDR files on any PC.
                       </p>
                     </div>
                   </div>
                 </div>
 
-                {/* Right Interactive VLC Status Preview */}
+                {/* Right Interactive VLC Pipeline Preview */}
                 <div className="lg:col-span-5">
                   <div className="glass-card rounded-2xl border border-bifrost-amber/20 p-5 space-y-4 bg-zinc-950/80 shadow-xl">
                     <div className="flex items-center justify-between pb-3 border-b border-white/5 text-xs">
                       <span className="font-mono text-zinc-400">Endpoint: http://127.0.0.1:8080</span>
                       <span className="text-amber-400 font-mono flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-amber-400" />
-                        HTTP Polling (500ms)
+                        <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                        VLC Active
                       </span>
                     </div>
 
-                    {/* VLC Status Mockup */}
+                    {/* VLC Status Box */}
                     <div className="p-4 rounded-xl bg-zinc-900/80 border border-white/5 space-y-3 font-mono text-xs">
-                      <div className="text-zinc-400 pb-2 border-b border-white/5 flex items-center justify-between">
-                        <span>VLC State Telemetry</span>
-                        <span className="text-emerald-400">STATE: PLAYING</span>
-                      </div>
-                      <div className="space-y-1 text-zinc-300">
-                        <div className="flex justify-between">
-                          <span className="text-zinc-500">File:</span>
-                          <span className="text-zinc-200 truncate max-w-[200px]">Interstellar.2014.1080p.mkv</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-zinc-500">Position:</span>
-                          <span className="text-bifrost-amber font-bold">01:42:15 / 02:49:03 (60.5%)</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-zinc-500">Audio Stream:</span>
-                          <span className="text-zinc-200">Track 1 [English 5.1 DTS-HD]</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-zinc-500">Subtitles:</span>
-                          <span className="text-zinc-200">Track 2 [English SDH]</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-zinc-500">Sub Delay:</span>
-                          <span className="text-emerald-400">0.000s (Auto-Synced)</span>
-                        </div>
+                      <div className="text-zinc-400">VLC Media Player 3.0.20 Vetinari</div>
+                      <div className="p-3 rounded-lg bg-zinc-950 border border-white/5 text-zinc-300 space-y-1 text-[11px]">
+                        <div>GET /requests/status.xml</div>
+                        <div className="text-emerald-400">&lt;state&gt;playing&lt;/state&gt;</div>
+                        <div className="text-bifrost-amber">&lt;time&gt;5420&lt;/time&gt; &lt;length&gt;8640&lt;/length&gt;</div>
                       </div>
                     </div>
 
                     <div className="p-3 rounded-xl bg-zinc-900/50 border border-white/5 flex items-center justify-between text-xs font-mono">
-                      <span className="text-zinc-500">Compatibility</span>
-                      <span className="text-bifrost-amber font-bold">100% Codec Coverage</span>
+                      <span className="text-zinc-500">Compatibility Score</span>
+                      <span className="text-bifrost-amber font-bold">100% (Universal)</span>
                     </div>
                   </div>
                 </div>

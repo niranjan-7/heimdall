@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion'
+import { motion, useScroll, useTransform, useSpring, useReducedMotion } from 'framer-motion'
 import confetti from 'canvas-confetti'
 import { Download, Sparkles, Shield, Zap, ChevronRight, CheckCircle2, Play } from 'lucide-react'
 import { InteractiveAppMockup } from './InteractiveAppMockup'
@@ -26,18 +26,25 @@ export const HeroSection: React.FC = () => {
     offset: ['start start', 'end start']
   })
 
-  // Transform specs:
-  // Headline scale: 1 -> 0.92, opacity: 1 -> 0
-  // Visual mockup parallax: y: [0, -80]
-  // Aurora background: y: [0, 120]
-  const rawHeadlineScale = useTransform(scrollYProgress, [0, 0.7], [1, 0.92])
-  const rawHeadlineOpacity = useTransform(scrollYProgress, [0, 0.6], [1, 0])
-  const rawMockupY = useTransform(scrollYProgress, [0, 1], [0, -80])
-  const rawAuroraY = useTransform(scrollYProgress, [0, 1], [0, 120])
+  // Apple-style 3D App Window Unfold on Scroll [0, 0.45]
+  const rawRotateX = useTransform(scrollYProgress, [0, 0.45], [18, 0])
+  const rawMockupScale = useTransform(scrollYProgress, [0, 0.45], [0.92, 1.0])
+  const rawMockupY = useTransform(scrollYProgress, [0, 0.45], [40, 0])
+  const rawGlowOpacity = useTransform(scrollYProgress, [0, 0.45], [0.3, 0.85])
 
+  const rotateX = useSpring(rawRotateX, { stiffness: 100, damping: 25 })
+  const mockupScale = useSpring(rawMockupScale, { stiffness: 100, damping: 25 })
+  const mockupY = useSpring(rawMockupY, { stiffness: 100, damping: 25 })
+  const glowOpacity = useSpring(rawGlowOpacity, { stiffness: 100, damping: 25 })
+
+  // Headline scroll exit fade
+  const rawHeadlineScale = useTransform(scrollYProgress, [0, 0.6], [1, 0.92])
+  const rawHeadlineOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0])
   const headlineScale = shouldReduceMotion ? 1 : rawHeadlineScale
   const headlineOpacity = shouldReduceMotion ? 1 : rawHeadlineOpacity
-  const mockupY = shouldReduceMotion ? 0 : rawMockupY
+
+  // Background aurora shift
+  const rawAuroraY = useTransform(scrollYProgress, [0, 1], [0, 100])
   const auroraY = shouldReduceMotion ? 0 : rawAuroraY
 
   const handleDownloadClick = () => {
@@ -58,6 +65,32 @@ export const HeroSection: React.FC = () => {
     linux: { name: 'Linux (.AppImage)', link: 'https://github.com/niranjan-7/heimdall/releases/latest' }
   }
 
+  // Staggered text entrance kinematics with spring and motion blur
+  const textContainerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+        delayChildren: 0.05
+      }
+    }
+  }
+
+  const textItemVariants = {
+    hidden: { y: 24, opacity: 0, filter: 'blur(8px)' },
+    visible: {
+      y: 0,
+      opacity: 1,
+      filter: 'blur(0px)',
+      transition: {
+        type: 'spring' as const,
+        stiffness: 100,
+        damping: 20
+      }
+    }
+  }
+
   return (
     <section
       ref={containerRef}
@@ -73,31 +106,30 @@ export const HeroSection: React.FC = () => {
         className="absolute top-1/3 left-1/3 w-[450px] h-[300px] bg-bifrost-amber/15 rounded-full blur-[100px] pointer-events-none transform-gpu"
       />
 
-      {/* Hero Content (Headline, Subtitle, CTA with Scroll Exit scaling & fade) */}
+      {/* Hero Content with Staggered Entrance & Scroll Exit */}
       <motion.div
         style={{
           scale: headlineScale,
           opacity: headlineOpacity
         }}
+        variants={textContainerVariants}
+        initial="hidden"
+        animate="visible"
         className="relative max-w-5xl mx-auto px-6 text-center space-y-6 transform-gpu"
       >
         {/* Release Tag Pill */}
         <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+          variants={textItemVariants}
           className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full glass-card border-bifrost-amber/30 text-bifrost-amber text-xs font-semibold shadow-lg shadow-bifrost-amber/10"
         >
           <Sparkles className="w-3.5 h-3.5 text-bifrost-amber animate-spin" style={{ animationDuration: '8s' }} />
-          <span>Heimdall v1.2.0 Released • Multi-Engine + Couch Remote</span>
+          <span>Open-Source Desktop Media Companion • Heimdall v0.1.3 (v1.2.0)</span>
           <ChevronRight className="w-3 h-3 text-bifrost-amber" />
         </motion.div>
 
         {/* Main Headline */}
         <motion.h1
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ type: 'spring', stiffness: 100, damping: 20, delay: 0.1 }}
+          variants={textItemVariants}
           className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight text-white leading-[1.08]"
         >
           The All-Seeing Watchman for <br />
@@ -108,9 +140,7 @@ export const HeroSection: React.FC = () => {
 
         {/* Subtitle */}
         <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ type: 'spring', stiffness: 100, damping: 20, delay: 0.2 }}
+          variants={textItemVariants}
           className="max-w-2xl mx-auto text-base sm:text-lg text-zinc-400 font-normal leading-relaxed"
         >
           Zero manual tracking. Heimdall connects directly to your local players with{' '}
@@ -121,9 +151,7 @@ export const HeroSection: React.FC = () => {
 
         {/* CTA Buttons */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ type: 'spring', stiffness: 100, damping: 20, delay: 0.3 }}
+          variants={textItemVariants}
           className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4"
         >
           <a
@@ -146,9 +174,7 @@ export const HeroSection: React.FC = () => {
 
         {/* Trust badges */}
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 0.4 }}
+          variants={textItemVariants}
           className="flex items-center justify-center gap-6 pt-2 text-xs text-zinc-500 font-medium flex-wrap"
         >
           <div className="flex items-center gap-1.5">
@@ -166,13 +192,29 @@ export const HeroSection: React.FC = () => {
         </motion.div>
       </motion.div>
 
-      {/* 3D Tilt Application Mockup Showcase with Parallax Shift */}
-      <motion.div
-        style={{ y: mockupY }}
-        className="w-full max-w-6xl mx-auto px-4 mt-12 transform-gpu"
+      {/* Apple-Style 3D Perspective App Window Unfold on Scroll */}
+      <div
+        style={{ perspective: 1200 }}
+        className="w-full max-w-6xl mx-auto px-4 mt-12 relative"
       >
-        <InteractiveAppMockup />
-      </motion.div>
+        {/* Dynamic ambient glow behind the window, scaling opacity on unfold */}
+        <motion.div
+          style={{ opacity: shouldReduceMotion ? 0.6 : glowOpacity }}
+          className="absolute inset-x-8 -inset-y-4 bg-gradient-to-tr from-bifrost-amber/30 via-bifrost-cyan/25 to-purple-600/20 rounded-3xl blur-[90px] pointer-events-none transform-gpu"
+        />
+
+        <motion.div
+          style={{
+            rotateX: shouldReduceMotion ? 0 : rotateX,
+            scale: shouldReduceMotion ? 1 : mockupScale,
+            y: shouldReduceMotion ? 0 : mockupY,
+            transformStyle: 'preserve-3d'
+          }}
+          className="transform-gpu relative z-10"
+        >
+          <InteractiveAppMockup />
+        </motion.div>
+      </div>
     </section>
   )
 }

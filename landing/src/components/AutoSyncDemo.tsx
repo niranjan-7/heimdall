@@ -1,7 +1,39 @@
 import React, { useState, useEffect } from 'react'
-import { motion, useReducedMotion } from 'framer-motion'
+import { motion, useMotionValue, useMotionTemplate, useReducedMotion } from 'framer-motion'
 import { Sparkles, Sliders, Waves, CheckCircle2, RotateCcw, AlertTriangle, Play, Pause } from 'lucide-react'
 import { MotionReveal } from './MotionReveal'
+
+// Reusable Spotlight Card component for mouse-move radial spotlight glow
+const SpotlightCard: React.FC<{
+  children: React.ReactNode
+  className?: string
+  variants?: any
+}> = ({ children, className = '', variants }) => {
+  const mouseX = useMotionValue(0)
+  const mouseY = useMotionValue(0)
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    mouseX.set(e.clientX - rect.left)
+    mouseY.set(e.clientY - rect.top)
+  }
+
+  return (
+    <motion.div
+      variants={variants}
+      onMouseMove={handleMouseMove}
+      className={`relative group rounded-2xl p-6 glass-card border border-white/10 overflow-hidden transform-gpu ${className}`}
+    >
+      <motion.div
+        className="pointer-events-none absolute -inset-px rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+        style={{
+          background: useMotionTemplate`radial-gradient(280px circle at ${mouseX}px ${mouseY}px, rgba(245, 158, 11, 0.16), transparent 80%)`
+        }}
+      />
+      <div className="relative z-10 space-y-2">{children}</div>
+    </motion.div>
+  )
+}
 
 export const AutoSyncDemo: React.FC = () => {
   const [offsetMs, setOffsetMs] = useState<number>(1850)
@@ -9,6 +41,8 @@ export const AutoSyncDemo: React.FC = () => {
   const [isSynced, setIsSynced] = useState<boolean>(false)
   const [isPlaying, setIsPlaying] = useState<boolean>(true)
   const [playhead, setPlayhead] = useState<number>(0)
+  const [hasAutoDemoRun, setHasAutoDemoRun] = useState<boolean>(false)
+  const [highlightShimmer, setHighlightShimmer] = useState<boolean>(false)
   const shouldReduceMotion = useReducedMotion()
 
   // Simulated audio playback ticker
@@ -20,19 +54,40 @@ export const AutoSyncDemo: React.FC = () => {
     return () => clearInterval(interval)
   }, [isPlaying])
 
+  // Scroll-driven auto-demo on first viewport entry
+  const handleViewportEnter = () => {
+    if (hasAutoDemoRun) return
+    setHasAutoDemoRun(true)
+
+    // Trigger smooth spring animation 600ms after entering the viewport
+    setTimeout(() => {
+      setHighlightShimmer(true)
+      setIsScanning(true)
+      setTimeout(() => {
+        setIsScanning(false)
+        setOffsetMs(0)
+        setIsSynced(true)
+        setTimeout(() => setHighlightShimmer(false), 2000)
+      }, 1200)
+    }, 600)
+  }
+
   const triggerAutoSync = () => {
     setIsScanning(true)
+    setHighlightShimmer(true)
     setTimeout(() => {
       setIsScanning(false)
       setOffsetMs(0)
       setIsSynced(true)
-    }, 1400)
+      setTimeout(() => setHighlightShimmer(false), 1500)
+    }, 1200)
   }
 
   const resetDemo = () => {
     setOffsetMs(1850)
     setIsSynced(false)
     setIsScanning(false)
+    setHighlightShimmer(false)
   }
 
   const nudge = (delta: number) => {
@@ -65,7 +120,7 @@ export const AutoSyncDemo: React.FC = () => {
   }
 
   const cardVariants = {
-    hidden: { y: 30, opacity: 0, scale: 0.96 },
+    hidden: { y: 35, opacity: 0, scale: 0.96 },
     visible: {
       y: 0,
       opacity: 1,
@@ -79,7 +134,12 @@ export const AutoSyncDemo: React.FC = () => {
   }
 
   return (
-    <section id="auto-sync" className="py-24 relative overflow-hidden">
+    <motion.section
+      id="auto-sync"
+      onViewportEnter={handleViewportEnter}
+      viewport={{ amount: 0.4, once: true }}
+      className="py-24 relative overflow-hidden"
+    >
       {/* Background radial glow */}
       <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-[550px] h-[350px] bg-bifrost-amber/10 rounded-full blur-[140px] pointer-events-none" />
       <div className="absolute top-1/3 right-1/4 w-[400px] h-[300px] bg-bifrost-cyan/10 rounded-full blur-[130px] pointer-events-none" />
@@ -102,91 +162,99 @@ export const AutoSyncDemo: React.FC = () => {
 
           <MotionReveal delay={0.2}>
             <p className="text-zinc-400 text-sm sm:text-base leading-relaxed">
-              Never fiddle with VLC’s <kbd className="px-1.5 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-300 font-mono text-xs">G</kbd> and <kbd className="px-1.5 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-300 font-mono text-xs">H</kbd> keys again. Heimdall extracts speech envelopes from the film’s audio track and cross-correlates timestamps to snap subtitles into atomic alignment.
+              Downloaded a movie with out-of-sync subtitles? Heimdall runs an embedded FFmpeg voice-energy pass against subtitle cue timestamps and calculates the cross-correlation peak. No guessing, no frustration.
             </p>
           </MotionReveal>
         </div>
 
-        {/* Interactive Visualizer Canvas with Spring Entrance */}
+        {/* Interactive Timeline Visualizer Card */}
         <motion.div
-          initial={shouldReduceMotion ? { opacity: 0 } : { y: 35, opacity: 0, scale: 0.98 }}
+          initial={shouldReduceMotion ? { opacity: 0 } : { y: 40, opacity: 0, scale: 0.98 }}
           whileInView={{ y: 0, opacity: 1, scale: 1 }}
-          viewport={{ once: true, margin: '-80px' }}
+          viewport={{ once: true, margin: '-60px' }}
           transition={{ type: 'spring', stiffness: 100, damping: 20 }}
-          className="glass-panel p-6 sm:p-8 rounded-3xl border border-white/10 relative shadow-2xl backdrop-blur-2xl transform-gpu"
+          className="glass-panel rounded-3xl border border-white/10 p-6 sm:p-8 shadow-2xl relative overflow-hidden backdrop-blur-2xl space-y-6 transform-gpu"
         >
-          {/* Top Bar / Status */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-white/5">
+          {/* Visualizer Top Bar */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 border-b border-white/5 gap-3">
             <div className="flex items-center gap-3">
-              <button
-                onClick={() => setIsPlaying(!isPlaying)}
-                className="w-10 h-10 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 flex items-center justify-center transition-colors border border-white/5 cursor-pointer"
-              >
-                {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
-              </button>
+              <div className="w-9 h-9 rounded-xl bg-bifrost-amber/15 border border-bifrost-amber/30 flex items-center justify-center text-bifrost-amber font-bold">
+                <Sliders className="w-4 h-4" />
+              </div>
               <div>
-                <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                <h3 className="text-white font-bold text-sm sm:text-base flex items-center gap-2">
                   <span>Audio & Subtitle Timeline</span>
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 font-normal">
-                    Oppenheimer.2023.2160p.mkv
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300 border border-white/5">
+                    Oppenheimer (2023) • 01:42:15
                   </span>
-                </h4>
+                </h3>
                 <p className="text-xs text-zinc-400">
-                  {isPlaying ? 'Simulating real-time media playback stream' : 'Timeline paused'}
+                  Dual-track audio voice envelope vs. subtitle timestamp alignment
                 </p>
               </div>
             </div>
 
-            {/* Sync Status Badge */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 self-end sm:self-center">
+              {/* Reset button */}
+              <button
+                onClick={resetDemo}
+                className="p-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                title="Reset simulation"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+
+              {/* Play/Pause */}
+              <button
+                onClick={() => setIsPlaying(!isPlaying)}
+                className="px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 fill-current" />}
+                <span>{isPlaying ? 'Pause' : 'Play'}</span>
+              </button>
+
+              {/* Status Badge */}
               <div
-                className={`px-3.5 py-1.5 rounded-xl border flex items-center gap-2 text-xs font-semibold transition-all ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition-all ${
                   isSynced
-                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                    : isScanning
-                    ? 'bg-bifrost-amber/10 border-bifrost-amber/30 text-bifrost-amber animate-pulse'
-                    : 'bg-red-500/10 border-red-500/30 text-red-400'
+                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                    : 'bg-red-500/20 text-red-400 border border-red-500/30'
                 }`}
               >
                 {isSynced ? (
                   <>
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Synchronized (0ms Drift • 99.4% Match)</span>
-                  </>
-                ) : isScanning ? (
-                  <>
-                    <Sparkles className="w-3.5 h-3.5 text-bifrost-amber animate-spin" />
-                    <span>Cross-correlating 120 FFT speech windows...</span>
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>0ms Synced</span>
                   </>
                 ) : (
-                  <>
-                    <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
-                    <span>Subtitle Lag: +{offsetMs} ms</span>
-                  </>
+                  <motion.div
+                    animate={
+                      shouldReduceMotion
+                        ? { opacity: 1 }
+                        : { opacity: [0.7, 1, 0.7], scale: [1, 1.04, 1] }
+                    }
+                    transition={{ repeat: Infinity, duration: 1.5 }}
+                    className="flex items-center gap-1.5"
+                  >
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    <span>Subtitle Lag: +{offsetMs}ms</span>
+                  </motion.div>
                 )}
               </div>
-
-              <button
-                onClick={resetDemo}
-                title="Reset to desynced state"
-                className="p-2 rounded-xl bg-zinc-800/80 hover:bg-zinc-700 text-zinc-400 hover:text-white transition-colors cursor-pointer"
-              >
-                <RotateCcw className="w-4 h-4" />
-              </button>
             </div>
           </div>
 
-          {/* Timelines Container */}
-          <div className="my-8 space-y-6 relative">
-            {/* Playhead vertical line */}
+          {/* Timeline Tracks Box */}
+          <div className="space-y-4 pt-2 relative">
+            {/* Playhead vertical line sweeping across */}
             <div
-              className="absolute top-0 bottom-0 w-0.5 bg-bifrost-amber z-20 pointer-events-none transition-all duration-75 shadow-[0_0_12px_#f59e0b]"
+              className="absolute top-0 bottom-0 w-0.5 bg-bifrost-amber z-20 pointer-events-none transition-all duration-75 ease-linear shadow-[0_0_8px_rgba(245,158,11,0.8)]"
               style={{ left: `${playhead}%` }}
             >
-              <div className="w-2.5 h-2.5 -top-1 -translate-x-[4px] bg-bifrost-amber rounded-full absolute" />
+              <div className="w-2.5 h-2.5 -ml-1 -top-1 absolute rounded-full bg-bifrost-amber shadow-md" />
             </div>
 
-            {/* Track 1: Audio Speech Envelope */}
+            {/* Track 1: Audio Speech Energy Waveform (Cyan) */}
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs font-medium text-zinc-400">
                 <span className="flex items-center gap-2">
@@ -235,9 +303,9 @@ export const AutoSyncDemo: React.FC = () => {
               <div className="flex items-center justify-between text-xs font-medium text-zinc-400">
                 <span className="flex items-center gap-2">
                   <Sliders className="w-3.5 h-3.5 text-bifrost-amber" />
-                  <span className="text-zinc-200">Subtitle Cues (.SRT / .ASS)</span>
+                  <span className="text-zinc-200">Subtitle (.srt / .ass) Waveform Cues</span>
                   <span
-                    className={`font-mono text-[11px] px-1.5 py-0.2 rounded ${
+                    className={`font-mono text-[11px] px-2 py-0.5 rounded-full font-bold transition-colors ${
                       offsetMs === 0 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'
                     }`}
                   >
@@ -248,7 +316,7 @@ export const AutoSyncDemo: React.FC = () => {
               </div>
 
               <div className="h-16 w-full bg-zinc-950/80 rounded-2xl border border-white/5 relative overflow-hidden flex items-center">
-                {/* Motion container shifting subtitle cues */}
+                {/* Motion container shifting subtitle cues with spring physics */}
                 <motion.div
                   className="absolute inset-0 flex items-center"
                   animate={{ x: `${subtitleShiftPercent}%` }}
@@ -275,19 +343,30 @@ export const AutoSyncDemo: React.FC = () => {
 
           {/* Interactive Control Deck */}
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 pt-4 border-t border-white/5">
-            {/* Auto-Sync Main Trigger */}
+            {/* Auto-Sync Main Trigger with Shimmer Highlight */}
             <div className="flex items-center gap-3 w-full md:w-auto">
               <button
                 onClick={triggerAutoSync}
                 disabled={isScanning || isSynced}
-                className={`w-full md:w-auto px-6 py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2.5 transition-all shadow-lg ${
+                className={`relative overflow-hidden w-full md:w-auto px-6 py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2.5 transition-all shadow-lg ${
                   isSynced
                     ? 'bg-zinc-800 text-zinc-400 cursor-default border border-white/5'
                     : isScanning
                     ? 'bg-bifrost-amber/60 text-zinc-950 cursor-wait'
+                    : highlightShimmer
+                    ? 'bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 text-zinc-950 shadow-bifrost-amber/40 scale-105'
                     : 'bg-gradient-to-r from-bifrost-amber to-amber-600 hover:from-amber-400 hover:to-bifrost-amber text-zinc-950 shadow-bifrost-amber/20 hover:scale-105 active:scale-95 cursor-pointer'
                 }`}
               >
+                {/* Shimmer beam effect */}
+                {highlightShimmer && (
+                  <motion.div
+                    initial={{ x: '-100%' }}
+                    animate={{ x: '100%' }}
+                    transition={{ repeat: Infinity, duration: 1.2, ease: 'linear' }}
+                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none"
+                  />
+                )}
                 <Sparkles className={`w-4 h-4 ${isScanning ? 'animate-spin' : ''}`} />
                 {isScanning
                   ? 'Analyzing Audio Waveform...'
@@ -296,12 +375,12 @@ export const AutoSyncDemo: React.FC = () => {
                   : '⚡ Auto-Align Subtitles'}
               </button>
 
-              <span className="text-xs text-zinc-500 hidden sm:inline">
-                Instant FFmpeg cross-correlation
+              <span className="text-xs text-zinc-500 hidden sm:inline font-mono">
+                FFmpeg Speech Correlation
               </span>
             </div>
 
-            {/* Micro-Nudge Buttons (Manual Precision) */}
+            {/* Micro-Nudge Buttons (Preserved Manual Precision) */}
             <div className="flex items-center gap-2 w-full md:w-auto justify-end">
               <span className="text-xs text-zinc-400 font-medium mr-1">Micro-Nudge:</span>
               <button
@@ -335,45 +414,45 @@ export const AutoSyncDemo: React.FC = () => {
           </div>
         </motion.div>
 
-        {/* Feature Highlights Grid with Staggered Spring Cascade */}
+        {/* 3 Bottom Feature Cards with Staggered Entrance & Mouse-move Radial Spotlight Glow */}
         <motion.div
           variants={containerVariants}
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, margin: '-80px' }}
+          viewport={{ once: true, margin: '-60px' }}
           className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8"
         >
-          <motion.div variants={cardVariants} className="glass-card p-6 rounded-2xl border border-white/5 space-y-2 transform-gpu">
+          <SpotlightCard variants={cardVariants}>
             <h4 className="text-white font-bold text-base flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-bifrost-amber" />
+              <span className="w-2 h-2 rounded-full bg-bifrost-amber shadow-[0_0_8px_rgba(245,158,11,0.8)]" />
               Speech Envelope FFT
             </h4>
             <p className="text-zinc-400 text-xs leading-relaxed">
               Extracts high-energy vocal frequencies (300Hz - 3.4kHz) from local media files without requiring cloud transcription APIs.
             </p>
-          </motion.div>
+          </SpotlightCard>
 
-          <motion.div variants={cardVariants} className="glass-card p-6 rounded-2xl border border-white/5 space-y-2 transform-gpu">
+          <SpotlightCard variants={cardVariants}>
             <h4 className="text-white font-bold text-base flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-bifrost-cyan" />
+              <span className="w-2 h-2 rounded-full bg-bifrost-cyan shadow-[0_0_8px_rgba(6,182,212,0.8)]" />
               Cross-Correlation Peak
             </h4>
             <p className="text-zinc-400 text-xs leading-relaxed">
               Calculates Pearson correlation between audio voice energy and subtitle text timestamps to detect exact drift to the millisecond.
             </p>
-          </motion.div>
+          </SpotlightCard>
 
-          <motion.div variants={cardVariants} className="glass-card p-6 rounded-2xl border border-white/5 space-y-2 transform-gpu">
+          <SpotlightCard variants={cardVariants}>
             <h4 className="text-white font-bold text-base flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-purple-400" />
+              <span className="w-2 h-2 rounded-full bg-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.8)]" />
               Zero Video Re-encoding
             </h4>
             <p className="text-zinc-400 text-xs leading-relaxed">
               Dispatches non-destructive real-time offset commands straight to VLC HTTP API or mpv IPC socket instantly during playback.
             </p>
-          </motion.div>
+          </SpotlightCard>
         </motion.div>
       </div>
-    </section>
+    </motion.section>
   )
 }

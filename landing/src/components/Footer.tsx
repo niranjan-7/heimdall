@@ -1,10 +1,23 @@
-import React from 'react'
-import { motion, useReducedMotion } from 'framer-motion'
-import { Download, Heart, Sparkles, ExternalLink } from 'lucide-react'
+import React, { useRef } from 'react'
+import { motion, useScroll, useTransform, useSpring, useReducedMotion } from 'framer-motion'
+import { Download, Sparkles, ExternalLink } from 'lucide-react'
 import { GithubIcon } from './Icons'
 
 export const Footer: React.FC = () => {
   const shouldReduceMotion = useReducedMotion()
+  const ctaRef = useRef<HTMLDivElement>(null)
+
+  // Scroll-linked scale & glow transition as CTA approaches viewport center
+  const { scrollYProgress } = useScroll({
+    target: ctaRef,
+    offset: ['start end', 'center center']
+  })
+
+  const rawScale = useTransform(scrollYProgress, [0, 1], [0.94, 1.0])
+  const rawGlowOpacity = useTransform(scrollYProgress, [0, 1], [0.2, 1.0])
+
+  const scale = useSpring(rawScale, { stiffness: 100, damping: 25 })
+  const glowOpacity = useSpring(rawGlowOpacity, { stiffness: 100, damping: 25 })
 
   return (
     <footer className="relative border-t border-white/5 pt-20 pb-12 overflow-hidden bg-zinc-950">
@@ -12,29 +25,39 @@ export const Footer: React.FC = () => {
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[250px] bg-bifrost-amber/10 rounded-full blur-[140px] pointer-events-none" />
 
       <div className="max-w-6xl mx-auto px-6">
-        {/* Bottom CTA Card with Spring Entrance */}
+        {/* Bottom CTA Card with Scroll-Linked Scale & Glow Transition */}
         <motion.div
-          initial={shouldReduceMotion ? { opacity: 0 } : { y: 35, opacity: 0, scale: 0.98 }}
-          whileInView={{ y: 0, opacity: 1, scale: 1 }}
-          viewport={{ once: true, margin: '-80px' }}
-          transition={{ type: 'spring', stiffness: 100, damping: 20 }}
+          ref={ctaRef}
+          style={{
+            scale: shouldReduceMotion ? 1 : scale
+          }}
           className="glass-panel p-8 sm:p-12 rounded-3xl border border-white/10 relative overflow-hidden text-center space-y-6 mb-16 shadow-2xl transform-gpu"
         >
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full glass-card border-bifrost-amber/30 text-bifrost-amber text-xs font-semibold">
+          {/* Dynamic background radial amber glow fading from 0.2 to 1 */}
+          <motion.div
+            style={{
+              opacity: shouldReduceMotion ? 0.7 : glowOpacity
+            }}
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[300px] bg-gradient-to-tr from-bifrost-amber/30 via-amber-500/20 to-bifrost-cyan/15 rounded-full blur-[100px] pointer-events-none transform-gpu"
+          />
+
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full glass-card border-bifrost-amber/30 text-bifrost-amber text-xs font-semibold relative z-10">
             <Sparkles className="w-3.5 h-3.5" />
             <span>Open Source Desktop Companion</span>
           </div>
-          <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
+
+          <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight relative z-10">
             Take Back Control of Your <br />
             <span className="bg-gradient-to-r from-bifrost-amber via-amber-300 to-amber-500 bg-clip-text text-transparent">
               Movie & Anime Nights
             </span>
           </h2>
-          <p className="text-zinc-400 text-sm sm:text-base max-w-xl mx-auto">
+
+          <p className="text-zinc-400 text-sm sm:text-base max-w-xl mx-auto relative z-10 leading-relaxed">
             Available today for Windows, macOS, and Linux. No subscriptions, no ads, 100% free and open source forever.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4 relative z-10">
             <a
               href="https://github.com/niranjan-7/heimdall/releases/download/v1.2.0/Heimdall.Setup.1.2.0.exe"
               className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-bifrost-amber to-amber-600 hover:from-amber-400 hover:to-bifrost-amber text-zinc-950 font-extrabold text-sm flex items-center justify-center gap-2.5 shadow-xl shadow-bifrost-amber/25 hover:shadow-bifrost-amber/40 transition-all hover:scale-105 active:scale-95 cursor-pointer"
@@ -54,7 +77,7 @@ export const Footer: React.FC = () => {
             </a>
           </div>
 
-          <div className="flex items-center justify-center gap-6 pt-2 text-xs text-zinc-500 font-mono">
+          <div className="flex items-center justify-center gap-6 pt-2 text-xs text-zinc-500 font-mono relative z-10">
             <span>Windows 10/11</span>
             <span>•</span>
             <span>macOS (Intel / Apple Silicon)</span>
@@ -97,12 +120,6 @@ export const Footer: React.FC = () => {
             >
               Releases <ExternalLink className="w-3 h-3" />
             </a>
-          </div>
-
-          <div className="flex items-center gap-1 text-zinc-500">
-            <span>Crafted for Cinephiles with</span>
-            <Heart className="w-3 h-3 text-red-500 fill-red-500" />
-            <span>under MIT License</span>
           </div>
         </div>
       </div>
