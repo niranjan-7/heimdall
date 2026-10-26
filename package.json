@@ -4,6 +4,7 @@
   "description": "Heimdall — Standalone Windows VLC Series & Watch-History Companion App",
   "main": "./out/main/index.js",
   "author": "Heimdall",
+  "license": "MIT",
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
