@@ -14,7 +14,9 @@ import {
   Zap,
   Sliders,
   Search,
-  Play
+  Play,
+  Languages,
+  Download
 } from 'lucide-react'
 
 interface SettingsModalProps {
@@ -401,6 +403,81 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
             <p className="text-[11px] text-zinc-500 mt-1">
               Marks episode as Watched & triggers AniList scrobble once progress reaches this threshold.
             </p>
+          </div>
+
+          {/* Module 4: Smart Subtitle Preferences */}
+          <div className="p-4 rounded-xl bg-zinc-950/60 border border-surface-border space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-lg bg-emerald-500/15 text-emerald-400">
+                  <Languages className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wider">
+                    Smart Subtitle Downloader
+                  </h4>
+                  <p className="text-[11px] text-zinc-400">
+                    64KB hash matching, language aliases & audio auto-sync
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-300 mb-1.5">
+                  Preferred Subtitle Language
+                </label>
+                <select
+                  value={settings.preferredSubtitleLanguage || 'en'}
+                  onChange={(e) => setSettings({ ...settings, preferredSubtitleLanguage: e.target.value })}
+                  className="w-full px-3 py-2 text-xs bg-zinc-950 border border-surface-border rounded-xl text-zinc-200 focus:outline-none focus:border-bifrost-amber"
+                >
+                  <option value="en">English (en)</option>
+                  <option value="es">Spanish / Español (es)</option>
+                  <option value="ja">Japanese / 日本語 (ja)</option>
+                  <option value="fr">French / Français (fr)</option>
+                  <option value="de">German / Deutsch (de)</option>
+                  <option value="hi">Hindi / हिन्दी (hi)</option>
+                  <option value="it">Italian / Italiano (it)</option>
+                  <option value="pt">Portuguese (pt)</option>
+                  <option value="zh">Chinese / 中文 (zh)</option>
+                  <option value="ko">Korean / 한국어 (ko)</option>
+                  <option value="ar">Arabic / العربية (ar)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-300 mb-1.5">
+                  OpenSubtitles API Key (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={settings.openSubtitlesApiKey || ''}
+                  onChange={(e) => setSettings({ ...settings, openSubtitlesApiKey: e.target.value })}
+                  placeholder="Custom VIP Key (Optional)"
+                  className="w-full px-3 py-2 text-xs bg-zinc-950 border border-surface-border rounded-xl text-zinc-200 focus:outline-none focus:border-bifrost-amber font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-1 border-t border-zinc-800/60">
+              <div>
+                <span className="text-xs font-semibold text-zinc-200">Auto-Download Subtitles</span>
+                <p className="text-[10px] text-zinc-500">
+                  Automatically search and download missing subtitles on playback
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={settings.autoDownloadSubtitles ?? false}
+                  onChange={(e) => setSettings({ ...settings, autoDownloadSubtitles: e.target.checked })}
+                  className="sr-only peer"
+                />
+                <div className="w-9 h-5 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+              </label>
+            </div>
           </div>
 
           {/* Feature 5: Discord Rich Presence */}

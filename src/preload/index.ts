@@ -8,7 +8,8 @@ import {
   VlcStateUpdate,
   AniListMediaInfo,
   TmdbMovieSearchResult,
-  AppNotification
+  AppNotification,
+  SubtitleDownloadResult
 } from '../shared/types'
 
 export interface IElectronAPI {
@@ -74,6 +75,21 @@ export interface IElectronAPI {
   ) => Promise<{ currentDelay: number }>
   resetMovieSubtitleDelay: (movieId: string) => Promise<{ currentDelay: number }>
   getSubtitleDelay: () => Promise<number>
+
+  // Module 4: Subtitle Downloader
+  downloadSubtitle: (
+    seriesId: string,
+    episodeId: string,
+    lang?: string
+  ) => Promise<SubtitleDownloadResult>
+  downloadMovieSubtitle: (
+    movieId: string,
+    lang?: string
+  ) => Promise<SubtitleDownloadResult>
+  scanLocalSubtitles: (
+    filePath: string,
+    lang?: string
+  ) => Promise<{ found: boolean; path?: string }>
 
   // Feature 6: AniList
   searchAniList: (query: string) => Promise<AniListMediaInfo[]>
@@ -150,6 +166,14 @@ const api: IElectronAPI = {
     ipcRenderer.invoke('subsync:reset', seriesId, episodeId),
   resetMovieSubtitleDelay: (movieId) => ipcRenderer.invoke('subsync:reset-movie', movieId),
   getSubtitleDelay: () => ipcRenderer.invoke('subsync:get-delay'),
+
+  // Subtitle Downloader
+  downloadSubtitle: (seriesId, episodeId, lang) =>
+    ipcRenderer.invoke('subtitles:download-episode', seriesId, episodeId, lang),
+  downloadMovieSubtitle: (movieId, lang) =>
+    ipcRenderer.invoke('subtitles:download-movie', movieId, lang),
+  scanLocalSubtitles: (filePath, lang) =>
+    ipcRenderer.invoke('subtitles:scan-local', filePath, lang),
 
   searchAniList: (query) => ipcRenderer.invoke('anilist:search', query),
   validateAniListToken: (token) => ipcRenderer.invoke('anilist:validate-token', token),

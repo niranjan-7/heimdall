@@ -88,10 +88,16 @@ export class SubtitleSyncService {
     const base = path.basename(filePath, ext)
 
     const candidateFiles = [
+      path.join(dir, `${base}.synced.srt`),
+      path.join(dir, `${base}.en.synced.srt`),
       path.join(dir, `${base}.srt`),
-      path.join(dir, `${base}.ass`),
       path.join(dir, `${base}.en.srt`),
       path.join(dir, `${base}.eng.srt`),
+      path.join(dir, `${base}.english.srt`),
+      path.join(dir, `${base}.sub-eng.srt`),
+      path.join(dir, `${base}.extracted.srt`),
+      path.join(dir, `${base}.en.extracted.srt`),
+      path.join(dir, `${base}.ass`),
       path.join(dir, `${base}.en.ass`),
       path.join(dir, `${base}.eng.ass`)
     ]

@@ -108,6 +108,9 @@ export interface AppSettings {
   enableAnime4K?: boolean
   anime4kPreset?: Anime4KPreset
   mpvCustomArgs?: string
+  preferredSubtitleLanguage?: string
+  openSubtitlesApiKey?: string
+  autoDownloadSubtitles?: boolean
   completionThreshold: number
   httpPort: number
   httpPassword: string
@@ -119,6 +122,15 @@ export interface AppSettings {
   enableAniListScrobble: boolean
   enableThumbnails: boolean
   tmdbApiKey?: string
+}
+
+export interface SubtitleDownloadResult {
+  success: boolean
+  source: 'subdb' | 'opensubtitles' | 'local_extracted' | 'local_matched' | 'none'
+  filePath?: string
+  language: string
+  message: string
+  offsetApplied?: number
 }
 
 export interface VlcStateUpdate {

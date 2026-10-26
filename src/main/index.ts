@@ -10,6 +10,7 @@ import { ThumbnailService } from './thumbnailService'
 import { DiscordService } from './discordService'
 import { AniListService } from './anilistService'
 import { SubtitleSyncService } from './subtitleSyncService'
+import { SubtitleDownloadService } from './subtitleDownloadService'
 import { TmdbService } from './tmdbService'
 import { scanSeriesFolders } from './folderScanner'
 import { scanMoviesFolder } from './movieScanner'
@@ -36,6 +37,7 @@ let thumbnailService: ThumbnailService
 let discordService: DiscordService
 let anilistService: AniListService
 let subtitleSyncService: SubtitleSyncService
+let subtitleDownloadService: SubtitleDownloadService
 let tmdbService: TmdbService
 
 function createWindow(): void {
@@ -375,6 +377,29 @@ function registerIpcHandlers(): void {
     return vlcController.getSubtitleDelay()
   })
 
+  // Module 4: Subtitle Downloader IPC
+  ipcMain.handle(
+    'subtitles:download-episode',
+    async (_event, seriesId: string, episodeId: string, lang?: string) => {
+      return await subtitleDownloadService.downloadSubtitleForEpisode(seriesId, episodeId, lang)
+    }
+  )
+
+  ipcMain.handle(
+    'subtitles:download-movie',
+    async (_event, movieId: string, lang?: string) => {
+      return await subtitleDownloadService.downloadSubtitleForMovie(movieId, lang)
+    }
+  )
+
+  ipcMain.handle(
+    'subtitles:scan-local',
+    (_event, filePath: string, lang?: string) => {
+      const found = subtitleDownloadService.findLocalSubtitle(filePath, lang)
+      return { found: Boolean(found), path: found || undefined }
+    }
+  )
+
   // AniList Integration IPC
   ipcMain.handle('anilist:search', async (_event, query: string) => {
     return await anilistService.searchAnime(query)
@@ -489,6 +514,7 @@ app.whenReady().then(() => {
   syncWorker = new SyncWorker(storageService, discordService, anilistService, () => mainWindow)
   vlcController = new VlcController(storageService, syncWorker)
   subtitleSyncService = new SubtitleSyncService(storageService, vlcController)
+  subtitleDownloadService = new SubtitleDownloadService(storageService, subtitleSyncService)
   tmdbService = new TmdbService()
 
   thumbnailService.setCallback((id, isMovie) => {

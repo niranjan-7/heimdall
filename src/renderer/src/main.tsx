@@ -65,6 +65,19 @@ if (typeof window !== 'undefined' && !window.api) {
     resetSubtitleDelay: async () => ({ currentDelay: 0 }),
     resetMovieSubtitleDelay: async () => ({ currentDelay: 0 }),
     getSubtitleDelay: async () => 0,
+    downloadSubtitle: async () => ({
+      success: false,
+      source: 'none',
+      language: 'en',
+      message: 'Desktop app required'
+    }),
+    downloadMovieSubtitle: async () => ({
+      success: false,
+      source: 'none',
+      language: 'en',
+      message: 'Desktop app required'
+    }),
+    scanLocalSubtitles: async () => ({ found: false }),
     searchAniList: async () => [],
     validateAniListToken: async () => ({ success: false }),
     linkAniListMedia: async () => ({} as any),
