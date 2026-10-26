@@ -128,12 +128,36 @@ function registerIpcHandlers(): void {
     const result = await dialog.showOpenDialog(mainWindow, {
       properties: ['openFile'],
       title: 'Select VLC Executable (vlc.exe)',
-      filters: [{ name: 'VLC Media Player', extensions: ['exe'] }]
+      filters: [
+        { name: 'VLC Media Player', extensions: ['exe', 'app', ''] }
+      ]
     })
     if (result.canceled || result.filePaths.length === 0) {
       return null
     }
     return result.filePaths[0]
+  })
+
+  ipcMain.handle('dialog:select-mpv-executable', async () => {
+    if (!mainWindow) return null
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openFile'],
+      title: 'Select mpv Executable (mpv.exe)',
+      filters: [
+        { name: 'mpv Media Player', extensions: ['exe', 'app', ''] }
+      ]
+    })
+    if (result.canceled || result.filePaths.length === 0) {
+      return null
+    }
+    return result.filePaths[0]
+  })
+
+  ipcMain.handle('player:detect-executables', () => {
+    return {
+      vlc: storageService.detectVlcPath() || null,
+      mpv: storageService.detectMpvPath() || null
+    }
   })
 
   // Series Operations

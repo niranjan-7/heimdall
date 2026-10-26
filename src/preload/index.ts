@@ -17,6 +17,8 @@ export interface IElectronAPI {
   saveSettings: (settings: Partial<AppSettings>) => Promise<AppSettings>
   selectFolder: () => Promise<string | null>
   selectVlcExecutable: () => Promise<string | null>
+  selectMpvExecutable: () => Promise<string | null>
+  detectPlayers: () => Promise<{ vlc: string | null; mpv: string | null }>
 
   // Series
   addSeries: (folderPath: string) => Promise<Series>
@@ -110,6 +112,8 @@ const api: IElectronAPI = {
   saveSettings: (settings) => ipcRenderer.invoke('storage:save-settings', settings),
   selectFolder: () => ipcRenderer.invoke('dialog:select-folder'),
   selectVlcExecutable: () => ipcRenderer.invoke('dialog:select-vlc-executable'),
+  selectMpvExecutable: () => ipcRenderer.invoke('dialog:select-mpv-executable'),
+  detectPlayers: () => ipcRenderer.invoke('player:detect-executables'),
 
   addSeries: (folderPath) => ipcRenderer.invoke('series:add', folderPath),
   addSeasonToSeries: (seriesId, folderPath) =>

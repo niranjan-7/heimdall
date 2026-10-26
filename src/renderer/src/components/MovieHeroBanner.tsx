@@ -128,7 +128,7 @@ export const MovieHeroBanner: React.FC<MovieHeroBannerProps> = ({
               {isPlayingThisMovie && (
                 <span className="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5 animate-pulse">
                   <Radio className="w-3.5 h-3.5" />
-                  VLC Active
+                  {activeVlcState?.playerType === 'mpv' ? 'mpv Active' : 'VLC Active'}
                 </span>
               )}
 
@@ -242,7 +242,7 @@ export const MovieHeroBanner: React.FC<MovieHeroBannerProps> = ({
             <span>
               {movie.timeSec > 0
                 ? `Resume Movie (${formatTime(movie.timeSec)})`
-                : 'Start Movie in VLC'}
+                : 'Play Movie'}
             </span>
           </button>
         </div>

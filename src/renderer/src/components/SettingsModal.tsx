@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { AppSettings } from '../../../shared/types'
+import { AppSettings, MediaPlayerType, Anime4KPreset } from '../../../shared/types'
 import {
   Settings,
   FolderOpen,
@@ -10,7 +10,11 @@ import {
   Sparkles,
   ExternalLink,
   Film,
-  UserCheck
+  UserCheck,
+  Zap,
+  Sliders,
+  Search,
+  Play
 } from 'lucide-react'
 
 interface SettingsModalProps {
@@ -26,6 +30,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
   const [tokenInput, setTokenInput] = useState('')
   const [validatingToken, setValidatingToken] = useState(false)
   const [tokenFeedback, setTokenFeedback] = useState<string | null>(null)
+  const [detectStatus, setDetectStatus] = useState<string | null>(null)
 
   useEffect(() => {
     if (isOpen) {
@@ -35,6 +40,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
       })
       setSavedSuccess(false)
       setTokenFeedback(null)
+      setDetectStatus(null)
     }
   }, [isOpen])
 
@@ -45,6 +51,39 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
     if (selected) {
       setSettings((prev) => (prev ? { ...prev, vlcPath: selected } : null))
     }
+  }
+
+  const handleBrowseMpv = async () => {
+    const selected = await window.api.selectMpvExecutable()
+    if (selected) {
+      setSettings((prev) => (prev ? { ...prev, mpvPath: selected } : null))
+    }
+  }
+
+  const handleAutoDetectPlayers = async () => {
+    setDetectStatus('Scanning system for players...')
+    try {
+      const detected = await window.api.detectPlayers()
+      setSettings((prev) => {
+        if (!prev) return null
+        return {
+          ...prev,
+          vlcPath: detected.vlc || prev.vlcPath,
+          mpvPath: detected.mpv || prev.mpvPath
+        }
+      })
+      const found: string[] = []
+      if (detected.vlc) found.push('VLC')
+      if (detected.mpv) found.push('mpv')
+      if (found.length > 0) {
+        setDetectStatus(`Detected: ${found.join(' & ')}`)
+      } else {
+        setDetectStatus('No additional players found in default paths.')
+      }
+    } catch {
+      setDetectStatus('Detection failed')
+    }
+    setTimeout(() => setDetectStatus(null), 3500)
   }
 
   const handleVerifyAniList = async () => {
@@ -130,27 +169,211 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
 
         {/* Form Body (Scrollable) */}
         <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-5 space-y-6">
-          {/* VLC Path */}
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-300 mb-1.5">
-              VLC Executable Path (`vlc.exe`)
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={settings.vlcPath}
-                onChange={(e) => setSettings({ ...settings, vlcPath: e.target.value })}
-                placeholder="C:\Program Files\VideoLAN\VLC\vlc.exe"
-                className="flex-1 px-3 py-2 text-sm bg-zinc-950 border border-surface-border rounded-xl text-zinc-200 focus:outline-none focus:border-bifrost-amber"
-              />
+          {/* Dual Media Player Engine Section */}
+          <div className="p-4 rounded-xl bg-zinc-950/70 border border-surface-border space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-lg bg-bifrost-amber/15 text-bifrost-amber">
+                  <Play className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wider">
+                    Media Player Engine
+                  </h4>
+                  <p className="text-[11px] text-zinc-400">
+                    Choose your primary media playback engine
+                  </p>
+                </div>
+              </div>
+
               <button
                 type="button"
-                onClick={handleBrowseVlc}
-                className="px-3.5 py-2 text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-xl flex items-center gap-1.5 transition-colors"
+                onClick={handleAutoDetectPlayers}
+                className="px-2.5 py-1 text-[11px] font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg flex items-center gap-1.5 transition-colors"
               >
-                <FolderOpen className="w-4 h-4 text-bifrost-amber" />
-                Browse
+                <Search className="w-3.5 h-3.5 text-bifrost-amber" />
+                Detect Players
               </button>
+            </div>
+
+            {detectStatus && (
+              <div className="text-[11px] px-3 py-1.5 rounded-lg bg-bifrost-amber/10 border border-bifrost-amber/20 text-bifrost-amber animate-in fade-in">
+                {detectStatus}
+              </div>
+            )}
+
+            {/* Player Switcher Segmented Control */}
+            <div className="grid grid-cols-2 gap-2 bg-zinc-900/80 p-1 rounded-xl border border-zinc-800/80">
+              <button
+                type="button"
+                onClick={() => setSettings({ ...settings, preferredPlayer: 'vlc' })}
+                className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
+                  (settings.preferredPlayer || 'vlc') === 'vlc'
+                    ? 'bg-bifrost-amber text-zinc-950 shadow-md font-bold'
+                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
+                }`}
+              >
+                <Shield className="w-4 h-4" />
+                VLC Media Player
+              </button>
+              <button
+                type="button"
+                onClick={() => setSettings({ ...settings, preferredPlayer: 'mpv' })}
+                className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
+                  settings.preferredPlayer === 'mpv'
+                    ? 'bg-cyan-500 text-zinc-950 shadow-md font-bold'
+                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
+                }`}
+              >
+                <Zap className="w-4 h-4" />
+                mpv Player
+              </button>
+            </div>
+
+            {/* VLC Executable Path */}
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+                  VLC Executable Path
+                </label>
+                {(settings.preferredPlayer || 'vlc') === 'vlc' && (
+                  <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-bifrost-amber/15 text-bifrost-amber">
+                    Active Primary
+                  </span>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={settings.vlcPath}
+                  onChange={(e) => setSettings({ ...settings, vlcPath: e.target.value })}
+                  placeholder="C:\Program Files\VideoLAN\VLC\vlc.exe"
+                  className="flex-1 px-3 py-1.5 text-xs bg-zinc-950 border border-surface-border rounded-xl text-zinc-200 focus:outline-none focus:border-bifrost-amber"
+                />
+                <button
+                  type="button"
+                  onClick={handleBrowseVlc}
+                  className="px-3 py-1.5 text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-xl flex items-center gap-1.5 transition-colors"
+                >
+                  <FolderOpen className="w-3.5 h-3.5 text-bifrost-amber" />
+                  Browse
+                </button>
+              </div>
+            </div>
+
+            {/* mpv Executable Path */}
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+                  mpv Executable Path
+                </label>
+                {settings.preferredPlayer === 'mpv' && (
+                  <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-400">
+                    Active Primary
+                  </span>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={settings.mpvPath || ''}
+                  onChange={(e) => setSettings({ ...settings, mpvPath: e.target.value })}
+                  placeholder="C:\Program Files\mpv\mpv.exe"
+                  className="flex-1 px-3 py-1.5 text-xs bg-zinc-950 border border-surface-border rounded-xl text-zinc-200 focus:outline-none focus:border-cyan-500"
+                />
+                <button
+                  type="button"
+                  onClick={handleBrowseMpv}
+                  className="px-3 py-1.5 text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-xl flex items-center gap-1.5 transition-colors"
+                >
+                  <FolderOpen className="w-3.5 h-3.5 text-cyan-400" />
+                  Browse
+                </button>
+              </div>
+            </div>
+
+            {/* mpv Anime4K & High-Quality Upscaling Subcard */}
+            <div className="p-3 rounded-lg bg-zinc-900/60 border border-zinc-800/60 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                  <div>
+                    <h5 className="text-xs font-semibold text-zinc-200">
+                      Anime4K & High-End Scaling (mpv)
+                    </h5>
+                    <p className="text-[10px] text-zinc-400">
+                      GPU shader upscaling for razor-sharp anime line art and 4K displays
+                    </p>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={settings.enableAnime4K ?? false}
+                    onChange={(e) => setSettings({ ...settings, enableAnime4K: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-cyan-500"></div>
+                </label>
+              </div>
+
+              {settings.enableAnime4K && (
+                <div className="space-y-2 pt-1 border-t border-zinc-800/60">
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                    Upscaling Profile
+                  </label>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {[
+                      {
+                        id: 'hq_lanczos' as Anime4KPreset,
+                        label: 'EWA-Lanczos HQ',
+                        desc: 'Best for Movies & 1080p Anime'
+                      },
+                      {
+                        id: 'anime4k' as Anime4KPreset,
+                        label: 'Anime4K Shaders',
+                        desc: 'Ultra sharp anime edges'
+                      },
+                      {
+                        id: 'fast' as Anime4KPreset,
+                        label: 'Fast / Low Power',
+                        desc: 'Hardware accelerated'
+                      }
+                    ].map((preset) => {
+                      const isSelected = (settings.anime4kPreset || 'hq_lanczos') === preset.id
+                      return (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => setSettings({ ...settings, anime4kPreset: preset.id })}
+                          className={`p-2 rounded-lg text-left border transition-all ${
+                            isSelected
+                              ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300'
+                              : 'bg-zinc-950/40 border-zinc-800 text-zinc-400 hover:text-zinc-200'
+                          }`}
+                        >
+                          <div className="text-[11px] font-bold">{preset.label}</div>
+                          <div className="text-[9px] text-zinc-500 leading-tight">{preset.desc}</div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Custom mpv Arguments */}
+              <div>
+                <label className="block text-[10px] font-semibold uppercase tracking-wider text-zinc-400 mb-1">
+                  Custom mpv Arguments (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={settings.mpvCustomArgs || ''}
+                  onChange={(e) => setSettings({ ...settings, mpvCustomArgs: e.target.value })}
+                  placeholder='e.g. --sub-font="Trebuchet MS" --volume=100'
+                  className="w-full px-3 py-1 text-xs bg-zinc-950 border border-surface-border rounded-lg text-zinc-200 focus:outline-none focus:border-cyan-500 font-mono"
+                />
+              </div>
             </div>
           </div>
 

@@ -5,6 +5,11 @@ import { LibraryData, AppSettings, Series, Episode, Movie } from '../shared/type
 
 const DEFAULT_SETTINGS: AppSettings = {
   vlcPath: '',
+  mpvPath: '',
+  preferredPlayer: 'vlc',
+  enableAnime4K: false,
+  anime4kPreset: 'hq_lanczos',
+  mpvCustomArgs: '',
   completionThreshold: 0.9,
   httpPort: 42120,
   httpPassword: 'heimdall_secret',
@@ -32,15 +37,50 @@ export class StorageService {
     this.loadLibrary()
   }
 
-  private detectVlcPath(): string {
+  public detectVlcPath(): string {
     const candidates = [
       'C:\\Program Files\\VideoLAN\\VLC\\vlc.exe',
-      'C:\\Program Files (x86)\\VideoLAN\\VLC\\vlc.exe'
+      'C:\\Program Files (x86)\\VideoLAN\\VLC\\vlc.exe',
+      '/usr/bin/vlc',
+      '/usr/local/bin/vlc',
+      '/Applications/VLC.app/Contents/MacOS/VLC'
     ]
 
     for (const candidate of candidates) {
       try {
         if (fs.existsSync(candidate)) {
+          return candidate
+        }
+      } catch {
+        // ignore
+      }
+    }
+    return ''
+  }
+
+  public detectMpvPath(): string {
+    const localAppData = process.env.LOCALAPPDATA || ''
+    const appData = process.env.APPDATA || ''
+    const userProfile = process.env.USERPROFILE || ''
+    const programData = process.env.ProgramData || ''
+
+    const candidates = [
+      'C:\\Program Files\\mpv\\mpv.exe',
+      'C:\\Program Files (x86)\\mpv\\mpv.exe',
+      'C:\\mpv\\mpv.exe',
+      path.join(localAppData, 'Programs', 'mpv', 'mpv.exe'),
+      path.join(appData, 'mpv', 'mpv.exe'),
+      path.join(userProfile, 'scoop', 'apps', 'mpv', 'current', 'mpv.exe'),
+      path.join(programData, 'chocolatey', 'bin', 'mpv.exe'),
+      '/usr/bin/mpv',
+      '/usr/local/bin/mpv',
+      '/opt/homebrew/bin/mpv',
+      '/Applications/mpv.app/Contents/MacOS/mpv'
+    ]
+
+    for (const candidate of candidates) {
+      try {
+        if (candidate && fs.existsSync(candidate)) {
           return candidate
         }
       } catch {
@@ -84,12 +124,25 @@ export class StorageService {
       this.settingsData = { ...DEFAULT_SETTINGS }
     }
 
+    let updated = false
     if (!this.settingsData.vlcPath || !fs.existsSync(this.settingsData.vlcPath)) {
-      const detected = this.detectVlcPath()
-      if (detected) {
-        this.settingsData.vlcPath = detected
-        this.saveSettings(this.settingsData)
+      const detectedVlc = this.detectVlcPath()
+      if (detectedVlc) {
+        this.settingsData.vlcPath = detectedVlc
+        updated = true
       }
+    }
+
+    if (!this.settingsData.mpvPath || !fs.existsSync(this.settingsData.mpvPath)) {
+      const detectedMpv = this.detectMpvPath()
+      if (detectedMpv) {
+        this.settingsData.mpvPath = detectedMpv
+        updated = true
+      }
+    }
+
+    if (updated) {
+      this.saveSettings(this.settingsData)
     }
   }
 

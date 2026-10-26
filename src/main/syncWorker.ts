@@ -1,6 +1,6 @@
 import { BrowserWindow } from 'electron'
 import * as path from 'path'
-import { Series, Episode, Movie, VlcStateUpdate, AppSettings } from '../shared/types'
+import { Series, Episode, Movie, VlcStateUpdate, AppSettings, MediaPlayerType } from '../shared/types'
 import { StorageService } from './storageService'
 import { DiscordService } from './discordService'
 import { AniListService } from './anilistService'
@@ -13,6 +13,7 @@ export class SyncWorker {
   private activeSeries: Series | null = null
   private activeEpisode: Episode | null = null
   private activeMovie: Movie | null = null
+  private activePlayerType: MediaPlayerType = 'vlc'
   private getMainWindow: () => BrowserWindow | null
   private consecutiveErrors = 0
   private scrobbledEpisodeIds = new Set<string>()
@@ -29,11 +30,12 @@ export class SyncWorker {
     this.getMainWindow = getMainWindow
   }
 
-  public start(series: Series, initialEpisode: Episode): void {
+  public start(series: Series, initialEpisode: Episode, playerType: MediaPlayerType = 'vlc'): void {
     this.stop()
     this.activeSeries = series
     this.activeEpisode = initialEpisode
     this.activeMovie = null
+    this.activePlayerType = playerType
     this.consecutiveErrors = 0
     this.scrobbledEpisodeIds.clear()
 
@@ -43,25 +45,30 @@ export class SyncWorker {
       }
     })
 
-    this.timer = setInterval(() => {
-      this.pollVlcStatus().catch(() => {
-        this.consecutiveErrors++
-      })
-    }, 1500)
+    if (playerType === 'vlc') {
+      this.timer = setInterval(() => {
+        this.pollVlcStatus().catch(() => {
+          this.consecutiveErrors++
+        })
+      }, 1500)
+    }
   }
 
-  public startMovie(movie: Movie): void {
+  public startMovie(movie: Movie, playerType: MediaPlayerType = 'vlc'): void {
     this.stop()
     this.activeSeries = null
     this.activeEpisode = null
     this.activeMovie = movie
+    this.activePlayerType = playerType
     this.consecutiveErrors = 0
 
-    this.timer = setInterval(() => {
-      this.pollVlcStatus().catch(() => {
-        this.consecutiveErrors++
-      })
-    }, 1500)
+    if (playerType === 'vlc') {
+      this.timer = setInterval(() => {
+        this.pollVlcStatus().catch(() => {
+          this.consecutiveErrors++
+        })
+      }, 1500)
+    }
   }
 
   public stop(): void {
@@ -78,7 +85,8 @@ export class SyncWorker {
       win.webContents.send('vlc:stopped', {
         seriesId: this.activeSeries ? this.activeSeries.id : null,
         episodeId: this.activeEpisode ? this.activeEpisode.id : null,
-        movieId: this.activeMovie ? this.activeMovie.id : null
+        movieId: this.activeMovie ? this.activeMovie.id : null,
+        playerType: this.activePlayerType
       })
     }
 
@@ -110,13 +118,13 @@ export class SyncWorker {
 
       const data = await response.json()
       this.consecutiveErrors = 0
-      this.handleVlcData(data, settings)
+      this.handleVlcData(data)
     } catch {
       this.consecutiveErrors++
     }
   }
 
-  private handleVlcData(data: any, settings: AppSettings): void {
+  private handleVlcData(data: any): void {
     const state: 'playing' | 'paused' | 'stopped' =
       data.state === 'playing' ? 'playing' : data.state === 'paused' ? 'paused' : 'stopped'
 
@@ -124,8 +132,30 @@ export class SyncWorker {
     const duration = Math.floor(Number(data.length) || 0)
 
     const meta = data.information?.category?.meta
-    const vlcFilename = meta?.filename || ''
-    const vlcUrl = meta?.url || ''
+    const filename = meta?.filename || ''
+    const url = meta?.url || ''
+
+    this.handleTelemetryUpdate({
+      currentTime,
+      duration,
+      state,
+      filename,
+      filePath: url,
+      playerType: 'vlc'
+    })
+  }
+
+  public handleTelemetryUpdate(telemetry: {
+    currentTime: number
+    duration: number
+    state: 'playing' | 'paused' | 'stopped'
+    filename?: string
+    filePath?: string
+    playerType?: MediaPlayerType
+  }): void {
+    const settings = this.storageService.getSettings()
+    const { currentTime, duration, state, filename = '', filePath = '' } = telemetry
+    const playerType = telemetry.playerType || this.activePlayerType
 
     // 1. Movie handling
     if (this.activeMovie) {
@@ -165,7 +195,8 @@ export class SyncWorker {
           state,
           currentTime,
           duration,
-          completed: movie.completed || isCompleted
+          completed: movie.completed || isCompleted,
+          playerType
         }
         win.webContents.send('vlc:progress-update', update)
       }
@@ -175,7 +206,7 @@ export class SyncWorker {
     // 2. Series handling
     if (!this.activeSeries) return
 
-    const matchedEpisode = this.matchEpisode(vlcFilename, vlcUrl)
+    const matchedEpisode = this.matchEpisode(filename, filePath)
     if (matchedEpisode) {
       this.activeEpisode = matchedEpisode
     }
@@ -225,11 +256,12 @@ export class SyncWorker {
         movieId: null,
         episodeId: currentEp ? currentEp.id : null,
         filePath: currentEp ? currentEp.filePath : null,
-        filename: currentEp ? currentEp.fileName : vlcFilename,
+        filename: currentEp ? currentEp.fileName : filename,
         state,
         currentTime,
         duration,
-        completed: currentEp ? currentEp.completed || isCompleted : false
+        completed: currentEp ? currentEp.completed || isCompleted : false,
+        playerType
       }
       win.webContents.send('vlc:progress-update', update)
     }

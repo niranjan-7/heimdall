@@ -98,8 +98,16 @@ export interface LibraryData {
   movies: Movie[]
 }
 
+export type MediaPlayerType = 'vlc' | 'mpv'
+export type Anime4KPreset = 'hq_lanczos' | 'anime4k' | 'fast'
+
 export interface AppSettings {
   vlcPath: string
+  mpvPath?: string
+  preferredPlayer?: MediaPlayerType
+  enableAnime4K?: boolean
+  anime4kPreset?: Anime4KPreset
+  mpvCustomArgs?: string
   completionThreshold: number
   httpPort: number
   httpPassword: string
@@ -125,7 +133,10 @@ export interface VlcStateUpdate {
   duration: number
   completed: boolean
   subDelaySec?: number
+  playerType?: MediaPlayerType
 }
+
+export type PlayerStateUpdate = VlcStateUpdate
 
 export type FilterStatus = 'all' | 'unwatched' | 'in_progress' | 'completed'
 
