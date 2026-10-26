@@ -1,5 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import QRCode from 'qrcode'
 import App from './App'
 import './index.css'
 
@@ -78,14 +79,24 @@ if (typeof window !== 'undefined' && !window.api) {
       message: 'Desktop app required'
     }),
     scanLocalSubtitles: async () => ({ found: false }),
-    getRemoteServerInfo: async () => ({
-      enabled: true,
-      port: 42125,
-      localIp: '192.168.1.100',
-      url: 'http://192.168.1.100:42125',
-      qrCodeDataUrl: '',
-      connectedClients: 0
-    }),
+    getRemoteServerInfo: async () => {
+      const host = (typeof window !== 'undefined' && window.location.hostname && window.location.hostname !== 'localhost')
+        ? window.location.hostname
+        : '127.0.0.1'
+      const url = `http://${host}:42125`
+      let qr = ''
+      try {
+        qr = await QRCode.toDataURL(url, { margin: 2, scale: 6 })
+      } catch {}
+      return {
+        enabled: true,
+        port: 42125,
+        localIp: host,
+        url,
+        qrCodeDataUrl: qr,
+        connectedClients: 0
+      }
+    },
     searchAniList: async () => [],
     validateAniListToken: async () => ({ success: false }),
     linkAniListMedia: async () => ({} as any),

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import QRCode from 'qrcode'
 import { RemoteServerInfo } from '../../../shared/types'
 import { Smartphone, X, Copy, Check, ExternalLink, Wifi, ShieldCheck, Play } from 'lucide-react'
 
@@ -15,10 +16,53 @@ export const MobileRemoteModal: React.FC<MobileRemoteModalProps> = ({ isOpen, on
   useEffect(() => {
     if (isOpen) {
       setLoading(true)
-      window.api.getRemoteServerInfo().then((serverInfo) => {
-        setInfo(serverInfo)
-        setLoading(false)
-      })
+      window.api
+        .getRemoteServerInfo()
+        .then(async (serverInfo) => {
+          let qr = serverInfo.qrCodeDataUrl
+          const targetUrl = serverInfo.url || `http://${serverInfo.localIp || '127.0.0.1'}:${serverInfo.port || 42125}`
+
+          if (!qr || qr.length === 0) {
+            try {
+              qr = await QRCode.toDataURL(targetUrl, {
+                margin: 2,
+                scale: 6,
+                color: { dark: '#000000', light: '#ffffff' }
+              })
+            } catch {
+              // ignore
+            }
+          }
+
+          setInfo({ ...serverInfo, url: targetUrl, qrCodeDataUrl: qr })
+          setLoading(false)
+        })
+        .catch(async () => {
+          // Fallback if IPC fails
+          const host =
+            typeof window !== 'undefined' && window.location.hostname && window.location.hostname !== 'localhost'
+              ? window.location.hostname
+              : '127.0.0.1'
+          const targetUrl = `http://${host}:42125`
+          let qr = ''
+          try {
+            qr = await QRCode.toDataURL(targetUrl, {
+              margin: 2,
+              scale: 6,
+              color: { dark: '#000000', light: '#ffffff' }
+            })
+          } catch {}
+
+          setInfo({
+            enabled: true,
+            port: 42125,
+            localIp: host,
+            url: targetUrl,
+            qrCodeDataUrl: qr,
+            connectedClients: 0
+          })
+          setLoading(false)
+        })
     }
   }, [isOpen])
 
