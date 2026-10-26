@@ -1,6 +1,6 @@
 import { BrowserWindow } from 'electron'
 import * as path from 'path'
-import { Series, Episode, VlcStateUpdate, AppSettings } from '../shared/types'
+import { Series, Episode, Movie, VlcStateUpdate, AppSettings } from '../shared/types'
 import { StorageService } from './storageService'
 import { DiscordService } from './discordService'
 import { AniListService } from './anilistService'
@@ -12,6 +12,7 @@ export class SyncWorker {
   private anilistService: AniListService
   private activeSeries: Series | null = null
   private activeEpisode: Episode | null = null
+  private activeMovie: Movie | null = null
   private getMainWindow: () => BrowserWindow | null
   private consecutiveErrors = 0
   private scrobbledEpisodeIds = new Set<string>()
@@ -32,17 +33,30 @@ export class SyncWorker {
     this.stop()
     this.activeSeries = series
     this.activeEpisode = initialEpisode
+    this.activeMovie = null
     this.consecutiveErrors = 0
     this.scrobbledEpisodeIds.clear()
 
-    // Mark initially completed episodes as already scrobbled so we don't duplicate
     series.episodes.forEach((e) => {
       if (e.completed) {
         this.scrobbledEpisodeIds.add(e.id)
       }
     })
 
-    // Poll every 1500ms
+    this.timer = setInterval(() => {
+      this.pollVlcStatus().catch(() => {
+        this.consecutiveErrors++
+      })
+    }, 1500)
+  }
+
+  public startMovie(movie: Movie): void {
+    this.stop()
+    this.activeSeries = null
+    this.activeEpisode = null
+    this.activeMovie = movie
+    this.consecutiveErrors = 0
+
     this.timer = setInterval(() => {
       this.pollVlcStatus().catch(() => {
         this.consecutiveErrors++
@@ -56,28 +70,26 @@ export class SyncWorker {
       this.timer = null
     }
 
-    // Flush any pending changes to library
     this.storageService.saveLibrary()
-
-    // Clear Discord Rich Presence
     this.discordService.clearActivity().catch(() => {})
 
-    // Notify renderer that VLC is stopped
     const win = this.getMainWindow()
     if (win && !win.isDestroyed()) {
       win.webContents.send('vlc:stopped', {
         seriesId: this.activeSeries ? this.activeSeries.id : null,
-        episodeId: this.activeEpisode ? this.activeEpisode.id : null
+        episodeId: this.activeEpisode ? this.activeEpisode.id : null,
+        movieId: this.activeMovie ? this.activeMovie.id : null
       })
     }
 
     this.activeSeries = null
     this.activeEpisode = null
+    this.activeMovie = null
     this.consecutiveErrors = 0
   }
 
   private async pollVlcStatus(): Promise<void> {
-    if (!this.activeSeries) return
+    if (!this.activeSeries && !this.activeMovie) return
 
     const settings = this.storageService.getSettings()
     const url = `http://127.0.0.1:${settings.httpPort}/requests/status.json`
@@ -89,17 +101,12 @@ export class SyncWorker {
 
       const response = await fetch(url, {
         method: 'GET',
-        headers: {
-          Authorization: authHeader
-        },
+        headers: { Authorization: authHeader },
         signal: controller.signal
       })
 
       clearTimeout(timeoutId)
-
-      if (!response.ok) {
-        return
-      }
+      if (!response.ok) return
 
       const data = await response.json()
       this.consecutiveErrors = 0
@@ -110,20 +117,64 @@ export class SyncWorker {
   }
 
   private handleVlcData(data: any, settings: AppSettings): void {
-    if (!this.activeSeries) return
-
     const state: 'playing' | 'paused' | 'stopped' =
       data.state === 'playing' ? 'playing' : data.state === 'paused' ? 'paused' : 'stopped'
 
     const currentTime = Math.floor(Number(data.time) || 0)
     const duration = Math.floor(Number(data.length) || 0)
 
-    // Extract filename from VLC metadata
     const meta = data.information?.category?.meta
     const vlcFilename = meta?.filename || ''
     const vlcUrl = meta?.url || ''
 
-    // Resolve matching episode from the series
+    // 1. Movie handling
+    if (this.activeMovie) {
+      const movie = this.activeMovie
+      const threshold = settings.completionThreshold || 0.9
+      const isCompleted = duration > 0 ? currentTime / duration >= threshold : false
+
+      if ((state === 'playing' || state === 'paused') && currentTime > 2) {
+        this.storageService.updateMovieProgress(movie.id, {
+          timeSec: currentTime,
+          durationSec: duration > 0 ? duration : movie.durationSec,
+          completed: isCompleted || movie.completed,
+          lastWatchedAt: Date.now()
+        })
+      }
+
+      this.discordService
+        .updateActivity({
+          seriesTitle: movie.year ? `${movie.title} (${movie.year})` : movie.title,
+          episodeNumber: null,
+          currentTime,
+          duration,
+          isPlaying: state === 'playing',
+          coverImage: movie.posterUrl
+        })
+        .catch(() => {})
+
+      const win = this.getMainWindow()
+      if (win && !win.isDestroyed()) {
+        const update: VlcStateUpdate = {
+          isRunning: true,
+          seriesId: null,
+          movieId: movie.id,
+          episodeId: null,
+          filePath: movie.primaryFilePath,
+          filename: movie.fileName,
+          state,
+          currentTime,
+          duration,
+          completed: movie.completed || isCompleted
+        }
+        win.webContents.send('vlc:progress-update', update)
+      }
+      return
+    }
+
+    // 2. Series handling
+    if (!this.activeSeries) return
+
     const matchedEpisode = this.matchEpisode(vlcFilename, vlcUrl)
     if (matchedEpisode) {
       this.activeEpisode = matchedEpisode
@@ -136,7 +187,6 @@ export class SyncWorker {
       const threshold = settings.completionThreshold || 0.9
       isCompleted = duration > 0 ? currentTime / duration >= threshold : false
 
-      // Check if newly completed and auto-scrobble to AniList
       if (
         (isCompleted || currentEp.completed) &&
         !this.scrobbledEpisodeIds.has(currentEp.id) &&
@@ -146,7 +196,6 @@ export class SyncWorker {
         this.triggerAniListScrobble(this.activeSeries, currentEp, settings)
       }
 
-      // Update episode in storage
       this.storageService.updateEpisodeProgress(this.activeSeries.id, currentEp.id, {
         timeSec: currentTime,
         durationSec: duration > 0 ? duration : currentEp.durationSec,
@@ -155,7 +204,6 @@ export class SyncWorker {
       })
     }
 
-    // Update Discord Rich Presence
     if (currentEp) {
       this.discordService
         .updateActivity({
@@ -169,12 +217,12 @@ export class SyncWorker {
         .catch(() => {})
     }
 
-    // Emit live IPC event to React renderer
     const win = this.getMainWindow()
     if (win && !win.isDestroyed()) {
       const update: VlcStateUpdate = {
         isRunning: true,
         seriesId: this.activeSeries.id,
+        movieId: null,
         episodeId: currentEp ? currentEp.id : null,
         filePath: currentEp ? currentEp.filePath : null,
         filename: currentEp ? currentEp.fileName : vlcFilename,
@@ -238,21 +286,18 @@ export class SyncWorker {
     const cleanVlcFile = vlcFilename ? path.basename(vlcFilename).toLowerCase() : ''
     const cleanUrlFile = decodedUrl ? path.basename(decodedUrl).toLowerCase() : ''
 
-    // 1. Try matching by exact filename or URL basename
     for (const ep of this.activeSeries.episodes) {
       const epBase = path.basename(ep.filePath).toLowerCase()
       if (cleanVlcFile && epBase === cleanVlcFile) return ep
       if (cleanUrlFile && epBase === cleanUrlFile) return ep
     }
 
-    // 2. Try matching by full path containment
     for (const ep of this.activeSeries.episodes) {
       const epNorm = path.normalize(ep.filePath).toLowerCase()
       if (decodedUrl && epNorm.includes(path.normalize(decodedUrl).toLowerCase())) return ep
       if (vlcFilename && epNorm.includes(path.normalize(vlcFilename).toLowerCase())) return ep
     }
 
-    // Fallback to active episode if no match
     return this.activeEpisode
   }
 }

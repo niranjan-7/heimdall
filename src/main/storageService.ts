@@ -1,7 +1,7 @@
 import { app } from 'electron'
 import * as path from 'path'
 import * as fs from 'fs'
-import { LibraryData, AppSettings, Series, Episode } from '../shared/types'
+import { LibraryData, AppSettings, Series, Episode, Movie } from '../shared/types'
 
 const DEFAULT_SETTINGS: AppSettings = {
   vlcPath: '',
@@ -17,7 +17,7 @@ const DEFAULT_SETTINGS: AppSettings = {
 export class StorageService {
   private libraryPath: string
   private settingsPath: string
-  private libraryData: LibraryData = { series: [] }
+  private libraryData: LibraryData = { series: [], movies: [] }
   private settingsData: AppSettings = { ...DEFAULT_SETTINGS }
 
   constructor() {
@@ -32,7 +32,6 @@ export class StorageService {
     this.loadLibrary()
   }
 
-  // Auto-detect VLC path if not already set or invalid
   private detectVlcPath(): string {
     const candidates = [
       'C:\\Program Files\\VideoLAN\\VLC\\vlc.exe',
@@ -112,12 +111,15 @@ export class StorageService {
         if (!Array.isArray(this.libraryData.series)) {
           this.libraryData.series = []
         }
+        if (!Array.isArray(this.libraryData.movies)) {
+          this.libraryData.movies = []
+        }
       } else {
-        this.libraryData = { series: [] }
+        this.libraryData = { series: [], movies: [] }
       }
     } catch (error) {
       console.error('Failed to load library:', error)
-      this.libraryData = { series: [] }
+      this.libraryData = { series: [], movies: [] }
     }
   }
 
@@ -129,6 +131,7 @@ export class StorageService {
     this.atomicWriteFileSync(this.libraryPath, JSON.stringify(this.libraryData, null, 2))
   }
 
+  // Series methods
   public getSeries(id: string): Series | undefined {
     return this.libraryData.series.find((s) => s.id === id)
   }
@@ -182,5 +185,62 @@ export class StorageService {
 
     this.saveLibrary()
     return episode
+  }
+
+  // Movie methods
+  public getMovies(): Movie[] {
+    return this.libraryData.movies || []
+  }
+
+  public getMovie(id: string): Movie | undefined {
+    return (this.libraryData.movies || []).find((m) => m.id === id)
+  }
+
+  public addOrUpdateMovie(movie: Movie): void {
+    if (!this.libraryData.movies) this.libraryData.movies = []
+    const index = this.libraryData.movies.findIndex((m) => m.id === movie.id)
+    if (index >= 0) {
+      this.libraryData.movies[index] = movie
+    } else {
+      this.libraryData.movies.unshift(movie)
+    }
+    this.saveLibrary()
+  }
+
+  public removeMovie(id: string): boolean {
+    if (!this.libraryData.movies) return false
+    const initialLen = this.libraryData.movies.length
+    this.libraryData.movies = this.libraryData.movies.filter((m) => m.id !== id)
+    if (this.libraryData.movies.length !== initialLen) {
+      this.saveLibrary()
+      return true
+    }
+    return false
+  }
+
+  public updateMovieProgress(
+    movieId: string,
+    update: {
+      timeSec?: number
+      durationSec?: number
+      completed?: boolean
+      lastWatchedAt?: number | null
+      hasThumbnail?: boolean
+      subDelaySec?: number
+    }
+  ): Movie | null {
+    const movie = this.getMovie(movieId)
+    if (!movie) return null
+
+    if (update.timeSec !== undefined) movie.timeSec = update.timeSec
+    if (update.durationSec !== undefined && update.durationSec > 0)
+      movie.durationSec = update.durationSec
+    if (update.completed !== undefined) movie.completed = update.completed
+    if (update.lastWatchedAt !== undefined) movie.lastWatchedAt = update.lastWatchedAt
+    if (update.hasThumbnail !== undefined) movie.hasThumbnail = update.hasThumbnail
+    if (update.subDelaySec !== undefined) movie.subDelaySec = update.subDelaySec
+
+    this.saveLibrary()
+    return movie
   }
 }

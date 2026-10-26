@@ -28,7 +28,6 @@ export class SubtitleSyncService {
     this.ffmpegPath = ffmpegInstaller.path || 'ffmpeg'
   }
 
-  // Parse time string '00:01:23,456' or '00:01:23.456' to seconds
   private parseSrtTime(timeStr: string): number {
     const parts = timeStr.trim().replace(',', '.').split(':')
     if (parts.length === 3) {
@@ -40,7 +39,6 @@ export class SubtitleSyncService {
     return 0
   }
 
-  // Parse ASS/SSA time string '1:23:45.67' to seconds
   private parseAssTime(timeStr: string): number {
     const parts = timeStr.trim().split(':')
     if (parts.length === 3) {
@@ -52,7 +50,6 @@ export class SubtitleSyncService {
     return 0
   }
 
-  // Parse raw subtitle text into time intervals
   public parseSubtitleContent(content: string, isAss: boolean = false): SubtitleInterval[] {
     const intervals: SubtitleInterval[] = []
 
@@ -71,7 +68,6 @@ export class SubtitleSyncService {
         }
       }
     } else {
-      // Standard SRT parsing regex
       const srtRegex = /(\d{2}:\d{2}:\d{2}[,.]\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2}[,.]\d{3})/g
       let match: RegExpExecArray | null
       while ((match = srtRegex.exec(content)) !== null) {
@@ -86,13 +82,11 @@ export class SubtitleSyncService {
     return intervals
   }
 
-  // Locate external subtitle file or extract subtitle stream from video
   public async getSubtitleIntervals(filePath: string): Promise<SubtitleInterval[]> {
     const dir = path.dirname(filePath)
     const ext = path.extname(filePath)
     const base = path.basename(filePath, ext)
 
-    // Check for common external subtitle files in same folder
     const candidateFiles = [
       path.join(dir, `${base}.srt`),
       path.join(dir, `${base}.ass`),
@@ -112,12 +106,11 @@ export class SubtitleSyncService {
             return parsed
           }
         } catch {
-          // ignore and continue
+          // ignore
         }
       }
     }
 
-    // Fallback: Extract embedded subtitle stream using FFmpeg
     return new Promise((resolve) => {
       try {
         const args = ['-i', filePath, '-map', '0:s:0', '-c:s', 'srt', '-f', 'srt', '-']
@@ -128,7 +121,7 @@ export class SubtitleSyncService {
           stdoutData += d.toString()
         })
 
-        child.on('close', (code) => {
+        child.on('close', () => {
           if (stdoutData) {
             const parsed = this.parseSubtitleContent(stdoutData, false)
             resolve(parsed)
@@ -146,7 +139,6 @@ export class SubtitleSyncService {
     })
   }
 
-  // Detect speech activity in video audio using FFmpeg's silencedetect filter
   public async detectAudioSpeechIntervals(
     filePath: string,
     sampleStartSec = 30,
@@ -181,11 +173,9 @@ export class SubtitleSyncService {
           const intervals: AudioInterval[] = []
           const silences: { start: number; end: number }[] = []
 
-          // Match silence_start: 12.345 and silence_end: 15.678
           const silenceRegex =
             /silence_start:\s*([0-9.]+)|silence_end:\s*([0-9.]+)\s*\|\s*silence_duration:\s*([0-9.]+)/g
           let match: RegExpExecArray | null
-
           let currentSilenceStart = -1
 
           while ((match = silenceRegex.exec(stderrData)) !== null) {
@@ -198,7 +188,6 @@ export class SubtitleSyncService {
             }
           }
 
-          // Invert silence periods to get speech intervals
           let cursor = sampleStartSec
           const totalEnd = sampleStartSec + sampleDurationSec
 
@@ -225,7 +214,6 @@ export class SubtitleSyncService {
     })
   }
 
-  // Cross-correlation optimization to find the exact subtitle delay
   public computeOptimalOffset(
     speechIntervals: AudioInterval[],
     subIntervals: SubtitleInterval[],
@@ -262,7 +250,6 @@ export class SubtitleSyncService {
     let bestScore = -Infinity
     let bestShift = 0
 
-    // Evaluate candidate time shifts tau in [-maxShift, +maxShift]
     for (let shift = -shiftBins; shift <= shiftBins; shift++) {
       let score = 0
       const startIdx = Math.max(0, -shift)
@@ -283,14 +270,12 @@ export class SubtitleSyncService {
     }
 
     const rawOffsetSec = bestShift * binSize
-    // Rounded to two decimal places (e.g. +1.45s)
     const roundedOffset = Math.round(rawOffsetSec * 100) / 100
     const confidence = Math.min(100, Math.max(10, Math.round((bestScore / (totalSubBins * 2)) * 100)))
 
     return { offsetSec: roundedOffset, confidence }
   }
 
-  // Automatic one-click sync for an episode
   public async autoSyncEpisode(
     seriesId: string,
     episodeId: string
@@ -305,7 +290,6 @@ export class SubtitleSyncService {
       return { success: false, offsetSec: 0, message: 'Episode video file not found on disk' }
     }
 
-    // 1. Get subtitle intervals
     const subIntervals = await this.getSubtitleIntervals(episode.filePath)
     if (subIntervals.length === 0) {
       return {
@@ -315,7 +299,6 @@ export class SubtitleSyncService {
       }
     }
 
-    // 2. Detect audio speech activity
     const speechIntervals = await this.detectAudioSpeechIntervals(episode.filePath, 30, 800)
     if (speechIntervals.length === 0) {
       return {
@@ -325,15 +308,10 @@ export class SubtitleSyncService {
       }
     }
 
-    // 3. Compute optimal alignment offset
     const { offsetSec, confidence } = this.computeOptimalOffset(speechIntervals, subIntervals)
 
-    // 4. Update episode in storage
-    this.storageService.updateEpisodeProgress(seriesId, episodeId, {})
     episode.subDelaySec = offsetSec
     this.storageService.saveLibrary()
-
-    // 5. Apply immediately to active VLC process
     await this.vlcController.setSubtitleDelay(offsetSec)
 
     return {
@@ -343,7 +321,46 @@ export class SubtitleSyncService {
     }
   }
 
-  // Live micro-nudge adjustment
+  // Movie Subtitle Sync
+  public async autoSyncMovie(
+    movieId: string
+  ): Promise<{ success: boolean; offsetSec: number; message: string }> {
+    const movie = this.storageService.getMovie(movieId)
+    if (!movie || !fs.existsSync(movie.primaryFilePath)) {
+      return { success: false, offsetSec: 0, message: 'Movie file not found on disk' }
+    }
+
+    const subIntervals = await this.getSubtitleIntervals(movie.primaryFilePath)
+    if (subIntervals.length === 0) {
+      return {
+        success: false,
+        offsetSec: 0,
+        message: 'No subtitle track or external .srt found for this movie.'
+      }
+    }
+
+    const speechIntervals = await this.detectAudioSpeechIntervals(movie.primaryFilePath, 60, 900)
+    if (speechIntervals.length === 0) {
+      return {
+        success: false,
+        offsetSec: 0,
+        message: 'Could not extract speech envelope from movie audio.'
+      }
+    }
+
+    const { offsetSec, confidence } = this.computeOptimalOffset(speechIntervals, subIntervals)
+
+    movie.subDelaySec = offsetSec
+    this.storageService.saveLibrary()
+    await this.vlcController.setSubtitleDelay(offsetSec)
+
+    return {
+      success: true,
+      offsetSec,
+      message: `Aligned movie subtitles by ${offsetSec > 0 ? `+${offsetSec}` : offsetSec}s (${confidence}% confidence)`
+    }
+  }
+
   public async nudgeSubtitleDelay(
     seriesId: string,
     episodeId: string,
@@ -361,7 +378,6 @@ export class SubtitleSyncService {
     episode.subDelaySec = newDelay
 
     if (applyToSeason) {
-      // Apply this offset to all episodes in same season
       const seasonEpisodes = series.episodes.filter((e) => e.seasonFolder === episode.seasonFolder)
       for (const ep of seasonEpisodes) {
         ep.subDelaySec = newDelay
@@ -370,14 +386,28 @@ export class SubtitleSyncService {
     }
 
     this.storageService.saveLibrary()
-
-    // Send command to live VLC process
     await this.vlcController.setSubtitleDelay(newDelay)
 
     return { currentDelay: newDelay }
   }
 
-  // Reset subtitle delay back to 0.0s
+  public async nudgeMovieSubtitleDelay(
+    movieId: string,
+    deltaSec: number
+  ): Promise<{ currentDelay: number }> {
+    const movie = this.storageService.getMovie(movieId)
+    if (!movie) return { currentDelay: 0 }
+
+    const current = movie.subDelaySec || 0
+    const newDelay = Math.round((current + deltaSec) * 100) / 100
+    movie.subDelaySec = newDelay
+
+    this.storageService.saveLibrary()
+    await this.vlcController.setSubtitleDelay(newDelay)
+
+    return { currentDelay: newDelay }
+  }
+
   public async resetSubtitleDelay(seriesId: string, episodeId: string): Promise<void> {
     const series = this.storageService.getSeries(seriesId)
     if (!series) return
@@ -385,6 +415,16 @@ export class SubtitleSyncService {
     const episode = series.episodes.find((e) => e.id === episodeId)
     if (episode) {
       episode.subDelaySec = 0
+      this.storageService.saveLibrary()
+    }
+
+    await this.vlcController.setSubtitleDelay(0)
+  }
+
+  public async resetMovieSubtitleDelay(movieId: string): Promise<void> {
+    const movie = this.storageService.getMovie(movieId)
+    if (movie) {
+      movie.subDelaySec = 0
       this.storageService.saveLibrary()
     }
 

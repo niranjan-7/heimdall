@@ -49,8 +49,53 @@ export interface Series {
   defaultSubDelaySec?: number
 }
 
+export interface Movie {
+  id: string
+  title: string
+  cleanTitle: string
+  year?: number | null
+  filePaths: string[] // multi-part files (e.g. CD1, CD2)
+  primaryFilePath: string
+  fileName: string
+  fileSize?: number
+  durationSec: number
+  timeSec: number
+  completed: boolean
+  lastWatchedAt: number | null
+  // Technical specs extracted offline via ffmpeg:
+  resolution?: string
+  videoCodec?: string
+  audioCodec?: string
+  // TMDB / Online metadata:
+  tmdbId?: number | null
+  posterUrl?: string | null
+  backdropUrl?: string | null
+  overview?: string | null
+  rating?: number | null
+  releaseDate?: string | null
+  genres?: string[]
+  director?: string | null
+  // Local video thumbnail (revealed on hover):
+  hasThumbnail?: boolean
+  subDelaySec?: number
+}
+
+export interface TmdbMovieSearchResult {
+  id: number
+  title: string
+  original_title?: string
+  release_date?: string
+  year?: number
+  poster_path?: string
+  backdrop_path?: string
+  overview?: string
+  vote_average?: number
+  genre_ids?: number[]
+}
+
 export interface LibraryData {
   series: Series[]
+  movies: Movie[]
 }
 
 export interface AppSettings {
@@ -65,11 +110,13 @@ export interface AppSettings {
   aniListAvatar?: string
   enableAniListScrobble: boolean
   enableThumbnails: boolean
+  tmdbApiKey?: string
 }
 
 export interface VlcStateUpdate {
   isRunning: boolean
   seriesId: string | null
+  movieId?: string | null
   episodeId: string | null
   filePath: string | null
   filename: string | null

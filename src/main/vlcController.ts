@@ -1,6 +1,6 @@
 import { spawn, ChildProcess } from 'child_process'
 import * as fs from 'fs'
-import { Series, Episode } from '../shared/types'
+import { Series, Episode, Movie } from '../shared/types'
 import { StorageService } from './storageService'
 import { SyncWorker } from './syncWorker'
 
@@ -46,7 +46,6 @@ export class VlcController {
     if (this.currentProcess) {
       this.syncWorker.stop()
 
-      // Try graceful HTTP stop command first
       try {
         const settings = this.storageService.getSettings()
         const auth = 'Basic ' + Buffer.from(':' + settings.httpPassword).toString('base64')
@@ -69,6 +68,75 @@ export class VlcController {
     }
   }
 
+  public async launchMovie(
+    movieId: string,
+    options: { startTime?: number } = {}
+  ): Promise<{ success: boolean; message?: string }> {
+    const movie = this.storageService.getMovie(movieId)
+    if (!movie || movie.filePaths.length === 0) {
+      return { success: false, message: 'Movie not found or has no playable files.' }
+    }
+
+    const settings = this.storageService.getSettings()
+    if (!settings.vlcPath || !fs.existsSync(settings.vlcPath)) {
+      return {
+        success: false,
+        message: `VLC executable not found at "${settings.vlcPath}". Please check Settings.`
+      }
+    }
+
+    let startTime = options.startTime ?? movie.timeSec
+    if (movie.completed && options.startTime === undefined) {
+      startTime = 0
+    }
+
+    await this.stopCurrentProcess()
+
+    const subDelay = movie.subDelaySec ?? 0
+    this.currentSubDelay = subDelay
+
+    const vlcArgs = [
+      ...movie.filePaths,
+      `--start-time=${Math.max(0, Math.floor(startTime))}`,
+      '--extraintf=http',
+      `--http-port=${settings.httpPort}`,
+      `--http-password=${settings.httpPassword}`
+    ]
+
+    if (subDelay !== 0) {
+      vlcArgs.push(`--sub-delay=${subDelay}`)
+    }
+
+    try {
+      const child = spawn(settings.vlcPath, vlcArgs, {
+        detached: false,
+        stdio: 'ignore'
+      })
+
+      this.currentProcess = child
+      this.syncWorker.startMovie(movie)
+
+      child.on('error', (err) => {
+        console.error('Failed to spawn VLC process:', err)
+        this.syncWorker.stop()
+        this.currentProcess = null
+      })
+
+      child.on('close', () => {
+        this.syncWorker.stop()
+        this.currentProcess = null
+      })
+
+      this.storageService.updateMovieProgress(movie.id, {
+        lastWatchedAt: Date.now()
+      })
+
+      return { success: true }
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'Error launching VLC' }
+    }
+  }
+
   public async launchSeries(
     seriesId: string,
     targetEpisodeId?: string,
@@ -87,7 +155,6 @@ export class VlcController {
       }
     }
 
-    // Determine target episode
     let startIndex = 0
     if (targetEpisodeId) {
       const idx = series.episodes.findIndex((e) => e.id === targetEpisodeId)
@@ -104,7 +171,6 @@ export class VlcController {
     let targetEpisode = series.episodes[startIndex]
     let startTime = options.startTime ?? targetEpisode.timeSec
 
-    // If advanceIfCompleted is requested and target episode is completed, advance to next episode
     if (options.advanceIfCompleted && targetEpisode.completed) {
       if (startIndex + 1 < series.episodes.length) {
         startIndex = startIndex + 1
@@ -113,14 +179,11 @@ export class VlcController {
       }
     }
 
-    // Stop previous VLC instance cleanly
     await this.stopCurrentProcess()
 
-    // Slice array from index N to end
     const remainingEpisodes = series.episodes.slice(startIndex)
     const playlistPaths = remainingEpisodes.map((e) => e.filePath)
 
-    // Retrieve saved subtitle delay
     const subDelay = targetEpisode.subDelaySec ?? series.defaultSubDelaySec ?? 0
     this.currentSubDelay = subDelay
 
@@ -143,8 +206,6 @@ export class VlcController {
       })
 
       this.currentProcess = child
-
-      // Start live sync worker
       this.syncWorker.start(series, targetEpisode)
 
       child.on('error', (err) => {
@@ -158,7 +219,6 @@ export class VlcController {
         this.currentProcess = null
       })
 
-      // Update series lastActiveEpisodeId
       this.storageService.updateEpisodeProgress(series.id, targetEpisode.id, {
         lastWatchedAt: Date.now()
       })

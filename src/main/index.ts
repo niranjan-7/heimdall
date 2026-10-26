@@ -10,8 +10,10 @@ import { ThumbnailService } from './thumbnailService'
 import { DiscordService } from './discordService'
 import { AniListService } from './anilistService'
 import { SubtitleSyncService } from './subtitleSyncService'
+import { TmdbService } from './tmdbService'
 import { scanSeriesFolders } from './folderScanner'
-import { Series } from '../shared/types'
+import { scanMoviesFolder } from './movieScanner'
+import { Series, Movie } from '../shared/types'
 
 // Register privileged custom scheme for video thumbnails
 protocol.registerSchemesAsPrivileged([
@@ -34,13 +36,14 @@ let thumbnailService: ThumbnailService
 let discordService: DiscordService
 let anilistService: AniListService
 let subtitleSyncService: SubtitleSyncService
+let tmdbService: TmdbService
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
-    width: 1320,
-    height: 880,
+    width: 1360,
+    height: 900,
     minWidth: 1040,
-    minHeight: 700,
+    minHeight: 720,
     show: false,
     autoHideMenuBar: true,
     title: 'Heimdall',
@@ -74,8 +77,8 @@ function registerCustomProtocols(): void {
   protocol.handle('heimdall-thumb', async (request) => {
     try {
       const parsed = new URL(request.url)
-      const episodeId = decodeURIComponent(parsed.pathname.replace(/^\/+/, ''))
-      const thumbPath = thumbnailService.getThumbnailPath(episodeId)
+      const id = decodeURIComponent(parsed.pathname.replace(/^\/+/, ''))
+      const thumbPath = thumbnailService.getThumbnailPath(id)
       if (fs.existsSync(thumbPath)) {
         return await net.fetch(pathToFileURL(thumbPath).toString())
       }
@@ -111,7 +114,7 @@ function registerIpcHandlers(): void {
     if (!mainWindow) return null
     const result = await dialog.showOpenDialog(mainWindow, {
       properties: ['openDirectory', 'createDirectory'],
-      title: 'Select Series or Season Folder'
+      title: 'Select Folder'
     })
     if (result.canceled || result.filePaths.length === 0) {
       return null
@@ -205,9 +208,110 @@ function registerIpcHandlers(): void {
     return storageService.removeSeries(seriesId)
   })
 
+  // Module 2: Movies Operations
+  ipcMain.handle('movies:scan-folder', async (_event, folderPath: string) => {
+    const existing = storageService.getMovies()
+    const scannedMovies = await scanMoviesFolder(folderPath, existing)
+
+    // Save and queue background tasks for each movie
+    for (const m of scannedMovies) {
+      storageService.addOrUpdateMovie(m)
+      thumbnailService.queueMovie(m)
+
+      // Background TMDB query if missing metadata
+      if (!m.tmdbId) {
+        const settings = storageService.getSettings()
+        tmdbService.searchMovie(m.cleanTitle, m.year, settings.tmdbApiKey).then(async (results) => {
+          if (results.length > 0) {
+            const top = results[0]
+            const details = await tmdbService.getMovieDetails(top.id, settings.tmdbApiKey)
+            m.tmdbId = top.id
+            m.title = top.title
+            m.posterUrl = top.poster_path
+            m.backdropUrl = top.backdrop_path
+            m.overview = top.overview
+            m.rating = top.vote_average
+            m.year = top.year || m.year
+            if (details) {
+              m.genres = details.genres
+              m.director = details.director
+            }
+            storageService.addOrUpdateMovie(m)
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('movie:updated', m)
+            }
+          }
+        })
+      }
+    }
+
+    return storageService.getMovies()
+  })
+
+  ipcMain.handle('movies:remove', (_event, movieId: string) => {
+    return storageService.removeMovie(movieId)
+  })
+
+  ipcMain.handle(
+    'movies:play',
+    async (_event, movieId: string, options?: { startTime?: number }) => {
+      return await vlcController.launchMovie(movieId, options)
+    }
+  )
+
+  ipcMain.handle('movies:toggle-completed', (_event, movieId: string, completed?: boolean) => {
+    const movie = storageService.getMovie(movieId)
+    if (!movie) return null
+    const newCompleted = completed !== undefined ? completed : !movie.completed
+    return storageService.updateMovieProgress(movieId, {
+      completed: newCompleted,
+      timeSec: newCompleted ? movie.durationSec : 0,
+      lastWatchedAt: Date.now()
+    })
+  })
+
+  ipcMain.handle('movies:reset-progress', (_event, movieId: string) => {
+    return storageService.updateMovieProgress(movieId, {
+      completed: false,
+      timeSec: 0
+    })
+  })
+
+  // TMDB Search & Fix Match
+  ipcMain.handle('tmdb:search', async (_event, query: string, year?: number) => {
+    const settings = storageService.getSettings()
+    return await tmdbService.searchMovie(query, year, settings.tmdbApiKey)
+  })
+
+  ipcMain.handle('movies:fix-match', async (_event, movieId: string, tmdbId: number) => {
+    const movie = storageService.getMovie(movieId)
+    if (!movie) throw new Error('Movie not found')
+
+    const settings = storageService.getSettings()
+    const details = await tmdbService.getMovieDetails(tmdbId, settings.tmdbApiKey)
+    if (details) {
+      movie.tmdbId = details.id
+      movie.title = details.title
+      movie.year = details.year || movie.year
+      movie.posterUrl = details.poster_path
+      movie.backdropUrl = details.backdrop_path
+      movie.overview = details.overview
+      movie.rating = details.vote_average
+      movie.genres = details.genres
+      movie.director = details.director
+      storageService.addOrUpdateMovie(movie)
+    }
+
+    return movie
+  })
+
   // Module 1: Subtitle Sync IPC
   ipcMain.handle('subsync:auto-sync', async (_event, seriesId: string, episodeId: string) => {
     return await subtitleSyncService.autoSyncEpisode(seriesId, episodeId)
+  })
+
+  ipcMain.handle('subsync:auto-sync-movie', async (_event, movieId: string) => {
+    return await subtitleSyncService.autoSyncMovie(movieId)
   })
 
   ipcMain.handle(
@@ -228,8 +332,17 @@ function registerIpcHandlers(): void {
     }
   )
 
+  ipcMain.handle('subsync:nudge-movie', async (_event, movieId: string, deltaSec: number) => {
+    return await subtitleSyncService.nudgeMovieSubtitleDelay(movieId, deltaSec)
+  })
+
   ipcMain.handle('subsync:reset', async (_event, seriesId: string, episodeId: string) => {
     await subtitleSyncService.resetSubtitleDelay(seriesId, episodeId)
+    return { currentDelay: 0 }
+  })
+
+  ipcMain.handle('subsync:reset-movie', async (_event, movieId: string) => {
+    await subtitleSyncService.resetMovieSubtitleDelay(movieId)
     return { currentDelay: 0 }
   })
 
@@ -351,10 +464,11 @@ app.whenReady().then(() => {
   syncWorker = new SyncWorker(storageService, discordService, anilistService, () => mainWindow)
   vlcController = new VlcController(storageService, syncWorker)
   subtitleSyncService = new SubtitleSyncService(storageService, vlcController)
+  tmdbService = new TmdbService()
 
-  thumbnailService.setCallback((seriesId, episodeId) => {
+  thumbnailService.setCallback((id, isMovie) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('thumbnail:generated', { seriesId, episodeId })
+      mainWindow.webContents.send('thumbnail:generated', { id, isMovie })
     }
   })
 
@@ -363,10 +477,12 @@ app.whenReady().then(() => {
   registerIpcHandlers()
   createWindow()
 
+  // Queue initial thumbnails
   const lib = storageService.getLibrary()
   for (const s of lib.series) {
     thumbnailService.queueSeries(s)
   }
+  thumbnailService.queueMovies(lib.movies)
 
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

@@ -4,8 +4,10 @@ import {
   LibraryData,
   Series,
   Episode,
+  Movie,
   VlcStateUpdate,
   AniListMediaInfo,
+  TmdbMovieSearchResult,
   AppNotification
 } from '../shared/types'
 
@@ -15,6 +17,8 @@ export interface IElectronAPI {
   saveSettings: (settings: Partial<AppSettings>) => Promise<AppSettings>
   selectFolder: () => Promise<string | null>
   selectVlcExecutable: () => Promise<string | null>
+
+  // Series
   addSeries: (folderPath: string) => Promise<Series>
   addSeasonToSeries: (seriesId: string, folderPath: string) => Promise<Series>
   rescanSeries: (seriesId: string) => Promise<Series>
@@ -31,10 +35,26 @@ export interface IElectronAPI {
     options?: { advanceIfCompleted?: boolean; startTime?: number }
   ) => Promise<{ success: boolean; message?: string }>
   stopVlc: () => Promise<void>
+
+  // Module 2: Movies
+  scanMoviesFolder: (folderPath: string) => Promise<Movie[]>
+  removeMovie: (movieId: string) => Promise<boolean>
+  playMovie: (
+    movieId: string,
+    options?: { startTime?: number }
+  ) => Promise<{ success: boolean; message?: string }>
+  toggleMovieCompleted: (movieId: string, completed?: boolean) => Promise<Movie | null>
+  resetMovieProgress: (movieId: string) => Promise<Movie | null>
+  searchTmdb: (query: string, year?: number) => Promise<TmdbMovieSearchResult[]>
+  fixMovieMatch: (movieId: string, tmdbId: number) => Promise<Movie>
+
   // Module 1: Subtitle Sync
   autoSyncSubtitle: (
     seriesId: string,
     episodeId: string
+  ) => Promise<{ success: boolean; offsetSec: number; message: string }>
+  autoSyncMovieSubtitle: (
+    movieId: string
   ) => Promise<{ success: boolean; offsetSec: number; message: string }>
   nudgeSubtitleDelay: (
     seriesId: string,
@@ -42,11 +62,17 @@ export interface IElectronAPI {
     deltaSec: number,
     applyToSeason: boolean
   ) => Promise<{ currentDelay: number }>
+  nudgeMovieSubtitleDelay: (
+    movieId: string,
+    deltaSec: number
+  ) => Promise<{ currentDelay: number }>
   resetSubtitleDelay: (
     seriesId: string,
     episodeId: string
   ) => Promise<{ currentDelay: number }>
+  resetMovieSubtitleDelay: (movieId: string) => Promise<{ currentDelay: number }>
   getSubtitleDelay: () => Promise<number>
+
   // Feature 6: AniList
   searchAniList: (query: string) => Promise<AniListMediaInfo[]>
   validateAniListToken: (
@@ -57,18 +83,25 @@ export interface IElectronAPI {
     media: { id: number; title?: string; coverImage?: string; bannerImage?: string }
   ) => Promise<Series>
   unlinkAniListMedia: (seriesId: string) => Promise<Series>
+
   // Feature 2: Thumbnails
   queueThumbnails: (seriesId: string) => Promise<void>
+
   // Listeners
   onVlcProgressUpdate: (callback: (update: VlcStateUpdate) => void) => () => void
   onVlcStopped: (
-    callback: (info: { seriesId: string | null; episodeId: string | null }) => void
+    callback: (info: {
+      seriesId: string | null
+      episodeId: string | null
+      movieId?: string | null
+    }) => void
   ) => () => void
   onThumbnailGenerated: (
-    callback: (info: { seriesId: string; episodeId: string }) => void
+    callback: (info: { id: string; isMovie?: boolean }) => void
   ) => () => void
   onNotification: (callback: (notification: AppNotification) => void) => () => void
   onSeriesUpdated: (callback: (series: Series) => void) => () => void
+  onMovieUpdated: (callback: (movie: Movie) => void) => () => void
 }
 
 const api: IElectronAPI = {
@@ -77,6 +110,7 @@ const api: IElectronAPI = {
   saveSettings: (settings) => ipcRenderer.invoke('storage:save-settings', settings),
   selectFolder: () => ipcRenderer.invoke('dialog:select-folder'),
   selectVlcExecutable: () => ipcRenderer.invoke('dialog:select-vlc-executable'),
+
   addSeries: (folderPath) => ipcRenderer.invoke('series:add', folderPath),
   addSeasonToSeries: (seriesId, folderPath) =>
     ipcRenderer.invoke('series:add-season', seriesId, folderPath),
@@ -90,13 +124,27 @@ const api: IElectronAPI = {
     ipcRenderer.invoke('vlc:play', seriesId, episodeId, options),
   stopVlc: () => ipcRenderer.invoke('vlc:stop'),
 
+  // Movies
+  scanMoviesFolder: (folderPath) => ipcRenderer.invoke('movies:scan-folder', folderPath),
+  removeMovie: (movieId) => ipcRenderer.invoke('movies:remove', movieId),
+  playMovie: (movieId, options) => ipcRenderer.invoke('movies:play', movieId, options),
+  toggleMovieCompleted: (movieId, completed) =>
+    ipcRenderer.invoke('movies:toggle-completed', movieId, completed),
+  resetMovieProgress: (movieId) => ipcRenderer.invoke('movies:reset-progress', movieId),
+  searchTmdb: (query, year) => ipcRenderer.invoke('tmdb:search', query, year),
+  fixMovieMatch: (movieId, tmdbId) => ipcRenderer.invoke('movies:fix-match', movieId, tmdbId),
+
   // Subtitle Sync
   autoSyncSubtitle: (seriesId, episodeId) =>
     ipcRenderer.invoke('subsync:auto-sync', seriesId, episodeId),
+  autoSyncMovieSubtitle: (movieId) => ipcRenderer.invoke('subsync:auto-sync-movie', movieId),
   nudgeSubtitleDelay: (seriesId, episodeId, deltaSec, applyToSeason) =>
     ipcRenderer.invoke('subsync:nudge', seriesId, episodeId, deltaSec, applyToSeason),
+  nudgeMovieSubtitleDelay: (movieId, deltaSec) =>
+    ipcRenderer.invoke('subsync:nudge-movie', movieId, deltaSec),
   resetSubtitleDelay: (seriesId, episodeId) =>
     ipcRenderer.invoke('subsync:reset', seriesId, episodeId),
+  resetMovieSubtitleDelay: (movieId) => ipcRenderer.invoke('subsync:reset-movie', movieId),
   getSubtitleDelay: () => ipcRenderer.invoke('subsync:get-delay'),
 
   searchAniList: (query) => ipcRenderer.invoke('anilist:search', query),
@@ -121,8 +169,7 @@ const api: IElectronAPI = {
     }
   },
   onThumbnailGenerated: (callback) => {
-    const handler = (_event: any, data: { seriesId: string; episodeId: string }): void =>
-      callback(data)
+    const handler = (_event: any, data: { id: string; isMovie?: boolean }): void => callback(data)
     ipcRenderer.on('thumbnail:generated', handler)
     return () => {
       ipcRenderer.removeListener('thumbnail:generated', handler)
@@ -140,6 +187,13 @@ const api: IElectronAPI = {
     ipcRenderer.on('series:updated', handler)
     return () => {
       ipcRenderer.removeListener('series:updated', handler)
+    }
+  },
+  onMovieUpdated: (callback) => {
+    const handler = (_event: any, data: Movie): void => callback(data)
+    ipcRenderer.on('movie:updated', handler)
+    return () => {
+      ipcRenderer.removeListener('movie:updated', handler)
     }
   }
 }

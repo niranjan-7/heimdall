@@ -1,21 +1,28 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { Series, LibraryData, VlcStateUpdate, AppNotification } from '../../shared/types'
+import { Series, Movie, LibraryData, VlcStateUpdate, AppNotification } from '../../shared/types'
 import { Sidebar } from './components/Sidebar'
 import { HeroBanner } from './components/HeroBanner'
 import { EpisodeGrid } from './components/EpisodeGrid'
+import { MovieHeroBanner } from './components/MovieHeroBanner'
+import { MovieGrid } from './components/MovieGrid'
 import { SettingsModal } from './components/SettingsModal'
 import { AniListSearchModal } from './components/AniListSearchModal'
-import { Eye, AlertCircle, Film, CheckCircle2, Info } from 'lucide-react'
+import { MovieMatchModal } from './components/MovieMatchModal'
+import { Eye, AlertCircle, Film, CheckCircle2, Info, Clapperboard } from 'lucide-react'
 
 export const App: React.FC = () => {
-  const [library, setLibrary] = useState<LibraryData>({ series: [] })
+  const [library, setLibrary] = useState<LibraryData>({ series: [], movies: [] })
+  const [viewMode, setViewMode] = useState<'series' | 'movies'>('series')
   const [selectedSeriesId, setSelectedSeriesId] = useState<string | null>(null)
+  const [selectedMovieId, setSelectedMovieId] = useState<string | null>(null)
+
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [aniListModalOpen, setAniListModalOpen] = useState(false)
+  const [matchingMovie, setMatchingMovie] = useState<Movie | null>(null)
+
   const [activeVlcState, setActiveVlcState] = useState<VlcStateUpdate | null>(null)
   const [notification, setNotification] = useState<AppNotification | null>(null)
 
-  // Load Library on initial mount
   const loadLibrary = useCallback(async () => {
     try {
       const data = await window.api.getLibrary()
@@ -23,23 +30,45 @@ export const App: React.FC = () => {
       if (data.series.length > 0 && !selectedSeriesId) {
         setSelectedSeriesId(data.series[0].id)
       }
+      if (data.movies && data.movies.length > 0 && !selectedMovieId) {
+        setSelectedMovieId(data.movies[0].id)
+      }
     } catch (err) {
       console.error('Failed to load library:', err)
     }
-  }, [selectedSeriesId])
+  }, [selectedSeriesId, selectedMovieId])
 
   useEffect(() => {
     loadLibrary()
   }, [loadLibrary])
 
-  // Setup listeners
   useEffect(() => {
     const unsubProgress = window.api.onVlcProgressUpdate((update: VlcStateUpdate) => {
       setActiveVlcState(update)
 
+      // Live update movie
+      if (update.movieId) {
+        setLibrary((prev) => ({
+          ...prev,
+          movies: (prev.movies || []).map((m) => {
+            if (m.id !== update.movieId) return m
+            return {
+              ...m,
+              timeSec: update.currentTime,
+              durationSec: update.duration > 0 ? update.duration : m.durationSec,
+              completed: update.completed || m.completed,
+              lastWatchedAt: Date.now()
+            }
+          })
+        }))
+        return
+      }
+
+      // Live update series
       if (update.seriesId && update.episodeId) {
-        setLibrary((prev) => {
-          const nextSeries = prev.series.map((s) => {
+        setLibrary((prev) => ({
+          ...prev,
+          series: prev.series.map((s) => {
             if (s.id !== update.seriesId) return s
             const updatedEpisodes = s.episodes.map((ep) => {
               if (ep.id !== update.episodeId) return ep
@@ -58,8 +87,7 @@ export const App: React.FC = () => {
               updatedAt: Date.now()
             }
           })
-          return { series: nextSeries }
-        })
+        }))
       }
     })
 
@@ -68,18 +96,22 @@ export const App: React.FC = () => {
       loadLibrary()
     })
 
-    const unsubThumb = window.api.onThumbnailGenerated(({ seriesId, episodeId }) => {
-      setLibrary((prev) => ({
-        series: prev.series.map((s) => {
-          if (s.id !== seriesId) return s
+    const unsubThumb = window.api.onThumbnailGenerated(({ id, isMovie }) => {
+      setLibrary((prev) => {
+        if (isMovie) {
           return {
-            ...s,
-            episodes: s.episodes.map((ep) =>
-              ep.id === episodeId ? { ...ep, hasThumbnail: true } : ep
-            )
+            ...prev,
+            movies: (prev.movies || []).map((m) => (m.id === id ? { ...m, hasThumbnail: true } : m))
           }
-        })
-      }))
+        }
+        return {
+          ...prev,
+          series: prev.series.map((s) => ({
+            ...s,
+            episodes: s.episodes.map((ep) => (ep.id === id ? { ...ep, hasThumbnail: true } : ep))
+          }))
+        }
+      })
     })
 
     const unsubNotification = window.api.onNotification((notif) => {
@@ -89,7 +121,15 @@ export const App: React.FC = () => {
 
     const unsubSeriesUpdated = window.api.onSeriesUpdated((updatedSeries) => {
       setLibrary((prev) => ({
+        ...prev,
         series: prev.series.map((s) => (s.id === updatedSeries.id ? updatedSeries : s))
+      }))
+    })
+
+    const unsubMovieUpdated = window.api.onMovieUpdated((updatedMovie) => {
+      setLibrary((prev) => ({
+        ...prev,
+        movies: (prev.movies || []).map((m) => (m.id === updatedMovie.id ? updatedMovie : m))
       }))
     })
 
@@ -99,17 +139,19 @@ export const App: React.FC = () => {
       unsubThumb()
       unsubNotification()
       unsubSeriesUpdated()
+      unsubMovieUpdated()
     }
   }, [loadLibrary])
 
   const currentSeries = library.series.find((s) => s.id === selectedSeriesId) || null
+  const currentMovie = (library.movies || []).find((m) => m.id === selectedMovieId) || null
 
   const showToast = (type: 'success' | 'info' | 'error', message: string) => {
     setNotification({ type, message })
     setTimeout(() => setNotification(null), 5000)
   }
 
-  // Handlers
+  // Series Handlers
   const handleAddSeries = async () => {
     try {
       const folder = await window.api.selectFolder()
@@ -118,6 +160,7 @@ export const App: React.FC = () => {
       const newSeries = await window.api.addSeries(folder)
       await loadLibrary()
       setSelectedSeriesId(newSeries.id)
+      setViewMode('series')
       showToast('info', `Imported "${newSeries.title}" (${newSeries.episodes.length} episodes)`)
     } catch (err: any) {
       showToast('error', err.message || 'Failed to add series folder')
@@ -139,7 +182,7 @@ export const App: React.FC = () => {
     }
   }
 
-  const handleRescan = async () => {
+  const handleRescanSeries = async () => {
     if (!currentSeries) return
     try {
       const updated = await window.api.rescanSeries(currentSeries.id)
@@ -154,7 +197,7 @@ export const App: React.FC = () => {
   const handleDeleteSeries = async () => {
     if (!currentSeries) return
     const confirmed = window.confirm(
-      `Remove "${currentSeries.title}" from Heimdall? (Your media files on disk will NOT be deleted)`
+      `Remove "${currentSeries.title}" from Heimdall? (Media files on disk will NOT be deleted)`
     )
     if (!confirmed) return
 
@@ -169,15 +212,13 @@ export const App: React.FC = () => {
     }
   }
 
-  const handlePlayResume = async () => {
+  const handlePlayResumeSeries = async () => {
     if (!currentSeries) return
     const res = await window.api.playVlc(currentSeries.id, undefined, { advanceIfCompleted: true })
-    if (!res.success && res.message) {
-      showToast('error', res.message)
-    }
+    if (!res.success && res.message) showToast('error', res.message)
   }
 
-  const handlePlayNext = async () => {
+  const handlePlayNextEpisode = async () => {
     if (!currentSeries) return
     let resumeIndex = -1
     if (currentSeries.lastActiveEpisodeId) {
@@ -187,49 +228,105 @@ export const App: React.FC = () => {
     if (nextIndex < currentSeries.episodes.length) {
       const nextEp = currentSeries.episodes[nextIndex]
       const res = await window.api.playVlc(currentSeries.id, nextEp.id, { startTime: 0 })
-      if (!res.success && res.message) {
-        showToast('error', res.message)
-      }
+      if (!res.success && res.message) showToast('error', res.message)
     }
   }
 
   const handlePlayEpisode = async (episodeId: string) => {
     if (!currentSeries) return
     const res = await window.api.playVlc(currentSeries.id, episodeId)
-    if (!res.success && res.message) {
-      showToast('error', res.message)
-    }
+    if (!res.success && res.message) showToast('error', res.message)
   }
 
-  const handleToggleWatched = async (episodeId: string, e: React.MouseEvent) => {
+  const handleToggleEpisodeWatched = async (episodeId: string, e: React.MouseEvent) => {
     e.stopPropagation()
     if (!currentSeries) return
     await window.api.toggleEpisodeCompleted(currentSeries.id, episodeId)
     await loadLibrary()
   }
 
-  const handleResetProgress = async (episodeId: string, e: React.MouseEvent) => {
+  const handleResetEpisodeProgress = async (episodeId: string, e: React.MouseEvent) => {
     e.stopPropagation()
     if (!currentSeries) return
     await window.api.resetEpisodeProgress(currentSeries.id, episodeId)
     await loadLibrary()
   }
 
-  const handleSeriesLinked = (updatedSeries: Series) => {
+  // Movie Handlers
+  const handleAddMoviesFolder = async () => {
+    try {
+      const folder = await window.api.selectFolder()
+      if (!folder) return
+
+      showToast('info', 'Scanning folder and querying TMDB metadata...')
+      const updatedMovies = await window.api.scanMoviesFolder(folder)
+      await loadLibrary()
+      setViewMode('movies')
+      if (updatedMovies.length > 0) {
+        setSelectedMovieId(updatedMovies[0].id)
+      }
+      showToast('success', `Found and updated ${updatedMovies.length} movies in library`)
+    } catch (err: any) {
+      showToast('error', err.message || 'Failed to scan movies folder')
+    }
+  }
+
+  const handlePlayMovie = async (movieId: string) => {
+    const res = await window.api.playMovie(movieId)
+    if (!res.success && res.message) showToast('error', res.message)
+  }
+
+  const handleToggleMovieWatched = async (movieId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    await window.api.toggleMovieCompleted(movieId)
+    await loadLibrary()
+  }
+
+  const handleDeleteMovie = async () => {
+    if (!currentMovie) return
+    const confirmed = window.confirm(
+      `Remove "${currentMovie.title}" from Heimdall? (Media files on disk will NOT be deleted)`
+    )
+    if (!confirmed) return
+
+    try {
+      await window.api.removeMovie(currentMovie.id)
+      const data = await window.api.getLibrary()
+      setLibrary(data)
+      setSelectedMovieId(data.movies && data.movies.length > 0 ? data.movies[0].id : null)
+      showToast('info', 'Movie removed from library')
+    } catch (err: any) {
+      showToast('error', err.message || 'Failed to remove movie')
+    }
+  }
+
+  const handleMovieMatched = (updatedMovie: Movie) => {
     setLibrary((prev) => ({
-      series: prev.series.map((s) => (s.id === updatedSeries.id ? updatedSeries : s))
+      ...prev,
+      movies: (prev.movies || []).map((m) => (m.id === updatedMovie.id ? updatedMovie : m))
     }))
-    showToast('success', `Linked "${updatedSeries.title}" to AniList`)
+    showToast('success', `Matched "${updatedMovie.title}" with TMDB`)
   }
 
   return (
     <div className="flex h-screen bg-background text-zinc-100 overflow-hidden font-sans">
       {/* Left Sidebar */}
       <Sidebar
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
         seriesList={library.series}
+        moviesList={library.movies || []}
         activeSeriesId={selectedSeriesId}
-        onSelectSeries={(id) => setSelectedSeriesId(id)}
-        onAddSeries={handleAddSeries}
+        activeMovieId={selectedMovieId}
+        onSelectSeries={(id) => {
+          setSelectedSeriesId(id)
+          setViewMode('series')
+        }}
+        onSelectMovie={(id) => {
+          setSelectedMovieId(id)
+          setViewMode('movies')
+        }}
+        onAddFolder={viewMode === 'series' ? handleAddSeries : handleAddMoviesFolder}
         onOpenSettings={() => setSettingsOpen(true)}
       />
 
@@ -257,52 +354,95 @@ export const App: React.FC = () => {
           </div>
         )}
 
-        {currentSeries ? (
-          <div>
-            {/* Top Hero Section with Subtitle Sync Engine */}
-            <HeroBanner
-              series={currentSeries}
-              activeVlcState={activeVlcState}
-              onPlayResume={handlePlayResume}
-              onPlayNext={handlePlayNext}
-              onAddSeason={handleAddSeason}
-              onRescan={handleRescan}
-              onDeleteSeries={handleDeleteSeries}
-              onOpenAniListSearch={() => setAniListModalOpen(true)}
-              onNotification={showToast}
-              onDelayUpdated={loadLibrary}
-            />
-
-            {/* Episode Grid with Season Tabs & Filters */}
-            <EpisodeGrid
-              series={currentSeries}
-              currentPlayingEpisodeId={
-                activeVlcState?.seriesId === currentSeries.id
-                  ? activeVlcState.episodeId
-                  : null
-              }
-              onPlayEpisode={handlePlayEpisode}
-              onToggleWatched={handleToggleWatched}
-              onResetProgress={handleResetProgress}
-            />
-          </div>
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-            <div className="w-16 h-16 rounded-2xl bg-zinc-900 border border-surface-border flex items-center justify-center mb-4 shadow-xl">
-              <Eye className="w-8 h-8 text-bifrost-amber stroke-[2]" />
+        {viewMode === 'series' ? (
+          // Series View
+          currentSeries ? (
+            <div>
+              <HeroBanner
+                series={currentSeries}
+                activeVlcState={activeVlcState}
+                onPlayResume={handlePlayResumeSeries}
+                onPlayNext={handlePlayNextEpisode}
+                onAddSeason={handleAddSeason}
+                onRescan={handleRescanSeries}
+                onDeleteSeries={handleDeleteSeries}
+                onOpenAniListSearch={() => setAniListModalOpen(true)}
+                onNotification={showToast}
+                onDelayUpdated={loadLibrary}
+              />
+              <EpisodeGrid
+                series={currentSeries}
+                currentPlayingEpisodeId={
+                  activeVlcState?.seriesId === currentSeries.id ? activeVlcState.episodeId : null
+                }
+                onPlayEpisode={handlePlayEpisode}
+                onToggleWatched={handleToggleEpisodeWatched}
+                onResetProgress={handleResetEpisodeProgress}
+              />
             </div>
-            <h3 className="text-xl font-bold text-zinc-200">No Series Selected</h3>
-            <p className="text-sm text-zinc-500 max-w-sm mt-1.5 mb-6">
-              Select a series from the sidebar or import a new folder of video files to start tracking your watch progress.
-            </p>
-            <button
-              onClick={handleAddSeries}
-              className="py-2.5 px-5 rounded-xl bg-bifrost-amber hover:bg-bifrost-glow text-zinc-950 font-bold text-xs flex items-center gap-2 shadow-lg shadow-bifrost-amber/20 transition-all"
-            >
-              <Film className="w-4 h-4 text-zinc-950" />
-              Add First Series
-            </button>
-          </div>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+              <div className="w-16 h-16 rounded-2xl bg-zinc-900 border border-surface-border flex items-center justify-center mb-4 shadow-xl">
+                <Eye className="w-8 h-8 text-bifrost-amber stroke-[2]" />
+              </div>
+              <h3 className="text-xl font-bold text-zinc-200">No Series Selected</h3>
+              <p className="text-sm text-zinc-500 max-w-sm mt-1.5 mb-6">
+                Select a series from the sidebar or import a folder of episodes to start tracking.
+              </p>
+              <button
+                onClick={handleAddSeries}
+                className="py-2.5 px-5 rounded-xl bg-bifrost-amber hover:bg-bifrost-glow text-zinc-950 font-bold text-xs flex items-center gap-2 shadow-lg shadow-bifrost-amber/20 transition-all"
+              >
+                <Film className="w-4 h-4 text-zinc-950" />
+                Add Series Folder
+              </button>
+            </div>
+          )
+        ) : (
+          // Movies View
+          currentMovie ? (
+            <div>
+              <MovieHeroBanner
+                movie={currentMovie}
+                activeVlcState={activeVlcState}
+                onPlayResume={() => handlePlayMovie(currentMovie.id)}
+                onFixMatch={() => setMatchingMovie(currentMovie)}
+                onDeleteMovie={handleDeleteMovie}
+                onNotification={showToast}
+                onDelayUpdated={loadLibrary}
+              />
+              <MovieGrid
+                movies={library.movies || []}
+                currentPlayingMovieId={
+                  activeVlcState?.movieId === currentMovie.id ? activeVlcState.movieId : null
+                }
+                onPlayMovie={handlePlayMovie}
+                onToggleWatched={handleToggleMovieWatched}
+                onFixMatch={(movie, e) => {
+                  e.stopPropagation()
+                  setMatchingMovie(movie)
+                }}
+                onSelectMovie={(movie) => setSelectedMovieId(movie.id)}
+              />
+            </div>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+              <div className="w-16 h-16 rounded-2xl bg-zinc-900 border border-surface-border flex items-center justify-center mb-4 shadow-xl">
+                <Clapperboard className="w-8 h-8 text-bifrost-amber stroke-[2]" />
+              </div>
+              <h3 className="text-xl font-bold text-zinc-200">No Movies In Library</h3>
+              <p className="text-sm text-zinc-500 max-w-sm mt-1.5 mb-6">
+                Import a folder containing feature films to enable TMDB cover art, hover video previews, and subtitle sync.
+              </p>
+              <button
+                onClick={handleAddMoviesFolder}
+                className="py-2.5 px-5 rounded-xl bg-bifrost-amber hover:bg-bifrost-glow text-zinc-950 font-bold text-xs flex items-center gap-2 shadow-lg shadow-bifrost-amber/20 transition-all"
+              >
+                <Clapperboard className="w-4 h-4 text-zinc-950" />
+                Add Movies Folder
+              </button>
+            </div>
+          )
         )}
       </main>
 
@@ -319,7 +459,23 @@ export const App: React.FC = () => {
           isOpen={aniListModalOpen}
           series={currentSeries}
           onClose={() => setAniListModalOpen(false)}
-          onLinked={handleSeriesLinked}
+          onLinked={(updatedSeries) => {
+            setLibrary((prev) => ({
+              ...prev,
+              series: prev.series.map((s) => (s.id === updatedSeries.id ? updatedSeries : s))
+            }))
+            showToast('success', `Linked "${updatedSeries.title}" to AniList`)
+          }}
+        />
+      )}
+
+      {/* TMDB Fix Match Modal */}
+      {matchingMovie && (
+        <MovieMatchModal
+          isOpen={true}
+          movie={matchingMovie}
+          onClose={() => setMatchingMovie(null)}
+          onMatched={handleMovieMatched}
         />
       )}
     </div>
