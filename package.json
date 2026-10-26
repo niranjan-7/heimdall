@@ -18,7 +18,10 @@
     "build:win": "npm run build && electron-builder --win",
     "build:linux": "npm run build && electron-builder --linux",
     "build:mac": "npm run build && electron-builder --mac",
-    "build:all": "npm run build && electron-builder -mwl"
+    "build:all": "npm run build && electron-builder -mwl",
+    "landing:dev": "npm --prefix landing run dev",
+    "landing:build": "npm --prefix landing run build",
+    "landing:preview": "npm --prefix landing run preview"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.1",
