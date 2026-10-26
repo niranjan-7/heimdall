@@ -80,9 +80,17 @@ if (typeof window !== 'undefined' && !window.api) {
     }),
     scanLocalSubtitles: async () => ({ found: false }),
     getRemoteServerInfo: async () => {
-      const host = (typeof window !== 'undefined' && window.location.hostname && window.location.hostname !== 'localhost')
-        ? window.location.hostname
-        : '127.0.0.1'
+      let host = '192.168.29.195'
+      try {
+        const res = await fetch('http://127.0.0.1:42125/api/status', { signal: AbortSignal.timeout(1000) })
+        if (res.ok) {
+          const data = await res.json()
+          if (data.localIp && !data.localIp.startsWith('127.')) {
+            host = data.localIp
+          }
+        }
+      } catch {}
+
       const url = `http://${host}:42125`
       let qr = ''
       try {

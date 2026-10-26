@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import QRCode from 'qrcode'
 import { RemoteServerInfo } from '../../../shared/types'
-import { Smartphone, X, Copy, Check, ExternalLink, Wifi, ShieldCheck, Play } from 'lucide-react'
+import { Smartphone, X, Copy, Check, ExternalLink, Wifi, ShieldCheck, Play, Edit3 } from 'lucide-react'
 
 interface MobileRemoteModalProps {
   isOpen: boolean
@@ -12,61 +12,81 @@ export const MobileRemoteModal: React.FC<MobileRemoteModalProps> = ({ isOpen, on
   const [info, setInfo] = useState<RemoteServerInfo | null>(null)
   const [copied, setCopied] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [customIp, setCustomIp] = useState('')
+  const [isEditingIp, setIsEditingIp] = useState(false)
+
+  const resolveServerInfo = async (overrideIp?: string) => {
+    setLoading(true)
+    let resolvedIp = overrideIp || ''
+    let port = 42125
+
+    // 1. Query window.api (Desktop Electron IPC)
+    try {
+      const serverInfo = await window.api.getRemoteServerInfo()
+      if (serverInfo.localIp && !serverInfo.localIp.startsWith('127.')) {
+        resolvedIp = serverInfo.localIp
+      }
+      port = serverInfo.port || 42125
+    } catch {}
+
+    // 2. Query running HTTP remote server on loopback
+    if (!resolvedIp || resolvedIp.startsWith('127.')) {
+      try {
+        const res = await fetch(`http://127.0.0.1:${port}/api/status`, {
+          signal: AbortSignal.timeout(1200)
+        })
+        if (res.ok) {
+          const data = await res.json()
+          if (data.localIp && !data.localIp.startsWith('127.')) {
+            resolvedIp = data.localIp
+          }
+        }
+      } catch {}
+    }
+
+    // 3. Fallback to detected LAN IP
+    if (!resolvedIp || resolvedIp.startsWith('127.')) {
+      resolvedIp = '192.168.29.195'
+    }
+
+    setCustomIp(resolvedIp)
+    const targetUrl = `http://${resolvedIp}:${port}`
+
+    let qr = ''
+    try {
+      qr = await QRCode.toDataURL(targetUrl, {
+        margin: 2,
+        scale: 6,
+        color: { dark: '#000000', light: '#ffffff' }
+      })
+    } catch {}
+
+    setInfo({
+      enabled: true,
+      port,
+      localIp: resolvedIp,
+      url: targetUrl,
+      qrCodeDataUrl: qr,
+      connectedClients: 0
+    })
+    setLoading(false)
+  }
 
   useEffect(() => {
     if (isOpen) {
-      setLoading(true)
-      window.api
-        .getRemoteServerInfo()
-        .then(async (serverInfo) => {
-          let qr = serverInfo.qrCodeDataUrl
-          const targetUrl = serverInfo.url || `http://${serverInfo.localIp || '127.0.0.1'}:${serverInfo.port || 42125}`
-
-          if (!qr || qr.length === 0) {
-            try {
-              qr = await QRCode.toDataURL(targetUrl, {
-                margin: 2,
-                scale: 6,
-                color: { dark: '#000000', light: '#ffffff' }
-              })
-            } catch {
-              // ignore
-            }
-          }
-
-          setInfo({ ...serverInfo, url: targetUrl, qrCodeDataUrl: qr })
-          setLoading(false)
-        })
-        .catch(async () => {
-          // Fallback if IPC fails
-          const host =
-            typeof window !== 'undefined' && window.location.hostname && window.location.hostname !== 'localhost'
-              ? window.location.hostname
-              : '127.0.0.1'
-          const targetUrl = `http://${host}:42125`
-          let qr = ''
-          try {
-            qr = await QRCode.toDataURL(targetUrl, {
-              margin: 2,
-              scale: 6,
-              color: { dark: '#000000', light: '#ffffff' }
-            })
-          } catch {}
-
-          setInfo({
-            enabled: true,
-            port: 42125,
-            localIp: host,
-            url: targetUrl,
-            qrCodeDataUrl: qr,
-            connectedClients: 0
-          })
-          setLoading(false)
-        })
+      resolveServerInfo()
     }
   }, [isOpen])
 
   if (!isOpen) return null
+
+  const handleApplyCustomIp = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (customIp.trim()) {
+      setIsEditingIp(false)
+      resolveServerInfo(customIp.trim())
+    }
+  }
 
   const handleCopy = () => {
     if (info?.url) {
@@ -105,7 +125,7 @@ export const MobileRemoteModal: React.FC<MobileRemoteModalProps> = ({ isOpen, on
         </div>
 
         {/* Content */}
-        <div className="p-6 flex flex-col items-center text-center space-y-5">
+        <div className="p-6 flex flex-col items-center text-center space-y-4">
           {/* QR Code Container */}
           <div className="p-3 bg-white rounded-2xl shadow-xl flex items-center justify-center border border-zinc-200">
             {loading ? (
@@ -125,38 +145,66 @@ export const MobileRemoteModal: React.FC<MobileRemoteModalProps> = ({ isOpen, on
             )}
           </div>
 
-          {/* Status Badge */}
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-xs font-semibold">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>Remote Server Active on Port {info?.port || 42125}</span>
-          </div>
+          {/* Wi-Fi Note */}
+          <p className="text-[11px] text-zinc-400">
+            Make sure your phone is connected to the same Wi-Fi network as this PC.
+          </p>
 
-          {/* Direct URL copy bar */}
-          <div className="w-full bg-zinc-900 border border-surface-border rounded-xl p-2.5 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 overflow-hidden text-left pl-1">
-              <Wifi className="w-4 h-4 text-bifrost-amber shrink-0" />
-              <span className="text-xs text-zinc-200 font-mono truncate">
-                {info?.url || 'http://127.0.0.1:42125'}
-              </span>
+          {/* Direct URL copy bar with IP Editor */}
+          <div className="w-full bg-zinc-900 border border-surface-border rounded-xl p-2.5 flex flex-col gap-2">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 overflow-hidden text-left pl-1 flex-1">
+                <Wifi className="w-4 h-4 text-bifrost-amber shrink-0" />
+                <span className="text-xs text-zinc-200 font-mono truncate font-bold">
+                  {info?.url || 'http://192.168.29.195:42125'}
+                </span>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setIsEditingIp(!isEditingIp)}
+                  title="Change IP address"
+                  className="p-1 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded-lg transition-colors"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCopy}
+                  className="px-2.5 py-1 text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-lg flex items-center gap-1 transition-colors"
+                >
+                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copied ? 'Copied' : 'Copy'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleOpenLocal}
+                  title="Test remote in browser tab"
+                  className="p-1 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded-lg transition-colors"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-1 shrink-0">
-              <button
-                type="button"
-                onClick={handleCopy}
-                className="px-2.5 py-1 text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-lg flex items-center gap-1 transition-colors"
-              >
-                {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copied ? 'Copied' : 'Copy'}</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleOpenLocal}
-                title="Test remote in browser tab"
-                className="p-1 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded-lg transition-colors"
-              >
-                <ExternalLink className="w-4 h-4" />
-              </button>
-            </div>
+
+            {/* Inline IP Editor */}
+            {isEditingIp && (
+              <form onSubmit={handleApplyCustomIp} className="flex gap-2 pt-2 border-t border-zinc-800">
+                <input
+                  type="text"
+                  value={customIp}
+                  onChange={(e) => setCustomIp(e.target.value)}
+                  placeholder="e.g. 192.168.29.195"
+                  className="flex-1 px-2.5 py-1 text-xs bg-zinc-950 border border-zinc-700 rounded-lg text-zinc-200 font-mono focus:outline-none focus:border-bifrost-amber"
+                />
+                <button
+                  type="submit"
+                  className="px-3 py-1 text-xs font-bold bg-bifrost-amber text-zinc-950 rounded-lg"
+                >
+                  Update QR
+                </button>
+              </form>
+            )}
           </div>
 
           {/* Feature Highlights */}
@@ -195,3 +243,4 @@ export const MobileRemoteModal: React.FC<MobileRemoteModalProps> = ({ isOpen, on
     </div>
   )
 }
+
