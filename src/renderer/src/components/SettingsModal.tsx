@@ -209,22 +209,42 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
     try {
       const res = await window.api.validateAniListToken(cleanToken)
       if (res.success && res.username) {
-        setSettings((prev) =>
-          prev
-            ? {
-                ...prev,
-                aniListToken: cleanToken,
-                aniListUsername: res.username,
-                aniListAvatar: res.avatar
-              }
-            : null
-        )
+        const updated = {
+          ...(settings || {} as AppSettings),
+          aniListToken: cleanToken,
+          aniListUsername: res.username,
+          aniListAvatar: res.avatar,
+          enableAniListScrobble: true
+        }
+        await window.api.saveSettings(updated)
+        setSettings(updated)
+        onSaved?.(updated)
         setTokenFeedback(`Connected as ${res.username}!`)
+        window.api.syncAllToAniList().catch(() => {})
       } else {
         setTokenFeedback(res.error || 'Invalid token')
       }
     } finally {
       setValidatingToken(false)
+    }
+  }
+
+  const [syncingAllAniList, setSyncingAllAniList] = useState(false)
+
+  const handleSyncAllAniList = async () => {
+    if (syncingAllAniList) return
+    setSyncingAllAniList(true)
+    try {
+      const res = await window.api.syncAllToAniList()
+      if (res.success) {
+        setTokenFeedback(`Synced ${res.count} series to AniList!`)
+      } else {
+        setTokenFeedback(res.message || 'Sync failed')
+      }
+    } catch (err: any) {
+      setTokenFeedback(err?.message || 'Sync failed')
+    } finally {
+      setSyncingAllAniList(false)
     }
   }
 
@@ -724,13 +744,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
                     </span>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleDisconnectAniList}
-                  className="text-xs text-red-400 hover:text-red-300"
-                >
-                  Disconnect
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleSyncAllAniList}
+                    disabled={syncingAllAniList}
+                    className="px-2.5 py-1 text-xs font-semibold bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 rounded-lg flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${syncingAllAniList ? 'animate-spin' : ''}`} />
+                    {syncingAllAniList ? 'Syncing...' : 'Sync All Series'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDisconnectAniList}
+                    className="text-xs text-red-400 hover:text-red-300 ml-1"
+                  >
+                    Disconnect
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="space-y-2">

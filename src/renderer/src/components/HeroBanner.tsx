@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Series, Episode, VlcStateUpdate } from '../../../shared/types'
 import { formatTime } from '../utils/formatters'
 import { SubtitleSyncWidget } from './SubtitleSyncWidget'
@@ -41,6 +41,23 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
   onDelayUpdated,
   onSeriesUpdated
 }) => {
+  const [syncingAniList, setSyncingAniList] = useState(false)
+
+  const handleSyncToAniList = async () => {
+    if (syncingAniList) return
+    setSyncingAniList(true)
+    try {
+      const res = await window.api.syncSeriesToAniList(series.id)
+      if (!res.success && res.message) {
+        onNotification('error', res.message)
+      }
+    } catch (err: any) {
+      onNotification('error', err?.message || 'Failed to sync to AniList')
+    } finally {
+      setSyncingAniList(false)
+    }
+  }
+
   const handleCleanTitles = async () => {
     try {
       const updated = await window.api.batchNormalizeEpisodeTitles(series.id)
@@ -157,6 +174,18 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                 <Sparkles className="w-3.5 h-3.5 text-sky-400" />
                 {series.aniListId ? 'Match / Change AniList' : 'Match AniList'}
               </button>
+
+              {series.aniListId ? (
+                <button
+                  onClick={handleSyncToAniList}
+                  disabled={syncingAniList}
+                  title="Force scrobble completed watch progress to your connected AniList account"
+                  className="px-3 py-1.5 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 hover:text-sky-100 border border-sky-500/40 text-xs font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 text-sky-400 ${syncingAniList ? 'animate-spin' : ''}`} />
+                  {syncingAniList ? 'Syncing...' : 'Sync to AniList'}
+                </button>
+              ) : null}
 
               <button
                 onClick={onAddSeason}

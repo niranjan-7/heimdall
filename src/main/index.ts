@@ -108,6 +108,112 @@ function registerCustomProtocols(): void {
   })
 }
 
+async function syncSeriesToAniList(
+  seriesId: string,
+  notify = true
+): Promise<{ success: boolean; progress?: number; message?: string }> {
+  try {
+    const series = storageService.getSeries(seriesId)
+    if (!series) return { success: false, message: 'Series not found' }
+    if (!series.aniListId) return { success: false, message: 'Series is not linked to AniList' }
+
+    const settings = storageService.getSettings()
+    if (!settings.enableAniListScrobble || !settings.aniListToken) {
+      return {
+        success: false,
+        message: 'AniList scrobbling is not enabled or no token configured in Settings'
+      }
+    }
+
+    const completedEpisodes = series.episodes.filter((e) => e.completed && e.episodeNumber !== null)
+    if (completedEpisodes.length === 0) {
+      return { success: false, message: 'No completed episodes found to sync' }
+    }
+
+    const maxEp = Math.max(...completedEpisodes.map((e) => e.episodeNumber!))
+    const res = await anilistService.scrobbleProgress(series.aniListId, maxEp, settings.aniListToken)
+
+    if (notify && mainWindow && !mainWindow.isDestroyed()) {
+      if (res.success) {
+        mainWindow.webContents.send('app:notification', {
+          type: 'success',
+          message: `🎉 Synced ${series.aniListTitle || series.title} (Ep ${maxEp}) to AniList!`
+        })
+      } else {
+        mainWindow.webContents.send('app:notification', {
+          type: 'error',
+          message: `AniList sync failed: ${res.error || 'Unknown error'}`
+        })
+      }
+    }
+
+    return { success: res.success, progress: maxEp, message: res.error }
+  } catch (err: any) {
+    if (notify && mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('app:notification', {
+        type: 'error',
+        message: `AniList sync failed: ${err?.message || 'Unexpected error'}`
+      })
+    }
+    return { success: false, message: err?.message || 'Unexpected error' }
+  }
+}
+
+async function syncAllSeriesToAniList(): Promise<{
+  success: boolean
+  count: number
+  message?: string
+}> {
+  try {
+    const library = storageService.getLibrary()
+    const settings = storageService.getSettings()
+    if (!settings.enableAniListScrobble || !settings.aniListToken) {
+      return {
+        success: false,
+        count: 0,
+        message: 'AniList scrobbling is disabled or token is missing.'
+      }
+    }
+
+    const linkedSeries = library.series.filter(
+      (s) => s.aniListId && s.episodes.some((e) => e.completed && e.episodeNumber !== null)
+    )
+
+    if (linkedSeries.length === 0) {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('app:notification', {
+          type: 'info',
+          message: 'No watched series currently linked to AniList.'
+        })
+      }
+      return {
+        success: true,
+        count: 0,
+        message: 'No watched series currently linked to AniList.'
+      }
+    }
+
+    let successCount = 0
+    for (const s of linkedSeries) {
+      const res = await syncSeriesToAniList(s.id, false)
+      if (res.success) {
+        successCount++
+      }
+    }
+
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('app:notification', {
+        type: 'success',
+        message: `🎉 Synced ${successCount} series to your AniList account!`
+      })
+    }
+
+    return { success: true, count: successCount }
+  } catch (err: any) {
+    return { success: false, count: 0, message: err?.message || 'Failed to sync series' }
+  }
+}
+
 function registerIpcHandlers(): void {
   // Storage
   ipcMain.handle('storage:get-library', () => {
@@ -461,9 +567,18 @@ function registerIpcHandlers(): void {
       series.aniListTitle = media.title || null
       series.updatedAt = Date.now()
       storageService.addOrUpdateSeries(series)
+      syncSeriesToAniList(seriesId, true).catch(() => {})
       return series
     }
   )
+
+  ipcMain.handle('anilist:sync-series', async (_event, seriesId: string) => {
+    return await syncSeriesToAniList(seriesId, true)
+  })
+
+  ipcMain.handle('anilist:sync-all', async () => {
+    return await syncAllSeriesToAniList()
+  })
 
   ipcMain.handle('anilist:unlink-series', async (_event, seriesId: string) => {
     const series = storageService.getSeries(seriesId)
@@ -496,11 +611,15 @@ function registerIpcHandlers(): void {
       if (!ep) return null
 
       const newCompleted = completed !== undefined ? completed : !ep.completed
-      return storageService.updateEpisodeProgress(seriesId, episodeId, {
+      const res = storageService.updateEpisodeProgress(seriesId, episodeId, {
         completed: newCompleted,
         timeSec: newCompleted ? ep.durationSec || ep.timeSec : 0,
         lastWatchedAt: Date.now()
       })
+      if (newCompleted) {
+        syncSeriesToAniList(seriesId, true).catch(() => {})
+      }
+      return res
     }
   )
 
@@ -520,7 +639,11 @@ function registerIpcHandlers(): void {
       episodeIds: string[],
       update: { completed?: boolean; resetProgress?: boolean }
     ) => {
-      return storageService.batchUpdateEpisodes(seriesId, episodeIds, update)
+      const res = storageService.batchUpdateEpisodes(seriesId, episodeIds, update)
+      if (update.completed) {
+        syncSeriesToAniList(seriesId, true).catch(() => {})
+      }
+      return res
     }
   )
 
@@ -534,7 +657,9 @@ function registerIpcHandlers(): void {
   ipcMain.handle(
     'episode:mark-prior-watched',
     (_event, seriesId: string, targetEpisodeId: string) => {
-      return storageService.markEpisodesPriorTo(seriesId, targetEpisodeId)
+      const res = storageService.markEpisodesPriorTo(seriesId, targetEpisodeId)
+      syncSeriesToAniList(seriesId, true).catch(() => {})
+      return res
     }
   )
 
