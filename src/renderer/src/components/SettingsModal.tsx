@@ -189,18 +189,31 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
     setTimeout(() => setDetectStatus(null), 3500)
   }
 
+  const cleanAniListToken = (raw: string): string => {
+    let token = raw.trim()
+    if (token.includes('access_token=')) {
+      const match = token.match(/access_token=([^&#\s]+)/)
+      if (match && match[1]) {
+        token = decodeURIComponent(match[1])
+      }
+    }
+    return token
+  }
+
   const handleVerifyAniList = async () => {
-    if (!tokenInput.trim()) return
+    const cleanToken = cleanAniListToken(tokenInput)
+    if (!cleanToken) return
+    setTokenInput(cleanToken)
     setValidatingToken(true)
     setTokenFeedback(null)
     try {
-      const res = await window.api.validateAniListToken(tokenInput.trim())
+      const res = await window.api.validateAniListToken(cleanToken)
       if (res.success && res.username) {
         setSettings((prev) =>
           prev
             ? {
                 ...prev,
-                aniListToken: tokenInput.trim(),
+                aniListToken: cleanToken,
                 aniListUsername: res.username,
                 aniListAvatar: res.avatar
               }
@@ -723,11 +736,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
               <div className="space-y-2">
                 <div className="flex gap-2">
                   <input
-                    type="password"
+                    type="text"
                     value={tokenInput}
-                    onChange={(e) => setTokenInput(e.target.value)}
-                    placeholder="Paste your AniList OAuth Token..."
-                    className="flex-1 px-3 py-1.5 text-xs bg-zinc-900 border border-surface-border rounded-lg text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-sky-500"
+                    onChange={(e) => setTokenInput(cleanAniListToken(e.target.value))}
+                    placeholder="Paste token or browser URL here..."
+                    className="flex-1 px-3 py-1.5 text-xs bg-zinc-900 border border-surface-border rounded-lg text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-sky-500 font-mono"
                   />
                   <button
                     type="button"
@@ -739,16 +752,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
                   </button>
                 </div>
 
-                <div className="flex items-center justify-between text-[11px] text-zinc-500">
-                  <span>Need a token? Click to authorize in your browser:</span>
-                  <a
-                    href="https://anilist.co/api/v2/oauth/authorize?client_id=27521&response_type=token"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-sky-400 hover:underline flex items-center gap-1"
-                  >
-                    Get AniList Token <ExternalLink className="w-3 h-3" />
-                  </a>
+                <div className="space-y-2 pt-1">
+                  <div className="flex items-center justify-between text-[11px] text-zinc-400">
+                    <span>Click to authorize in your browser:</span>
+                    <a
+                      href="https://anilist.co/api/v2/oauth/authorize?client_id=27521&response_type=token"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-sky-400 hover:underline flex items-center gap-1 font-semibold"
+                    >
+                      Get AniList Token <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+
+                  <div className="p-2.5 rounded-lg bg-sky-950/40 border border-sky-800/40 text-[11px] text-sky-200/90 leading-relaxed">
+                    💡 <b>How to get your token:</b> Click the link above, log in, and click <b>Authorize</b>. Even if the page shows <i>&quot;API route not found&quot;</i>, your token is in the address bar! Simply copy the <b>full URL from your browser address bar</b> and paste it into the box above. Heimdall will extract the token automatically!
+                  </div>
                 </div>
 
                 {tokenFeedback && (
