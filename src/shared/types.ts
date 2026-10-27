@@ -101,6 +101,8 @@ export interface LibraryData {
 export type MediaPlayerType = 'vlc' | 'mpv'
 export type Anime4KPreset = 'hq_lanczos' | 'anime4k' | 'fast'
 
+export type UITheme = 'liquid_glass' | 'classic_dark' | 'oled_black'
+
 export interface AppSettings {
   vlcPath: string
   mpvPath?: string
@@ -122,6 +124,7 @@ export interface AppSettings {
   enableAniListScrobble: boolean
   enableThumbnails: boolean
   enableLiquidGlass?: boolean
+  uiTheme?: UITheme
   tmdbApiKey?: string
   enableRemoteServer?: boolean
   remotePort?: number

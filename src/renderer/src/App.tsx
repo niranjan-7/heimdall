@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { Series, Movie, LibraryData, VlcStateUpdate, AppNotification, AppSettings } from '../../shared/types'
+import { Series, Movie, LibraryData, VlcStateUpdate, AppNotification, AppSettings, UITheme } from '../../shared/types'
 import { Sidebar } from './components/Sidebar'
 import { HeroBanner } from './components/HeroBanner'
 import { EpisodeGrid } from './components/EpisodeGrid'
@@ -337,16 +337,46 @@ export const App: React.FC = () => {
     showToast('success', `Matched "${updatedMovie.title}" with TMDB`)
   }
 
-  const isLiquidGlass = appSettings?.enableLiquidGlass !== false
+  const currentTheme: UITheme = appSettings?.uiTheme || (appSettings?.enableLiquidGlass === false ? 'classic_dark' : 'liquid_glass')
+  const isLiquidGlass = currentTheme === 'liquid_glass'
+  const isOled = currentTheme === 'oled_black'
+
+  const handleCycleTheme = async () => {
+    const nextTheme: UITheme =
+      currentTheme === 'liquid_glass'
+        ? 'classic_dark'
+        : currentTheme === 'classic_dark'
+          ? 'oled_black'
+          : 'liquid_glass'
+
+    const updated = {
+      ...(appSettings || {} as AppSettings),
+      uiTheme: nextTheme,
+      enableLiquidGlass: nextTheme === 'liquid_glass'
+    } as AppSettings
+
+    setAppSettings(updated)
+    await window.api.saveSettings(updated)
+    showToast(
+      'info',
+      `Switched UI theme to ${
+        nextTheme === 'classic_dark'
+          ? 'Classic Dark (Obsidian)'
+          : nextTheme === 'oled_black'
+            ? 'OLED Pure Black'
+            : 'Liquid Glass'
+      }`
+    )
+  }
 
   return (
     <div
-      className={`flex h-screen text-zinc-100 overflow-hidden font-sans relative ${
-        isLiquidGlass ? 'bg-black/10' : 'bg-[#09090b]'
+      className={`flex h-screen text-zinc-100 overflow-hidden font-sans relative theme-${currentTheme.replace('_', '-')} ${
+        isLiquidGlass ? 'bg-black/10' : isOled ? 'bg-black' : 'bg-[#0c0d12]'
       }`}
     >
       {/* Global Optical Refraction SVG Filter */}
-      <LiquidGlassSvgFilter />
+      {isLiquidGlass && <LiquidGlassSvgFilter />}
 
       {/* Liquid Glass Ambient Background Caustics */}
       {isLiquidGlass && (
@@ -377,6 +407,8 @@ export const App: React.FC = () => {
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenMobileRemote={() => setMobileRemoteOpen(true)}
         hasUpdate={hasUpdate}
+        currentTheme={currentTheme}
+        onThemeCycle={handleCycleTheme}
       />
 
       {/* Main Content Area */}

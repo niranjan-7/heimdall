@@ -4,7 +4,8 @@ import {
   MediaPlayerType,
   Anime4KPreset,
   UpdateInfo,
-  UpdateDownloadProgress
+  UpdateDownloadProgress,
+  UITheme
 } from '../../../shared/types'
 import {
   Settings,
@@ -836,32 +837,116 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
             </label>
           </div>
 
-          {/* Feature 3: Liquid Glass UI */}
-          <div className="p-4 rounded-xl bg-zinc-950/60 border border-surface-border flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="p-1.5 rounded-lg bg-indigo-500/15 text-indigo-400">
-                <Sparkles className="w-4 h-4" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wider">
-                  Liquid Glass UI
-                </h4>
-                <p className="text-[11px] text-zinc-400">
-                  Translucent acrylic surfaces, ambient Bifrost light caustics, and specular edge reflections
-                </p>
+          {/* Feature 3: Multiple UI Themes */}
+          <div className="p-4 rounded-xl bg-zinc-950/60 border border-surface-border space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-lg bg-amber-500/15 text-amber-400">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wider">
+                    Interface & Theme Style
+                  </h4>
+                  <p className="text-[11px] text-zinc-400">
+                    Switch between dynamic reactive acrylic, minimalist obsidian dark, or pitch-black OLED
+                  </p>
+                </div>
               </div>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={settings.enableLiquidGlass !== false}
-                onChange={(e) =>
-                  setSettings({ ...settings, enableLiquidGlass: e.target.checked })
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+              {/* Option 1: Liquid Glass */}
+              <button
+                type="button"
+                onClick={() =>
+                  setSettings({
+                    ...settings,
+                    uiTheme: 'liquid_glass',
+                    enableLiquidGlass: true
+                  })
                 }
-                className="sr-only peer"
-              />
-              <div className="w-9 h-5 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-500" />
-            </label>
+                className={`p-3 rounded-xl border text-left transition-all ${
+                  (settings.uiTheme === 'liquid_glass' ||
+                    (!settings.uiTheme && settings.enableLiquidGlass !== false))
+                    ? 'bg-amber-500/15 border-amber-500/70 ring-1 ring-amber-500/50 shadow-lg'
+                    : 'bg-zinc-900/60 border-surface-border hover:border-zinc-700'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-bold text-zinc-100 flex items-center gap-1.5">
+                    🌊 Liquid Glass
+                  </span>
+                  {(settings.uiTheme === 'liquid_glass' ||
+                    (!settings.uiTheme && settings.enableLiquidGlass !== false)) && (
+                    <Check className="w-3.5 h-3.5 text-amber-400" />
+                  )}
+                </div>
+                <p className="text-[10px] text-zinc-400 leading-snug">
+                  Translucent acrylic blur, reflects your desktop wallpaper, optical caustics
+                </p>
+              </button>
+
+              {/* Option 2: Classic Dark */}
+              <button
+                type="button"
+                onClick={() =>
+                  setSettings({
+                    ...settings,
+                    uiTheme: 'classic_dark',
+                    enableLiquidGlass: false
+                  })
+                }
+                className={`p-3 rounded-xl border text-left transition-all ${
+                  settings.uiTheme === 'classic_dark' ||
+                  (!settings.uiTheme && settings.enableLiquidGlass === false)
+                    ? 'bg-amber-500/15 border-amber-500/70 ring-1 ring-amber-500/50 shadow-lg'
+                    : 'bg-zinc-900/60 border-surface-border hover:border-zinc-700'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-bold text-zinc-100 flex items-center gap-1.5">
+                    🌙 Classic Dark
+                  </span>
+                  {(settings.uiTheme === 'classic_dark' ||
+                    (!settings.uiTheme && settings.enableLiquidGlass === false)) && (
+                    <Check className="w-3.5 h-3.5 text-amber-400" />
+                  )}
+                </div>
+                <p className="text-[10px] text-zinc-400 leading-snug">
+                  Solid opaque obsidian dark theme, crisp borders, zero distraction
+                </p>
+              </button>
+
+              {/* Option 3: OLED Pure Black */}
+              <button
+                type="button"
+                onClick={() =>
+                  setSettings({
+                    ...settings,
+                    uiTheme: 'oled_black',
+                    enableLiquidGlass: false
+                  })
+                }
+                className={`p-3 rounded-xl border text-left transition-all ${
+                  settings.uiTheme === 'oled_black'
+                    ? 'bg-amber-500/15 border-amber-500/70 ring-1 ring-amber-500/50 shadow-lg'
+                    : 'bg-zinc-900/60 border-surface-border hover:border-zinc-700'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-bold text-zinc-100 flex items-center gap-1.5">
+                    🖤 OLED Black
+                  </span>
+                  {settings.uiTheme === 'oled_black' && (
+                    <Check className="w-3.5 h-3.5 text-amber-400" />
+                  )}
+                </div>
+                <p className="text-[10px] text-zinc-400 leading-snug">
+                  True pitch-black #000000, max contrast with vivid amber accents
+                </p>
+              </button>
+            </div>
           </div>
 
           {/* Section: Updates & Data Safety */}

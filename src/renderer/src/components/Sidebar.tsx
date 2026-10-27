@@ -1,5 +1,5 @@
 import React from 'react'
-import { Series, Movie } from '../../../shared/types'
+import { Series, Movie, UITheme } from '../../../shared/types'
 import {
   Eye,
   FolderPlus,
@@ -24,6 +24,8 @@ interface SidebarProps {
   onOpenSettings: () => void
   onOpenMobileRemote?: () => void
   hasUpdate?: boolean
+  currentTheme?: UITheme
+  onThemeCycle?: () => void
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -38,7 +40,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onAddFolder,
   onOpenSettings,
   onOpenMobileRemote,
-  hasUpdate
+  hasUpdate,
+  currentTheme,
+  onThemeCycle
 }) => {
   return (
     <aside className="w-72 h-screen flex flex-col liquid-glass-panel border-r border-white/10 select-none shrink-0 relative z-10">
@@ -267,6 +271,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <span className="text-xs font-medium text-zinc-300 group-hover:text-amber-200">Mobile Remote</span>
             </div>
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 font-bold border border-amber-500/30">QR</span>
+          </button>
+        )}
+
+        {onThemeCycle && (
+          <button
+            onClick={onThemeCycle}
+            title="Click to cycle theme: Liquid Glass ⇄ Classic Dark ⇄ OLED Pure Black"
+            className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-zinc-800/60 text-zinc-400 hover:text-zinc-200 transition-colors group"
+          >
+            <div className="flex items-center gap-2.5">
+              <Sparkles className="w-4 h-4 text-amber-500 group-hover:scale-110 transition-transform" />
+              <span className="text-xs font-medium">UI Theme</span>
+            </div>
+            <span className="text-[10px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider border border-white/10 bg-white/5 text-amber-300">
+              {currentTheme === 'classic_dark'
+                ? 'Classic Dark'
+                : currentTheme === 'oled_black'
+                  ? 'OLED Black'
+                  : 'Liquid Glass'}
+            </span>
           </button>
         )}
 
