@@ -141,7 +141,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   {series.coverImage ? (
                     <img
                       src={series.coverImage}
-                      alt={series.title}
+                      alt={series.aniListTitle || series.title}
                       className="w-10 h-14 object-cover rounded-md shrink-0 border border-surface-border shadow-sm"
                     />
                   ) : (

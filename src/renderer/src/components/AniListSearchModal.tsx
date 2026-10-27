@@ -15,7 +15,7 @@ export const AniListSearchModal: React.FC<AniListSearchModalProps> = ({
   onClose,
   onLinked
 }) => {
-  const [query, setQuery] = useState(series.title)
+  const [query, setQuery] = useState(series.aniListTitle || series.title)
   const [results, setResults] = useState<AniListMediaInfo[]>([])
   const [searching, setSearching] = useState(false)
   const [linkingId, setLinkingId] = useState<number | null>(null)
