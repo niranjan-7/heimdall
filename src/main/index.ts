@@ -13,6 +13,7 @@ import { SubtitleSyncService } from './subtitleSyncService'
 import { SubtitleDownloadService } from './subtitleDownloadService'
 import { RemoteServer } from './remoteServer'
 import { TmdbService } from './tmdbService'
+import { UpdateService } from './updateService'
 import { scanSeriesFolders } from './folderScanner'
 import { scanMoviesFolder } from './movieScanner'
 import { Series, Movie } from '../shared/types'
@@ -41,6 +42,7 @@ let subtitleSyncService: SubtitleSyncService
 let subtitleDownloadService: SubtitleDownloadService
 let remoteServer: RemoteServer
 let tmdbService: TmdbService
+let updateService: UpdateService
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -487,6 +489,49 @@ function registerIpcHandlers(): void {
     })
   })
 
+  // Batch Episode Actions & Cleaner
+  ipcMain.handle(
+    'episode:batch-update',
+    (
+      _event,
+      seriesId: string,
+      episodeIds: string[],
+      update: { completed?: boolean; resetProgress?: boolean }
+    ) => {
+      return storageService.batchUpdateEpisodes(seriesId, episodeIds, update)
+    }
+  )
+
+  ipcMain.handle(
+    'episode:normalize-titles',
+    (_event, seriesId: string, episodeIds?: string[]) => {
+      return storageService.batchNormalizeEpisodeTitles(seriesId, episodeIds)
+    }
+  )
+
+  ipcMain.handle(
+    'episode:mark-prior-watched',
+    (_event, seriesId: string, targetEpisodeId: string) => {
+      return storageService.markEpisodesPriorTo(seriesId, targetEpisodeId)
+    }
+  )
+
+  // In-App Update Handlers
+  ipcMain.handle('update:check', async () => {
+    return await updateService.checkForUpdates()
+  })
+
+  ipcMain.handle(
+    'update:download-install',
+    async (_event, downloadUrl: string, assetName?: string) => {
+      return await updateService.downloadAndInstallUpdate(downloadUrl, assetName)
+    }
+  )
+
+  ipcMain.handle('storage:create-backup', () => {
+    return updateService.createBackup()
+  })
+
   // VLC Controls
   ipcMain.handle(
     'vlc:play',
@@ -523,6 +568,7 @@ app.whenReady().then(() => {
   subtitleSyncService = new SubtitleSyncService(storageService, vlcController)
   subtitleDownloadService = new SubtitleDownloadService(storageService, subtitleSyncService)
   tmdbService = new TmdbService()
+  updateService = new UpdateService(() => mainWindow)
   remoteServer = new RemoteServer(storageService, vlcController, thumbnailService)
   remoteServer.start()
 

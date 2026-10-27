@@ -21,7 +21,13 @@ export const App: React.FC = () => {
       }}
     >
       <div className="min-h-screen bg-obsidian-950 text-zinc-100 selection:bg-bifrost-amber selection:text-zinc-950 font-sans antialiased relative selection:font-bold">
-        {/* Top Floating Glass Pill Navbar with Spring Scroll Progress Bar */}
+        {/* Subtle Cyber Grid Matrix Overlay */}
+        <div className="fixed inset-0 bg-grid-cyber pointer-events-none opacity-40 z-0" />
+
+        {/* Global Ambient Depth Gradients */}
+        <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-gradient-to-b from-amber-500/[0.04] via-cyan-500/[0.02] to-transparent blur-[160px] pointer-events-none z-0" />
+
+        {/* Top Aerospace Floating Command Bar */}
         <Navbar />
 
         <main className="relative z-10 flex flex-col space-y-12">

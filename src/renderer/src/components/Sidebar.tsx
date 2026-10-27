@@ -23,6 +23,7 @@ interface SidebarProps {
   onAddFolder: () => void
   onOpenSettings: () => void
   onOpenMobileRemote?: () => void
+  hasUpdate?: boolean
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -36,7 +37,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectMovie,
   onAddFolder,
   onOpenSettings,
-  onOpenMobileRemote
+  onOpenMobileRemote,
+  hasUpdate
 }) => {
   return (
     <aside className="w-72 h-screen flex flex-col bg-surface border-r border-surface-border select-none shrink-0">
@@ -270,13 +272,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         <button
           onClick={onOpenSettings}
-          className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-zinc-800/60 text-zinc-400 hover:text-zinc-200 transition-colors"
+          className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-zinc-800/60 text-zinc-400 hover:text-zinc-200 transition-colors group relative"
         >
           <div className="flex items-center gap-2.5">
-            <SettingsIcon className="w-4 h-4 text-zinc-400" />
+            <SettingsIcon className="w-4 h-4 text-zinc-400 group-hover:text-zinc-200" />
             <span className="text-xs font-medium">Settings</span>
           </div>
-          <span className="text-[10px] text-zinc-600 font-mono">v1.2.0</span>
+          <div className="flex items-center gap-1.5">
+            {hasUpdate ? (
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-[10px] font-bold text-amber-300 shadow-sm animate-pulse">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                Update
+              </span>
+            ) : (
+              <span className="text-[10px] text-zinc-600 font-mono">v1.2.0</span>
+            )}
+          </div>
         </button>
       </div>
     </aside>

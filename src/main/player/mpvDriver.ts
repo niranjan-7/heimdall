@@ -111,7 +111,7 @@ export class MpvDriver implements IMediaPlayerDriver {
       `--input-ipc-server=${pipePath}`,
       '--idle=no',
       '--keep-open=no',
-      `--start=${Math.max(0, Math.floor(startTime))}`
+      '--reset-on-next-file=start'
     ]
 
     if (subDelay !== 0) {
@@ -142,7 +142,18 @@ export class MpvDriver implements IMediaPlayerDriver {
       args.push(...customTokens)
     }
 
-    args.push(...playlistPaths)
+    if (startTime > 0 && playlistPaths.length > 0) {
+      // Per-file option scope in mpv: only the first file starts at startTime
+      args.push(
+        '--{',
+        `--start=${Math.max(0, Math.floor(startTime))}`,
+        playlistPaths[0],
+        '--}',
+        ...playlistPaths.slice(1)
+      )
+    } else {
+      args.push(...playlistPaths)
+    }
     return args
   }
 

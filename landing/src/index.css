@@ -5,10 +5,10 @@
   --color-bifrost-cyan: #06b6d4;
   --color-bifrost-violet: #8b5cf6;
   --color-bifrost-emerald: #10b981;
-  --color-obsidian-950: #09090b;
-  --color-obsidian-900: #121215;
-  --color-obsidian-850: #18181f;
-  --color-obsidian-800: #20202a;
+  --color-obsidian-950: #06070a;
+  --color-obsidian-900: #0d0f15;
+  --color-obsidian-850: #141721;
+  --color-obsidian-800: #1c202d;
 }
 
 :root {
@@ -40,8 +40,8 @@ html.lenis body {
 body {
   margin: 0;
   padding: 0;
-  background-color: #09090b;
-  color: #fafafa;
+  background-color: #06070a;
+  color: #f4f4f6;
   overflow-x: hidden;
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
@@ -52,19 +52,37 @@ body {
   will-change: transform, opacity;
 }
 
-/* Custom Glassmorphism */
+/* Cyber Matrix Background Grid */
+.bg-grid-cyber {
+  background-size: 32px 32px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+}
+
+/* Professional Glassmorphism & High-Sheen Panels */
 .glass-panel {
-  background: rgba(18, 18, 23, 0.7);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(13, 15, 22, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .glass-card {
-  background: rgba(24, 24, 31, 0.6);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(18, 21, 31, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.glass-pill {
+  background: rgba(15, 18, 27, 0.82);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .glass-glow-amber {
@@ -77,15 +95,15 @@ body {
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 7px;
 }
 ::-webkit-scrollbar-track {
-  background: #09090b;
+  background: #06070a;
 }
 ::-webkit-scrollbar-thumb {
-  background: #27272a;
+  background: #232736;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #3f3f46;
+  background: #363c52;
 }

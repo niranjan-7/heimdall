@@ -2,6 +2,7 @@ import { app } from 'electron'
 import * as path from 'path'
 import * as fs from 'fs'
 import { LibraryData, AppSettings, Series, Episode, Movie } from '../shared/types'
+import { cleanEpisodeTitle, extractEpisodeNumber } from './folderScanner'
 
 const DEFAULT_SETTINGS: AppSettings = {
   vlcPath: '',
@@ -243,6 +244,92 @@ export class StorageService {
 
     this.saveLibrary()
     return episode
+  }
+
+  public batchUpdateEpisodes(
+    seriesId: string,
+    episodeIds: string[],
+    update: { completed?: boolean; resetProgress?: boolean }
+  ): Series | null {
+    const series = this.getSeries(seriesId)
+    if (!series) return null
+
+    const idSet = new Set(episodeIds)
+    const now = Date.now()
+
+    for (const ep of series.episodes) {
+      if (idSet.has(ep.id)) {
+        if (update.completed !== undefined) {
+          ep.completed = update.completed
+          if (update.completed) {
+            ep.timeSec = ep.durationSec > 0 ? ep.durationSec : ep.timeSec
+          } else {
+            ep.timeSec = 0
+          }
+          ep.lastWatchedAt = update.completed ? now : null
+        }
+        if (update.resetProgress) {
+          ep.timeSec = 0
+          ep.completed = false
+        }
+      }
+    }
+
+    series.updatedAt = now
+    this.saveLibrary()
+    return series
+  }
+
+  public batchNormalizeEpisodeTitles(seriesId: string, episodeIds?: string[]): Series | null {
+    const series = this.getSeries(seriesId)
+    if (!series) return null
+
+    const idSet = episodeIds && episodeIds.length > 0 ? new Set(episodeIds) : null
+
+    for (const ep of series.episodes) {
+      if (!idSet || idSet.has(ep.id)) {
+        const epNum = extractEpisodeNumber(ep.fileName)
+        if (epNum !== null) {
+          ep.episodeNumber = epNum
+        }
+        ep.title = cleanEpisodeTitle(ep.fileName)
+      }
+    }
+
+    // Re-sort series episodes numerically so playlists stay synchronized
+    series.episodes.sort((a, b) => {
+      if (a.seasonFolder !== b.seasonFolder) {
+        return a.seasonFolder.localeCompare(b.seasonFolder, undefined, { numeric: true })
+      }
+      if (a.episodeNumber !== null && b.episodeNumber !== null && a.episodeNumber !== b.episodeNumber) {
+        return a.episodeNumber - b.episodeNumber
+      }
+      return a.fileName.localeCompare(b.fileName, undefined, { numeric: true })
+    })
+
+    series.updatedAt = Date.now()
+    this.saveLibrary()
+    return series
+  }
+
+  public markEpisodesPriorTo(seriesId: string, targetEpisodeId: string): Series | null {
+    const series = this.getSeries(seriesId)
+    if (!series) return null
+
+    const targetIndex = series.episodes.findIndex((e) => e.id === targetEpisodeId)
+    if (targetIndex < 0) return null
+
+    const now = Date.now()
+    for (let i = 0; i < targetIndex; i++) {
+      const ep = series.episodes[i]
+      ep.completed = true
+      ep.timeSec = ep.durationSec > 0 ? ep.durationSec : ep.timeSec
+      ep.lastWatchedAt = now
+    }
+
+    series.updatedAt = now
+    this.saveLibrary()
+    return series
   }
 
   // Movie methods

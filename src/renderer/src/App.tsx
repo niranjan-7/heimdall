@@ -24,6 +24,18 @@ export const App: React.FC = () => {
 
   const [activeVlcState, setActiveVlcState] = useState<VlcStateUpdate | null>(null)
   const [notification, setNotification] = useState<AppNotification | null>(null)
+  const [hasUpdate, setHasUpdate] = useState(false)
+
+  useEffect(() => {
+    window.api
+      .checkForUpdates()
+      .then((info) => {
+        if (info && info.hasUpdate) {
+          setHasUpdate(true)
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   const loadLibrary = useCallback(async () => {
     try {
@@ -331,6 +343,7 @@ export const App: React.FC = () => {
         onAddFolder={viewMode === 'series' ? handleAddSeries : handleAddMoviesFolder}
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenMobileRemote={() => setMobileRemoteOpen(true)}
+        hasUpdate={hasUpdate}
       />
 
       {/* Main Content Area */}
@@ -381,6 +394,7 @@ export const App: React.FC = () => {
                 onPlayEpisode={handlePlayEpisode}
                 onToggleWatched={handleToggleEpisodeWatched}
                 onResetProgress={handleResetEpisodeProgress}
+                onSeriesUpdated={loadLibrary}
               />
             </div>
           ) : (

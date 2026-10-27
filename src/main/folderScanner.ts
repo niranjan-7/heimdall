@@ -1,6 +1,6 @@
 import * as fs from 'fs'
 import * as path from 'path'
-import { Episode, Series } from '../shared/types'
+import { Episode } from '../shared/types'
 
 const SUPPORTED_EXTENSIONS = new Set(['.mkv', '.mp4', '.avi', '.webm', '.m4v'])
 
@@ -12,17 +12,47 @@ interface DiscoveredFile {
   subfolderName: string
 }
 
+/**
+ * Intelligent multi-stage episode number extractor.
+ * Handles irregular naming schemes:
+ * - "epi - 123", "epi-123", "epi 123"
+ * - "124(episode)", "124 (ep)", "124 episode"
+ * - "Fairy Tail 154.mkv"
+ * - "[SubGroup] Show - S02E15 [1080p].mkv"
+ * - "Show (2014) - 05.mkv" (prevents year 2014 from being mistaken for ep 2014)
+ */
 export function extractEpisodeNumber(fileName: string): number | null {
-  const nameWithoutExt = path.parse(fileName).name
+  const parsed = path.parse(fileName)
+  let name = parsed.name
 
-  // Match patterns like S01E05, S1E5, E05, EP05, Ep. 05, etc.
-  const epMatch = /(?:s\d+)?\s*(?:e|ep|episode)\.?\s*(\d+)/i.exec(nameWithoutExt)
+  // Stage 1: Strip bracketed release tags: [SubsPlease], [Erai-raws], [1080p], [HEVC], etc.
+  name = name.replace(/\[[^\]]*\]/g, ' ')
+
+  // Stage 2: Strip parentheses that contain video/audio tech specs or release years:
+  // e.g. (1080p), (2014), (Dual Audio), (x265), (BluRay)
+  name = name.replace(
+    /\([^)]*(?:1080p|720p|480p|2160p|4k|x264|x265|hevc|web-dl|bluray|dual\s*audio|flac|aac|19\d\d|20\d\d)[^)]*\)/gi,
+    ' '
+  )
+
+  // Stage 3: Strip standalone tech spec tokens and years so their numbers don't conflict
+  name = name.replace(/\b(?:1080p|720p|480p|2160p|4k|x264|x265|hevc|av1|aac|dts|ddp|flac|hi10p|8bit|10bit)\b/gi, ' ')
+  name = name.replace(/\b(?:19\d\d|20\d\d)\b/g, ' ')
+
+  // Pattern A: Standard prefix: S01E05, S1E5, E05, EP05, Ep. 05, Epi - 05, Episode 05, etc.
+  const epMatch = /(?:s\d+)?\s*(?:e|ep|epi|eps|episode)\.?\s*-?\s*(\d+)/i.exec(name)
   if (epMatch && epMatch[1]) {
     return parseInt(epMatch[1], 10)
   }
 
-  // Match patterns like "Series Name - 150", "Series - 01", "150.mkv"
-  const dashMatch = /(?:^|\s|-|_|\[|\()(\d{1,4})(?:\s|-|_|\]|\)|$)/.exec(nameWithoutExt)
+  // Pattern B: Suffix pattern: "124(episode)", "124 (ep)", "124 episode", "124 - episode"
+  const suffixMatch = /(\d+)\s*(?:\(|\[|-)?\s*(?:episode|ep|epi|eps)\b/i.exec(name)
+  if (suffixMatch && suffixMatch[1]) {
+    return parseInt(suffixMatch[1], 10)
+  }
+
+  // Pattern C: Delimited number: "Fairy Tail 154", "Series - 01", "150.mkv"
+  const dashMatch = /(?:^|\s|-|_|#)(\d{1,4})(?:\s|-|_|\.|$)(?!\d)/.exec(name)
   if (dashMatch && dashMatch[1]) {
     return parseInt(dashMatch[1], 10)
   }
@@ -30,16 +60,34 @@ export function extractEpisodeNumber(fileName: string): number | null {
   return null
 }
 
+/**
+ * Generates a clean, normalized episode title.
+ * Strips release tags, technical specs, and messy prefixes.
+ */
 export function cleanEpisodeTitle(fileName: string): string {
   const parsed = path.parse(fileName)
   let name = parsed.name
 
-  // Strip common bracketed release groups: [SubsPlease], [Erai-raws], [1080p], (Dual Audio), etc.
+  // Strip bracketed groups: [SubsPlease], [1080p], etc.
   name = name.replace(/\[[^\]]*\]/g, ' ')
-  name = name.replace(/\([^)]*(?:1080p|720p|480p|x264|x265|hevc|web-dl|bluray)[^)]*\)/gi, ' ')
-  name = name.replace(/\b(?:1080p|720p|480p|x264|x265|HEVC|AV1|AAC|DDP|FLAC)\b/gi, ' ')
+  // Strip tech spec parentheses
+  name = name.replace(
+    /\([^)]*(?:1080p|720p|480p|2160p|4k|x264|x265|hevc|web-dl|bluray|dual\s*audio|flac|aac)[^)]*\)/gi,
+    ' '
+  )
+  name = name.replace(/\b(?:1080p|720p|480p|2160p|4k|x264|x265|HEVC|AV1|AAC|DDP|FLAC)\b/gi, ' ')
   name = name.replace(/[._]/g, ' ')
   name = name.replace(/\s+/g, ' ').trim()
+
+  const epNum = extractEpisodeNumber(fileName)
+  if (epNum !== null) {
+    // Check if there is a distinct chapter/story title after the episode number
+    const titleAfterEp = name.replace(new RegExp(`^(?:.*?)(?:ep|epi|episode)?\\s*-?\\s*${epNum}\\s*-?\\s*`, 'i'), '').trim()
+    if (titleAfterEp && titleAfterEp.length > 2 && !/^\d+$/.test(titleAfterEp)) {
+      return `Episode ${epNum} — ${titleAfterEp}`
+    }
+    return `Episode ${epNum}`
+  }
 
   return name || parsed.name
 }
@@ -109,13 +157,22 @@ export function scanSeriesFolders(
     }
   }
 
-  // Natural Numerical Sorting using Intl.Collator with { numeric: true, sensitivity: 'base' }
-  // We sort first by season/subfolder, then by filename
+  // Intelligent Episode-First Sorter:
+  // Sorts by season/subfolder first, then by numerical episode number,
+  // guaranteeing Episode 123 is immediately followed by Episode 124 regardless of naming style!
   discovered.sort((a, b) => {
     // If different subfolder, compare subfolders naturally
     if (a.subfolderName !== b.subfolderName) {
       return collator.compare(a.subfolderName, b.subfolderName)
     }
+
+    const epNumA = extractEpisodeNumber(a.fileName)
+    const epNumB = extractEpisodeNumber(b.fileName)
+
+    if (epNumA !== null && epNumB !== null && epNumA !== epNumB) {
+      return epNumA - epNumB
+    }
+
     // Compare filenames naturally
     return collator.compare(a.fileName, b.fileName)
   })
@@ -159,11 +216,9 @@ export function scanSeriesFolders(
     }
   })
 
-  // Derive series title from root folder basename
-  let seriesTitle = path.basename(rootPath)
-  if (!seriesTitle || seriesTitle === '.' || seriesTitle === '/') {
-    seriesTitle = 'Series'
-  }
+  // Derive series title from root folder name
+  const rawFolderName = path.basename(rootPath)
+  const title = rawFolderName.replace(/[._]/g, ' ').replace(/\s+/g, ' ').trim()
 
-  return { episodes, title: seriesTitle }
+  return { episodes, title }
 }

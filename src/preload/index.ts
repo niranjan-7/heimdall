@@ -10,7 +10,9 @@ import {
   TmdbMovieSearchResult,
   AppNotification,
   SubtitleDownloadResult,
-  RemoteServerInfo
+  RemoteServerInfo,
+  UpdateInfo,
+  UpdateDownloadProgress
 } from '../shared/types'
 
 export interface IElectronAPI {
@@ -109,7 +111,25 @@ export interface IElectronAPI {
   // Feature 2: Thumbnails
   queueThumbnails: (seriesId: string) => Promise<void>
 
+  // Batch Episode Actions & Cleaner
+  batchUpdateEpisodes: (
+    seriesId: string,
+    episodeIds: string[],
+    update: { completed?: boolean; resetProgress?: boolean }
+  ) => Promise<Series | null>
+  batchNormalizeEpisodeTitles: (seriesId: string, episodeIds?: string[]) => Promise<Series | null>
+  markEpisodesPriorTo: (seriesId: string, targetEpisodeId: string) => Promise<Series | null>
+
+  // In-App Updates & Safe Backups
+  checkForUpdates: () => Promise<UpdateInfo>
+  downloadAndInstallUpdate: (
+    downloadUrl: string,
+    assetName?: string
+  ) => Promise<{ success: boolean; message?: string }>
+  createBackup: () => Promise<{ success: boolean; backupPath?: string; error?: string }>
+
   // Listeners
+  onUpdateDownloadProgress: (callback: (progress: UpdateDownloadProgress) => void) => () => void
   onVlcProgressUpdate: (callback: (update: VlcStateUpdate) => void) => () => void
   onVlcStopped: (
     callback: (info: {
@@ -189,6 +209,27 @@ const api: IElectronAPI = {
   unlinkAniListMedia: (seriesId) => ipcRenderer.invoke('anilist:unlink-series', seriesId),
   queueThumbnails: (seriesId) => ipcRenderer.invoke('thumbnails:queue-series', seriesId),
 
+  // Batch Episode Actions & Cleaner
+  batchUpdateEpisodes: (seriesId, episodeIds, update) =>
+    ipcRenderer.invoke('episode:batch-update', seriesId, episodeIds, update),
+  batchNormalizeEpisodeTitles: (seriesId, episodeIds) =>
+    ipcRenderer.invoke('episode:normalize-titles', seriesId, episodeIds),
+  markEpisodesPriorTo: (seriesId, targetEpisodeId) =>
+    ipcRenderer.invoke('episode:mark-prior-watched', seriesId, targetEpisodeId),
+
+  // In-App Updates & Safe Backups
+  checkForUpdates: () => ipcRenderer.invoke('update:check'),
+  downloadAndInstallUpdate: (downloadUrl, assetName) =>
+    ipcRenderer.invoke('update:download-install', downloadUrl, assetName),
+  createBackup: () => ipcRenderer.invoke('storage:create-backup'),
+
+  onUpdateDownloadProgress: (callback) => {
+    const handler = (_event: any, data: any): void => callback(data)
+    ipcRenderer.on('update:download-progress', handler)
+    return () => {
+      ipcRenderer.removeListener('update:download-progress', handler)
+    }
+  },
   onVlcProgressUpdate: (callback) => {
     const handler = (_event: any, data: VlcStateUpdate): void => callback(data)
     ipcRenderer.on('vlc:progress-update', handler)

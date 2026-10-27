@@ -167,3 +167,20 @@ export interface AppNotification {
   type: 'success' | 'info' | 'error'
   message: string
 }
+
+export interface UpdateInfo {
+  hasUpdate: boolean
+  currentVersion: string
+  latestVersion: string
+  releaseDate?: string
+  releaseNotes?: string
+  downloadUrl?: string | null
+  assetName?: string | null
+  assetSize?: number | null
+}
+
+export interface UpdateDownloadProgress {
+  percent: number
+  transferred: number
+  total: number
+}

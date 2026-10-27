@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from 'react'
-import { AppSettings, MediaPlayerType, Anime4KPreset } from '../../../shared/types'
+import {
+  AppSettings,
+  MediaPlayerType,
+  Anime4KPreset,
+  UpdateInfo,
+  UpdateDownloadProgress
+} from '../../../shared/types'
 import {
   Settings,
   FolderOpen,
@@ -16,7 +22,11 @@ import {
   Search,
   Play,
   Languages,
-  Download
+  Download,
+  RefreshCw,
+  CheckCircle2,
+  AlertCircle,
+  Archive
 } from 'lucide-react'
 
 interface SettingsModalProps {
@@ -33,6 +43,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
   const [validatingToken, setValidatingToken] = useState(false)
   const [tokenFeedback, setTokenFeedback] = useState<string | null>(null)
   const [detectStatus, setDetectStatus] = useState<string | null>(null)
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null)
+  const [checkingUpdate, setCheckingUpdate] = useState(false)
+  const [downloadingUpdate, setDownloadingUpdate] = useState(false)
+  const [downloadProgress, setDownloadProgress] = useState<UpdateDownloadProgress | null>(null)
+  const [updateError, setUpdateError] = useState<string | null>(null)
+  const [backupStatus, setBackupStatus] = useState<string | null>(null)
+  const [backingUp, setBackingUp] = useState(false)
 
   useEffect(() => {
     if (isOpen) {
@@ -43,10 +60,75 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
       setSavedSuccess(false)
       setTokenFeedback(null)
       setDetectStatus(null)
+      setUpdateError(null)
+
+      // Background check for latest version on settings open
+      window.api
+        .checkForUpdates()
+        .then((info) => setUpdateInfo(info))
+        .catch(() => {})
+    }
+
+    const unsubProgress = window.api.onUpdateDownloadProgress((progress) => {
+      setDownloadProgress(progress)
+    })
+
+    return () => {
+      unsubProgress()
     }
   }, [isOpen])
 
   if (!isOpen || !settings) return null
+
+  const handleCheckForUpdates = async () => {
+    setCheckingUpdate(true)
+    setUpdateError(null)
+    try {
+      const info = await window.api.checkForUpdates()
+      setUpdateInfo(info)
+    } catch (err: any) {
+      setUpdateError(err?.message || 'Failed to check for updates.')
+    } finally {
+      setCheckingUpdate(false)
+    }
+  }
+
+  const handleDownloadAndInstall = async () => {
+    if (!updateInfo || !updateInfo.downloadUrl) return
+    setDownloadingUpdate(true)
+    setUpdateError(null)
+    try {
+      const res = await window.api.downloadAndInstallUpdate(
+        updateInfo.downloadUrl,
+        updateInfo.assetName || undefined
+      )
+      if (!res.success) {
+        setUpdateError(res.message || 'Failed to install update.')
+        setDownloadingUpdate(false)
+      }
+    } catch (err: any) {
+      setUpdateError(err?.message || 'Error occurred while updating.')
+      setDownloadingUpdate(false)
+    }
+  }
+
+  const handleCreateBackup = async () => {
+    setBackingUp(true)
+    try {
+      const res = await window.api.createBackup()
+      if (res.success && res.backupPath) {
+        const filename = res.backupPath.replace(/\\/g, '/').split('/').pop()
+        setBackupStatus(`Backup saved: ${filename}`)
+      } else {
+        setBackupStatus(res.error || 'Backup failed')
+      }
+    } catch (err: any) {
+      setBackupStatus(err?.message || 'Backup failed')
+    } finally {
+      setBackingUp(false)
+      setTimeout(() => setBackupStatus(null), 5000)
+    }
+  }
 
   const handleBrowseVlc = async () => {
     const selected = await window.api.selectVlcExecutable()
@@ -633,6 +715,139 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
               />
               <div className="w-9 h-5 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-bifrost-amber" />
             </label>
+          </div>
+
+          {/* Section: Updates & Data Safety */}
+          <div className="p-4 rounded-xl bg-zinc-950/70 border border-surface-border space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-lg bg-bifrost-amber/15 text-bifrost-amber">
+                  <Download className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wider">
+                    Updates & Data Preservation
+                  </h4>
+                  <p className="text-[11px] text-zinc-400">
+                    Upgrade to latest Heimdall with 100% watch progress & library data retention
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={backingUp}
+                  onClick={handleCreateBackup}
+                  className="px-2.5 py-1 text-[11px] font-medium bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 rounded-lg flex items-center gap-1.5 transition-colors"
+                  title="Create an instant JSON snapshot of all series, movies, and settings"
+                >
+                  <Archive className="w-3.5 h-3.5 text-zinc-400" />
+                  {backingUp ? 'Backing up...' : 'Backup Library'}
+                </button>
+
+                <button
+                  type="button"
+                  disabled={checkingUpdate || downloadingUpdate}
+                  onClick={handleCheckForUpdates}
+                  className="px-2.5 py-1 text-[11px] font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-lg flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 text-bifrost-amber ${checkingUpdate ? 'animate-spin' : ''}`} />
+                  {checkingUpdate ? 'Checking...' : 'Check Updates'}
+                </button>
+              </div>
+            </div>
+
+            {backupStatus && (
+              <div className="text-[11px] px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center gap-1.5 animate-in fade-in">
+                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                <span>{backupStatus}</span>
+              </div>
+            )}
+
+            {updateError && (
+              <div className="text-[11px] px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 flex items-center gap-1.5 animate-in fade-in">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>{updateError}</span>
+              </div>
+            )}
+
+            {/* When an update is detected */}
+            {updateInfo?.hasUpdate ? (
+              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-3 animate-in fade-in">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-amber-300">
+                        Version {updateInfo.latestVersion} Available
+                      </span>
+                      <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        New Update
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-zinc-400 mt-0.5">
+                      Current version: <span className="font-mono text-zinc-300">v{updateInfo.currentVersion}</span>
+                      {updateInfo.releaseDate && ` • Released ${updateInfo.releaseDate}`}
+                    </p>
+                  </div>
+
+                  {!downloadingUpdate && (
+                    <button
+                      type="button"
+                      onClick={handleDownloadAndInstall}
+                      className="px-3.5 py-1.5 text-xs font-bold bg-amber-500 hover:bg-amber-400 text-zinc-950 rounded-lg flex items-center gap-1.5 transition-colors shadow-md shadow-amber-500/20"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      Download & Update
+                    </button>
+                  )}
+                </div>
+
+                {/* Release notes */}
+                {updateInfo.releaseNotes && (
+                  <div className="text-[11px] text-zinc-300 bg-zinc-950/70 p-2.5 rounded-lg border border-zinc-800/80 max-h-24 overflow-y-auto whitespace-pre-wrap font-mono leading-relaxed">
+                    {updateInfo.releaseNotes}
+                  </div>
+                )}
+
+                {/* Download Progress */}
+                {downloadingUpdate && (
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-amber-300 font-medium flex items-center gap-1.5">
+                        <RefreshCw className="w-3 h-3 animate-spin" />
+                        Downloading and preparing installer...
+                      </span>
+                      <span className="font-mono text-zinc-300">
+                        {downloadProgress ? `${downloadProgress.percent}%` : 'Starting...'}
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-zinc-900 rounded-full overflow-hidden border border-zinc-800">
+                      <div
+                        className="h-full bg-gradient-to-r from-amber-600 to-amber-400 transition-all duration-200"
+                        style={{ width: `${downloadProgress?.percent || 0}%` }}
+                      />
+                    </div>
+                    <p className="text-[10px] text-zinc-400">
+                      Zero-Loss Guarantee: Your library and settings will be preserved through the update.
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : updateInfo ? (
+              <div className="text-[11px] px-3 py-2 rounded-lg bg-zinc-900/80 border border-surface-border text-zinc-400 flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-zinc-300">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  Heimdall is up to date (v{updateInfo.currentVersion})
+                </span>
+                <span className="text-[10px] text-emerald-400 font-medium">Safe & Synced</span>
+              </div>
+            ) : (
+              <div className="text-[11px] px-3 py-2 rounded-lg bg-zinc-900/60 border border-surface-border text-zinc-400 flex items-center justify-between">
+                <span>Current version: <span className="font-mono text-zinc-200 font-medium">v1.2.0</span></span>
+                <span className="text-[10px] text-zinc-500">Auto-backup enabled</span>
+              </div>
+            )}
           </div>
 
           {/* Footer buttons */}

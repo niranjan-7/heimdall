@@ -110,13 +110,20 @@ export class VlcDriver implements IMediaPlayerDriver {
     await this.stop()
     this.currentSubDelay = subDelay
 
-    const vlcArgs = [
-      ...movie.filePaths,
-      `--start-time=${Math.max(0, Math.floor(startTime))}`,
+    const firstPart = movie.filePaths[0]
+    const subsequentParts = movie.filePaths.slice(1)
+
+    const vlcArgs: string[] = [firstPart]
+    if (startTime > 0) {
+      // Colon prefix applies option strictly to the preceding item in VLC playlist
+      vlcArgs.push(`:start-time=${Math.max(0, Math.floor(startTime))}`)
+    }
+    vlcArgs.push(
+      ...subsequentParts,
       '--extraintf=http',
       `--http-port=${settings.httpPort}`,
       `--http-password=${settings.httpPassword}`
-    ]
+    )
 
     if (subDelay !== 0) {
       vlcArgs.push(`--sub-delay=${subDelay}`)
@@ -169,13 +176,23 @@ export class VlcDriver implements IMediaPlayerDriver {
     const playlistPaths = remainingEpisodes.map((e) => e.filePath)
     this.currentSubDelay = subDelay
 
-    const vlcArgs = [
-      ...playlistPaths,
-      `--start-time=${Math.max(0, Math.floor(startTime))}`,
+    // VLC command-line syntax:
+    // Prefixing an option with a single colon ':' applies it strictly to the preceding item.
+    // Double-dash '--start-time' applies globally to all items in the playlist, causing
+    // every next episode to skip halfway into the episode.
+    const firstEpPath = playlistPaths[0]
+    const subsequentEpPaths = playlistPaths.slice(1)
+
+    const vlcArgs: string[] = [firstEpPath]
+    if (startTime > 0) {
+      vlcArgs.push(`:start-time=${Math.max(0, Math.floor(startTime))}`)
+    }
+    vlcArgs.push(
+      ...subsequentEpPaths,
       '--extraintf=http',
       `--http-port=${settings.httpPort}`,
       `--http-password=${settings.httpPassword}`
-    ]
+    )
 
     if (subDelay !== 0) {
       vlcArgs.push(`--sub-delay=${subDelay}`)

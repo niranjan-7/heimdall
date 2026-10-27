@@ -60,13 +60,13 @@ export const TiltCard: React.FC<TiltCardProps> = ({
         rotateY: shouldReduceMotion ? 0 : rotateYSpring,
         transformStyle: 'preserve-3d'
       }}
-      className={`relative rounded-3xl glass-panel p-8 border border-white/10 overflow-hidden transform-gpu group transition-colors duration-300 [perspective:1000px] ${className}`}
+      className={`relative rounded-3xl glass-panel p-8 border border-white/[0.09] overflow-hidden transform-gpu group transition-all duration-300 [perspective:1000px] shadow-[0_20px_50px_rgba(0,0,0,0.7)] ${className}`}
     >
       {/* Radial spotlight glow following the cursor along the border & surface */}
       <motion.div
-        className="pointer-events-none absolute -inset-px rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+        className="pointer-events-none absolute -inset-px rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-0"
         style={{
-          background: useMotionTemplate`radial-gradient(360px circle at ${mouseX}px ${mouseY}px, ${accentColor}, transparent 80%)`
+          background: useMotionTemplate`radial-gradient(380px circle at ${mouseX}px ${mouseY}px, ${accentColor}, transparent 80%)`
         }}
       />
       <div className="relative z-10 h-full flex flex-col justify-between">
