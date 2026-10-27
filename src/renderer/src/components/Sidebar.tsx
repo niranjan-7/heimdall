@@ -41,7 +41,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   hasUpdate
 }) => {
   return (
-    <aside className="w-72 h-screen flex flex-col bg-black/30 backdrop-blur-2xl border-r border-white/10 select-none shrink-0 relative z-10">
+    <aside className="w-72 h-screen flex flex-col liquid-glass-panel border-r border-white/10 select-none shrink-0 relative z-10">
       {/* Brand Header */}
       <div className="p-4 border-b border-white/10 space-y-3.5">
         <div className="flex items-center gap-3">
@@ -62,12 +62,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Top View Mode Switcher: Series vs Movies */}
-        <div className="grid grid-cols-2 p-1 bg-black/40 rounded-xl border border-white/10 backdrop-blur-md">
+        <div className="grid grid-cols-2 p-1 bg-white/[0.04] rounded-xl border border-white/10 backdrop-blur-md">
           <button
             onClick={() => onViewModeChange('series')}
             className={`py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
               viewMode === 'series'
-                ? 'bg-zinc-800 text-bifrost-amber shadow-sm'
+                ? 'bg-amber-500/20 border border-amber-500/40 text-bifrost-amber shadow-sm'
                 : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
@@ -78,7 +78,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             onClick={() => onViewModeChange('movies')}
             className={`py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
               viewMode === 'movies'
-                ? 'bg-zinc-800 text-bifrost-amber shadow-sm'
+                ? 'bg-amber-500/20 border border-amber-500/40 text-bifrost-amber shadow-sm'
                 : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
@@ -90,7 +90,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Dynamic Add Folder Button */}
         <button
           onClick={onAddFolder}
-          className="w-full py-2 px-3 rounded-xl bg-white/[0.05] hover:bg-white/[0.09] text-zinc-200 border border-white/10 hover:border-bifrost-amber/40 backdrop-blur-md transition-all flex items-center justify-center gap-2 group shadow-sm"
+          className="w-full py-2 px-3 rounded-xl liquid-glass-pill hover:bg-white/[0.1] text-zinc-200 border border-white/10 hover:border-bifrost-amber/40 transition-all flex items-center justify-center gap-2 group shadow-sm"
         >
           <FolderPlus className="w-4 h-4 text-bifrost-amber group-hover:scale-110 transition-transform" />
           <span className="text-xs font-semibold">
@@ -130,8 +130,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onClick={() => onSelectSeries(series.id)}
                   className={`w-full text-left p-2.5 rounded-xl transition-all relative overflow-hidden group flex items-center gap-3 ${
                     isSelected
-                      ? 'liquid-glass border-bifrost-amber/50 shadow-lg shadow-black/40'
-                      : 'bg-white/[0.03] hover:bg-white/[0.08] border border-transparent hover:border-white/10 backdrop-blur-sm'
+                      ? 'liquid-glass border-bifrost-amber/60 shadow-lg shadow-black/40 ring-1 ring-amber-400/30'
+                      : 'bg-white/[0.03] hover:bg-white/[0.08] border border-transparent hover:border-white/10 backdrop-blur-md'
                   }`}
                 >
                   {isSelected && (
@@ -200,8 +200,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onClick={() => onSelectMovie(movie.id)}
                   className={`w-full text-left p-2.5 rounded-xl transition-all relative overflow-hidden group flex items-center gap-3 ${
                     isSelected
-                      ? 'liquid-glass border-bifrost-amber/50 shadow-lg shadow-black/40'
-                      : 'bg-white/[0.03] hover:bg-white/[0.08] border border-transparent hover:border-white/10 backdrop-blur-sm'
+                      ? 'liquid-glass border-bifrost-amber/60 shadow-lg shadow-black/40 ring-1 ring-amber-400/30'
+                      : 'bg-white/[0.03] hover:bg-white/[0.08] border border-transparent hover:border-white/10 backdrop-blur-md'
                   }`}
                 >
                   {isSelected && (
@@ -256,7 +256,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Footer / Mobile Remote & Settings Bar */}
-      <div className="p-3 border-t border-white/10 bg-black/30 backdrop-blur-xl space-y-1">
+      <div className="p-3 border-t border-white/10 bg-transparent space-y-1">
         {onOpenMobileRemote && (
           <button
             onClick={onOpenMobileRemote}

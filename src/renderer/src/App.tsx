@@ -9,6 +9,7 @@ import { SettingsModal } from './components/SettingsModal'
 import { AniListSearchModal } from './components/AniListSearchModal'
 import { MovieMatchModal } from './components/MovieMatchModal'
 import { MobileRemoteModal } from './components/MobileRemoteModal'
+import { LiquidGlassSvgFilter } from './components/ui/LiquidGlass'
 import { Eye, AlertCircle, Film, CheckCircle2, Info, Clapperboard } from 'lucide-react'
 
 export const App: React.FC = () => {
@@ -341,9 +342,12 @@ export const App: React.FC = () => {
   return (
     <div
       className={`flex h-screen text-zinc-100 overflow-hidden font-sans relative ${
-        isLiquidGlass ? 'bg-black/25' : 'bg-[#09090b]'
+        isLiquidGlass ? 'bg-black/10' : 'bg-[#09090b]'
       }`}
     >
+      {/* Global Optical Refraction SVG Filter */}
+      <LiquidGlassSvgFilter />
+
       {/* Liquid Glass Ambient Background Caustics */}
       {isLiquidGlass && (
         <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">

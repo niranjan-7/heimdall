@@ -98,6 +98,8 @@ export interface IElectronAPI {
   getRemoteServerInfo: () => Promise<RemoteServerInfo>
 
   // Feature 6: AniList
+  getDiscordStatus: () => Promise<{ isConnected: boolean; username: string; clientId: string }>
+  reconnectDiscord: () => Promise<{ isConnected: boolean; username: string; clientId: string }>
   searchAniList: (query: string) => Promise<AniListMediaInfo[]>
   validateAniListToken: (
     token: string
@@ -201,6 +203,10 @@ const api: IElectronAPI = {
 
   // Mobile Remote
   getRemoteServerInfo: () => ipcRenderer.invoke('remote:get-info'),
+
+  // Discord RPC
+  getDiscordStatus: () => ipcRenderer.invoke('discord:get-status'),
+  reconnectDiscord: () => ipcRenderer.invoke('discord:reconnect'),
 
   searchAniList: (query) => ipcRenderer.invoke('anilist:search', query),
   validateAniListToken: (token) => ipcRenderer.invoke('anilist:validate-token', token),

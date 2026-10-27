@@ -186,16 +186,16 @@ export const EpisodeGrid: React.FC<EpisodeGridProps> = ({
   return (
     <div className="space-y-4 relative pb-20">
       {/* Filters and Search Bar */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 liquid-glass p-3.5 rounded-xl border border-white/5">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 liquid-glass p-3.5 rounded-2xl border border-white/10 shadow-lg">
         {/* Season Tabs */}
         {seasonTabs.length > 1 ? (
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0 scrollbar-none">
             <button
               onClick={() => setSelectedSeason('all')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                 selectedSeason === 'all'
-                  ? 'bg-bifrost-amber text-zinc-950 shadow-sm'
-                  : 'bg-zinc-900 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
+                  ? 'bg-bifrost-amber text-zinc-950 shadow-md font-bold'
+                  : 'liquid-glass-pill text-zinc-300 hover:text-white'
               }`}
             >
               All Seasons ({series.episodes.length})
@@ -206,10 +206,10 @@ export const EpisodeGrid: React.FC<EpisodeGridProps> = ({
                 <button
                   key={season}
                   onClick={() => setSelectedSeason(season)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                     selectedSeason === season
-                      ? 'bg-bifrost-amber text-zinc-950 shadow-sm'
-                      : 'bg-zinc-900 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
+                      ? 'bg-bifrost-amber text-zinc-950 shadow-md font-bold'
+                      : 'liquid-glass-pill text-zinc-300 hover:text-white'
                   }`}
                 >
                   {season} ({count})
@@ -218,7 +218,7 @@ export const EpisodeGrid: React.FC<EpisodeGridProps> = ({
             })}
           </div>
         ) : (
-          <div className="flex items-center gap-2 text-xs font-semibold text-zinc-400">
+          <div className="flex items-center gap-2 text-xs font-semibold text-zinc-300">
             <Layers className="w-4 h-4 text-bifrost-amber" />
             <span>Episodes ({series.episodes.length})</span>
           </div>
@@ -228,18 +228,18 @@ export const EpisodeGrid: React.FC<EpisodeGridProps> = ({
         <div className="flex items-center gap-2.5 flex-wrap">
           {/* Search Input */}
           <div className="relative flex-1 sm:w-56">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Jump to ep or search..."
-              className="w-full pl-8 pr-3 py-1.5 text-xs bg-black/40 border border-white/10 rounded-lg text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-bifrost-amber backdrop-blur-md"
+              className="w-full pl-8 pr-3 py-1.5 text-xs bg-white/[0.05] border border-white/10 rounded-xl text-zinc-100 placeholder-zinc-400 focus:outline-none focus:border-bifrost-amber/60 backdrop-blur-md shadow-inner"
             />
           </div>
 
           {/* Status Segmented Control */}
-          <div className="flex items-center bg-black/40 p-1 rounded-lg border border-white/10 backdrop-blur-md">
+          <div className="flex items-center bg-white/[0.04] p-1 rounded-xl border border-white/10 backdrop-blur-md">
             {(
               [
                 { id: 'all', label: 'All' },
@@ -251,9 +251,9 @@ export const EpisodeGrid: React.FC<EpisodeGridProps> = ({
               <button
                 key={item.id}
                 onClick={() => setFilterStatus(item.id)}
-                className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors cursor-pointer ${
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${
                   filterStatus === item.id
-                    ? 'bg-zinc-800 text-zinc-100 font-semibold'
+                    ? 'bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40 shadow-sm'
                     : 'text-zinc-400 hover:text-zinc-200'
                 }`}
               >
@@ -272,10 +272,10 @@ export const EpisodeGrid: React.FC<EpisodeGridProps> = ({
                 setIsSelectionMode(true)
               }
             }}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border ${
               isSelectionMode
-                ? 'bg-bifrost-amber/20 border-bifrost-amber/50 text-bifrost-amber'
-                : 'bg-zinc-900 border-surface-border text-zinc-400 hover:text-zinc-200 hover:bg-zinc-850'
+                ? 'bg-bifrost-amber/25 border-bifrost-amber/60 text-bifrost-amber shadow-sm font-bold'
+                : 'liquid-glass-pill text-zinc-300 hover:text-zinc-100'
             }`}
           >
             <CheckSquare className="w-3.5 h-3.5" />
@@ -288,7 +288,7 @@ export const EpisodeGrid: React.FC<EpisodeGridProps> = ({
             onClick={handleBatchNormalizeTitles}
             disabled={isBatchProcessing}
             title="Clean and normalize messy episode filenames (e.g. 'epi - 123' -> 'Episode 123')"
-            className="p-1.5 px-2.5 rounded-lg text-xs font-semibold bg-zinc-900 border border-surface-border text-zinc-300 hover:text-bifrost-cyan hover:border-bifrost-cyan/40 transition-colors flex items-center gap-1.5 cursor-pointer"
+            className="p-1.5 px-2.5 rounded-xl text-xs font-semibold liquid-glass-pill hover:border-bifrost-cyan/50 text-zinc-300 hover:text-bifrost-cyan transition-all flex items-center gap-1.5 cursor-pointer"
           >
             <Sparkles className="w-3.5 h-3.5 text-bifrost-cyan" />
             <span className="hidden sm:inline">Clean Titles</span>

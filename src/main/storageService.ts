@@ -18,7 +18,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   httpPort: 42120,
   httpPassword: 'heimdall_secret',
   enableDiscordRPC: true,
-  discordClientId: '1343981881774346332',
+  discordClientId: '737663962677510245',
   enableAniListScrobble: true,
   enableThumbnails: true,
   enableLiquidGlass: true,

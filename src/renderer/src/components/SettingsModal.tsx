@@ -50,6 +50,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
   const [updateError, setUpdateError] = useState<string | null>(null)
   const [backupStatus, setBackupStatus] = useState<string | null>(null)
   const [backingUp, setBackingUp] = useState(false)
+  const [discordStatus, setDiscordStatus] = useState<{ isConnected: boolean; username: string; clientId: string } | null>(null)
+  const [isReconnectingDiscord, setIsReconnectingDiscord] = useState(false)
 
   useEffect(() => {
     if (isOpen) {
@@ -57,6 +59,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
         setSettings(s)
         setTokenInput(s.aniListToken || '')
       })
+      if (window.api.getDiscordStatus) {
+        window.api.getDiscordStatus().then(setDiscordStatus).catch(() => {})
+      }
       setSavedSuccess(false)
       setTokenFeedback(null)
       setDetectStatus(null)
@@ -77,6 +82,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
       unsubProgress()
     }
   }, [isOpen])
+
+  const handleReconnectDiscord = async () => {
+    setIsReconnectingDiscord(true)
+    try {
+      if (window.api.reconnectDiscord) {
+        const res = await window.api.reconnectDiscord()
+        setDiscordStatus(res)
+      }
+    } catch {
+      // ignore
+    } finally {
+      setIsReconnectingDiscord(false)
+    }
+  }
 
   if (!isOpen || !settings) return null
 
@@ -563,7 +582,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
           </div>
 
           {/* Feature 5: Discord Rich Presence */}
-          <div className="p-4 rounded-xl bg-zinc-950/60 border border-surface-border space-y-3">
+          <div className="p-4 rounded-xl bg-zinc-950/60 border border-surface-border space-y-3.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div className="p-1.5 rounded-lg bg-indigo-500/15 text-indigo-400">
@@ -590,6 +609,56 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
                 <div className="w-9 h-5 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600" />
               </label>
             </div>
+
+            {settings.enableDiscordRPC && (
+              <div className="pt-2.5 border-t border-zinc-800/60 space-y-3">
+                {/* Connection Status Badge */}
+                <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-black/40 border border-white/5 text-xs">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        discordStatus?.isConnected
+                          ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]'
+                          : 'bg-zinc-500'
+                      }`}
+                    />
+                    <span className="font-medium text-zinc-300">
+                      {discordStatus?.isConnected
+                        ? `Connected to Discord (${discordStatus.username || 'Active'})`
+                        : 'Discord RPC Idle (Waiting for playback or Discord)'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleReconnectDiscord}
+                    disabled={isReconnectingDiscord}
+                    className="px-2 py-1 rounded-md text-[11px] font-semibold bg-indigo-500/15 text-indigo-300 hover:bg-indigo-500/25 border border-indigo-500/30 transition-colors"
+                  >
+                    {isReconnectingDiscord ? 'Checking...' : 'Check / Reconnect'}
+                  </button>
+                </div>
+
+                {/* Client ID Customization */}
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold text-zinc-300 flex items-center justify-between">
+                    <span>Discord Application Client ID</span>
+                    <span className="text-[10px] text-zinc-500">Default: 737663962677510245</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={settings.discordClientId || ''}
+                    placeholder="737663962677510245"
+                    onChange={(e) =>
+                      setSettings({ ...settings, discordClientId: e.target.value })
+                    }
+                    className="w-full px-3 py-1.5 text-xs bg-zinc-900 border border-surface-border rounded-lg text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-indigo-500 font-mono"
+                  />
+                  <p className="text-[10px] text-zinc-500">
+                    Heimdall automatically broadcasts title, episode number, playtime, and AniList poster to your Discord profile.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Feature 6: AniList Auto-Scrobble */}

@@ -57,6 +57,7 @@ function createWindow(): void {
       process.platform === 'win32'
         ? join(__dirname, '../../build/icon.ico')
         : join(__dirname, '../../build/icon.png'),
+    transparent: true,
     backgroundColor: '#00000000',
     backgroundMaterial: 'acrylic',
     vibrancy: 'under-window',
@@ -125,6 +126,16 @@ function registerIpcHandlers(): void {
       discordService.disconnect()
     }
     return updated
+  })
+
+  // Discord RPC Status
+  ipcMain.handle('discord:get-status', () => {
+    return discordService.getStatus()
+  })
+
+  ipcMain.handle('discord:reconnect', async () => {
+    await discordService.connect()
+    return discordService.getStatus()
   })
 
   // Dialogs

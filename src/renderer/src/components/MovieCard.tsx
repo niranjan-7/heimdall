@@ -29,12 +29,15 @@ export const MovieCard: React.FC<MovieCardProps> = ({
         isCurrentPlaying
           ? 'liquid-glass border-bifrost-amber ring-2 ring-bifrost-amber/40 shadow-xl shadow-bifrost-amber/25 scale-[1.01]'
           : movie.completed
-            ? 'liquid-glass-card opacity-75 hover:opacity-100 hover:border-white/20'
-            : 'liquid-glass-card'
+            ? 'liquid-glass-card opacity-80 hover:opacity-100 hover:border-white/30'
+            : 'liquid-glass-card hover:border-amber-500/50'
       }`}
     >
+      {/* Specular Liquid Edge Sheen */}
+      <div className="absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none z-20" />
+
       {/* Poster / Hover Video Frame Container (2:3 Aspect Ratio) */}
-      <div className="relative w-full aspect-[2/3] bg-black/40 backdrop-blur-md overflow-hidden flex items-center justify-center border-b border-white/5">
+      <div className="relative w-full aspect-[2/3] bg-black/25 backdrop-blur-md overflow-hidden flex items-center justify-center border-b border-white/10">
         {/* Resting View: Official TMDB Poster if available */}
         {movie.posterUrl ? (
           <img
