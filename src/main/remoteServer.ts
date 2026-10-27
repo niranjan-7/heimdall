@@ -173,7 +173,7 @@ export class RemoteServer {
         const lib = this.storageService.getLibrary()
         const cleanSeries = lib.series.map((s) => ({
           id: s.id,
-          title: s.title,
+          title: s.aniListTitle || s.title,
           aniListTitle: s.aniListTitle,
           coverImage: s.coverImage,
           bannerImage: s.bannerImage,

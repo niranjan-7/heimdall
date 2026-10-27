@@ -1,5 +1,5 @@
 import { app, shell, BrowserWindow, ipcMain, dialog, protocol, net } from 'electron'
-import { join } from 'path'
+import { join, basename } from 'path'
 import { pathToFileURL } from 'url'
 import * as fs from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
@@ -317,7 +317,11 @@ function registerIpcHandlers(): void {
         newSeries.aniListId = top.id
         newSeries.coverImage = top.coverImage?.extraLarge || top.coverImage?.large
         newSeries.bannerImage = top.bannerImage
-        newSeries.aniListTitle = top.title.english || top.title.romaji
+        const animeTitle = top.title.english || top.title.romaji
+        newSeries.aniListTitle = animeTitle
+        if (animeTitle) {
+          newSeries.title = animeTitle
+        }
         storageService.addOrUpdateSeries(newSeries)
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.webContents.send('series:updated', newSeries)
@@ -338,6 +342,9 @@ function registerIpcHandlers(): void {
 
     const { episodes } = scanSeriesFolders(series.rootPath, series.additionalPaths, series.episodes)
     series.episodes = episodes
+    if (series.aniListTitle) {
+      series.title = series.aniListTitle
+    }
     series.updatedAt = Date.now()
     storageService.addOrUpdateSeries(series)
 
@@ -354,7 +361,7 @@ function registerIpcHandlers(): void {
       series.additionalPaths,
       series.episodes
     )
-    series.title = title
+    series.title = series.aniListTitle || title
     series.episodes = episodes
     series.updatedAt = Date.now()
     storageService.addOrUpdateSeries(series)
@@ -565,6 +572,9 @@ function registerIpcHandlers(): void {
       series.coverImage = media.coverImage || null
       series.bannerImage = media.bannerImage || null
       series.aniListTitle = media.title || null
+      if (media.title) {
+        series.title = media.title
+      }
       series.updatedAt = Date.now()
       storageService.addOrUpdateSeries(series)
       syncSeriesToAniList(seriesId, true).catch(() => {})
@@ -588,6 +598,7 @@ function registerIpcHandlers(): void {
     series.coverImage = null
     series.bannerImage = null
     series.aniListTitle = null
+    series.title = basename(series.rootPath)
     series.updatedAt = Date.now()
     storageService.addOrUpdateSeries(series)
     return series

@@ -255,7 +255,7 @@ export class SyncWorker {
     if (currentEp) {
       this.discordService
         .updateActivity({
-          seriesTitle: this.activeSeries.title,
+          seriesTitle: this.activeSeries.aniListTitle || this.activeSeries.title,
           episodeNumber: currentEp.episodeNumber,
           currentTime: currentEpTime,
           duration,

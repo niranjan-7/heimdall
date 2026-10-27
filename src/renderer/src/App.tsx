@@ -190,7 +190,7 @@ export const App: React.FC = () => {
       await loadLibrary()
       setSelectedSeriesId(newSeries.id)
       setViewMode('series')
-      showToast('info', `Imported "${newSeries.title}" (${newSeries.episodes.length} episodes)`)
+      showToast('info', `Imported "${newSeries.aniListTitle || newSeries.title}" (${newSeries.episodes.length} episodes)`)
     } catch (err: any) {
       showToast('error', err.message || 'Failed to add series folder')
     }
@@ -205,7 +205,7 @@ export const App: React.FC = () => {
       const updated = await window.api.addSeasonToSeries(currentSeries.id, folder)
       await loadLibrary()
       setSelectedSeriesId(updated.id)
-      showToast('success', `Added season to "${updated.title}"`)
+      showToast('success', `Added season to "${updated.aniListTitle || updated.title}"`)
     } catch (err: any) {
       showToast('error', err.message || 'Failed to add season folder')
     }
@@ -217,7 +217,7 @@ export const App: React.FC = () => {
       const updated = await window.api.rescanSeries(currentSeries.id)
       await loadLibrary()
       setSelectedSeriesId(updated.id)
-      showToast('info', `Rescanned "${updated.title}"`)
+      showToast('info', `Rescanned "${updated.aniListTitle || updated.title}"`)
     } catch (err: any) {
       showToast('error', err.message || 'Failed to rescan series')
     }
@@ -226,7 +226,7 @@ export const App: React.FC = () => {
   const handleDeleteSeries = async () => {
     if (!currentSeries) return
     const confirmed = window.confirm(
-      `Remove "${currentSeries.title}" from Heimdall? (Media files on disk will NOT be deleted)`
+      `Remove "${currentSeries.aniListTitle || currentSeries.title}" from Heimdall? (Media files on disk will NOT be deleted)`
     )
     if (!confirmed) return
 
@@ -541,7 +541,7 @@ export const App: React.FC = () => {
               ...prev,
               series: prev.series.map((s) => (s.id === updatedSeries.id ? updatedSeries : s))
             }))
-            showToast('success', `Linked "${updatedSeries.title}" to AniList`)
+            showToast('success', `Linked "${updatedSeries.aniListTitle || updatedSeries.title}" to AniList`)
           }}
         />
       )}

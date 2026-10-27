@@ -174,6 +174,16 @@ export class StorageService {
         if (!Array.isArray(this.libraryData.movies)) {
           this.libraryData.movies = []
         }
+        let migratedTitles = false
+        for (const s of this.libraryData.series) {
+          if (s.aniListTitle && s.title !== s.aniListTitle) {
+            s.title = s.aniListTitle
+            migratedTitles = true
+          }
+        }
+        if (migratedTitles) {
+          this.saveLibrary()
+        }
       } else {
         this.libraryData = { series: [], movies: [] }
       }
@@ -197,6 +207,9 @@ export class StorageService {
   }
 
   public addOrUpdateSeries(series: Series): void {
+    if (series.aniListTitle && series.title !== series.aniListTitle) {
+      series.title = series.aniListTitle
+    }
     const index = this.libraryData.series.findIndex((s) => s.id === series.id)
     if (index >= 0) {
       this.libraryData.series[index] = series

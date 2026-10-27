@@ -64,7 +64,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
       if (updated && onSeriesUpdated) {
         onSeriesUpdated(updated)
       }
-      onNotification('success', `Normalized episode titles for ${series.title}`)
+      onNotification('success', `Normalized episode titles for ${series.aniListTitle || series.title}`)
     } catch {
       onNotification('error', 'Failed to normalize titles')
     }
@@ -122,7 +122,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
             <div className="relative shrink-0 hidden sm:block">
               <img
                 src={series.coverImage}
-                alt={series.title}
+                alt={series.aniListTitle || series.title}
                 className="w-24 h-36 object-cover rounded-xl border border-surface-border shadow-xl ring-1 ring-white/10"
               />
             </div>

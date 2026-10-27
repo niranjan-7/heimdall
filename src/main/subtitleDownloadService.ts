@@ -321,7 +321,7 @@ export class SubtitleDownloadService {
       const seasonMatch = episode.seasonName.match(/(\d+)/)
       const seasonNumber = seasonMatch ? parseInt(seasonMatch[1], 10) : 1
       srtContent = await this.fetchFromOpenSubtitles({
-        query: series.title,
+        query: series.aniListTitle || series.title,
         season: seasonNumber,
         episode: episode.episodeNumber || undefined,
         lang,
