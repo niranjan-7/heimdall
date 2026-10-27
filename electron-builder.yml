@@ -20,6 +20,7 @@ win:
     - target: nsis
       arch:
         - x64
+  icon: build/icon.ico
   executableName: Heimdall
   signAndEditExecutable: false
 nsis:
@@ -28,6 +29,9 @@ nsis:
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: Heimdall
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  installerHeaderIcon: build/icon.ico
 mac:
   target:
     - target: dmg
