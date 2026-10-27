@@ -186,7 +186,7 @@ export const EpisodeGrid: React.FC<EpisodeGridProps> = ({
   return (
     <div className="space-y-4 relative pb-20">
       {/* Filters and Search Bar */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-surface p-3.5 rounded-xl border border-surface-border">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 liquid-glass p-3.5 rounded-xl border border-white/5">
         {/* Season Tabs */}
         {seasonTabs.length > 1 ? (
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0 scrollbar-none">
@@ -326,7 +326,7 @@ export const EpisodeGrid: React.FC<EpisodeGridProps> = ({
       {/* Floating Bottom Batch Action Bar */}
       {selectedEpisodeIds.size > 0 && (
         <div className="fixed bottom-6 inset-x-0 max-w-2xl mx-auto z-40 px-4 animate-in fade-in slide-in-from-bottom-4">
-          <div className="p-3 px-4 rounded-2xl bg-zinc-950/95 border border-bifrost-amber/40 shadow-2xl backdrop-blur-xl flex items-center justify-between gap-3 text-white">
+          <div className="p-3 px-4 rounded-2xl liquid-glass border border-bifrost-amber/50 shadow-2xl backdrop-blur-2xl flex items-center justify-between gap-3 text-white">
             <div className="flex items-center gap-2">
               <span className="w-6 h-6 rounded-full bg-bifrost-amber text-zinc-950 font-bold text-xs flex items-center justify-center">
                 {selectedEpisodeIds.size}

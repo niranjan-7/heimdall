@@ -27,10 +27,10 @@ export const MovieCard: React.FC<MovieCardProps> = ({
       onClick={() => onPlay(movie.id)}
       className={`group relative rounded-2xl border transition-all duration-300 cursor-pointer overflow-hidden flex flex-col justify-between ${
         isCurrentPlaying
-          ? 'bg-zinc-850 border-bifrost-amber ring-2 ring-bifrost-amber/40 shadow-xl shadow-bifrost-amber/15 scale-[1.01]'
+          ? 'liquid-glass border-bifrost-amber ring-2 ring-bifrost-amber/40 shadow-xl shadow-bifrost-amber/25 scale-[1.01]'
           : movie.completed
-            ? 'bg-zinc-900/60 border-zinc-800/60 hover:bg-zinc-850 hover:border-zinc-700'
-            : 'bg-zinc-900 border-surface-border hover:bg-zinc-850 hover:border-zinc-700 hover:shadow-xl'
+            ? 'liquid-glass-subtle hover:border-zinc-600'
+            : 'liquid-glass-interactive'
       }`}
     >
       {/* Poster / Hover Video Frame Container (2:3 Aspect Ratio) */}

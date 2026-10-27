@@ -41,7 +41,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   hasUpdate
 }) => {
   return (
-    <aside className="w-72 h-screen flex flex-col bg-surface border-r border-surface-border select-none shrink-0">
+    <aside className="w-72 h-screen flex flex-col bg-surface/75 backdrop-blur-2xl border-r border-white/5 select-none shrink-0 relative z-10">
       {/* Brand Header */}
       <div className="p-4 border-b border-surface-border space-y-3.5">
         <div className="flex items-center gap-3">
@@ -130,8 +130,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onClick={() => onSelectSeries(series.id)}
                   className={`w-full text-left p-2.5 rounded-xl transition-all relative overflow-hidden group flex items-center gap-3 ${
                     isSelected
-                      ? 'bg-zinc-800/80 border border-bifrost-amber/40 shadow-md shadow-black/40'
-                      : 'bg-zinc-900/40 hover:bg-zinc-900 border border-transparent hover:border-zinc-800'
+                      ? 'liquid-glass border-bifrost-amber/40 shadow-lg shadow-black/40'
+                      : 'bg-zinc-900/30 hover:bg-zinc-800/50 border border-transparent hover:border-white/5'
                   }`}
                 >
                   {isSelected && (
@@ -200,8 +200,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onClick={() => onSelectMovie(movie.id)}
                   className={`w-full text-left p-2.5 rounded-xl transition-all relative overflow-hidden group flex items-center gap-3 ${
                     isSelected
-                      ? 'bg-zinc-800/80 border border-bifrost-amber/40 shadow-md shadow-black/40'
-                      : 'bg-zinc-900/40 hover:bg-zinc-900 border border-transparent hover:border-zinc-800'
+                      ? 'liquid-glass border-bifrost-amber/40 shadow-lg shadow-black/40'
+                      : 'bg-zinc-900/30 hover:bg-zinc-800/50 border border-transparent hover:border-white/5'
                   }`}
                 >
                   {isSelected && (
@@ -256,7 +256,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Footer / Mobile Remote & Settings Bar */}
-      <div className="p-3 border-t border-surface-border bg-zinc-950/40 space-y-1">
+      <div className="p-3 border-t border-white/5 bg-zinc-950/60 backdrop-blur-md space-y-1">
         {onOpenMobileRemote && (
           <button
             onClick={onOpenMobileRemote}

@@ -84,7 +84,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
         resumeEpisode.timeSec / resumeEpisode.durationSec >= 0.85))
 
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-900 via-zinc-900/90 to-zinc-950 border border-surface-border p-6 shadow-xl mb-6 space-y-5">
+    <div className="relative overflow-hidden rounded-2xl liquid-glass p-6 shadow-2xl mb-6 space-y-5">
       {/* Background Banner Backdrop if linked to AniList */}
       {series.bannerImage && (
         <div
@@ -197,7 +197,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
 
         {/* Right Column: Hero Resume CTA */}
         {resumeEpisode && (
-          <div className="shrink-0 bg-zinc-950/70 border border-surface-border rounded-xl p-4 md:w-80 space-y-3 shadow-lg">
+          <div className="shrink-0 liquid-glass-subtle border border-white/10 rounded-xl p-4 md:w-80 space-y-3 shadow-lg">
             <div className="flex items-center justify-between text-xs text-zinc-400">
               <span className="font-semibold uppercase tracking-wider text-[10px] text-bifrost-amber flex items-center gap-1">
                 <Clock className="w-3 h-3" />

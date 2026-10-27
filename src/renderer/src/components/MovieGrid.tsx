@@ -68,7 +68,7 @@ export const MovieGrid: React.FC<MovieGridProps> = ({
   return (
     <div className="space-y-4">
       {/* Search, Filter & Sort Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-surface p-3.5 rounded-xl border border-surface-border">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 liquid-glass p-3.5 rounded-xl border border-white/5">
         {/* Search Input */}
         <div className="relative flex-1 max-w-md">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />

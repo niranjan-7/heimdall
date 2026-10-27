@@ -91,7 +91,7 @@ export const SubtitleSyncWidget: React.FC<SubtitleSyncWidgetProps> = ({
   }
 
   return (
-    <div className="p-3 bg-zinc-950/70 border border-surface-border rounded-xl backdrop-blur-md flex flex-wrap items-center justify-between gap-3 shadow-lg">
+    <div className="p-3 liquid-glass-subtle border border-white/10 rounded-xl backdrop-blur-xl flex flex-wrap items-center justify-between gap-3 shadow-lg">
       <div className="flex items-center gap-2.5">
         <div className="p-1.5 rounded-lg bg-bifrost-amber/15 text-bifrost-amber">
           <Zap className="w-4 h-4" />

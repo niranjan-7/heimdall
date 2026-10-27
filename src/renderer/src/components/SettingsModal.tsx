@@ -230,8 +230,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
-      <div className="w-full max-w-xl max-h-[90vh] flex flex-col rounded-2xl bg-surface-elevated border border-surface-border shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in">
+      <div className="w-full max-w-xl max-h-[90vh] flex flex-col rounded-2xl liquid-glass border border-white/10 shadow-2xl overflow-hidden backdrop-blur-2xl">
         {/* Header */}
         <div className="p-5 border-b border-surface-border flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -714,6 +714,34 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
                 className="sr-only peer"
               />
               <div className="w-9 h-5 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-bifrost-amber" />
+            </label>
+          </div>
+
+          {/* Feature 3: Liquid Glass UI */}
+          <div className="p-4 rounded-xl bg-zinc-950/60 border border-surface-border flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="p-1.5 rounded-lg bg-indigo-500/15 text-indigo-400">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wider">
+                  Liquid Glass UI
+                </h4>
+                <p className="text-[11px] text-zinc-400">
+                  Translucent acrylic surfaces, ambient Bifrost light caustics, and specular edge reflections
+                </p>
+              </div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={settings.enableLiquidGlass !== false}
+                onChange={(e) =>
+                  setSettings({ ...settings, enableLiquidGlass: e.target.checked })
+                }
+                className="sr-only peer"
+              />
+              <div className="w-9 h-5 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-500" />
             </label>
           </div>
 

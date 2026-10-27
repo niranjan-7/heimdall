@@ -41,14 +41,14 @@ export const EpisodeCard: React.FC<EpisodeCardProps> = ({
   return (
     <div
       onClick={handleCardClick}
-      className={`group relative rounded-xl border transition-all duration-200 cursor-pointer overflow-hidden flex flex-col justify-between ${
+      className={`group relative rounded-xl border transition-all duration-300 cursor-pointer overflow-hidden flex flex-col justify-between ${
         isSelected
-          ? 'bg-zinc-800/95 border-bifrost-amber ring-2 ring-bifrost-amber shadow-xl shadow-bifrost-amber/20'
+          ? 'liquid-glass border-bifrost-amber ring-2 ring-bifrost-amber shadow-xl shadow-bifrost-amber/25'
           : isCurrentPlaying
-            ? 'bg-zinc-800/90 border-bifrost-amber ring-1 ring-bifrost-amber/50 shadow-lg shadow-bifrost-amber/15'
+            ? 'liquid-glass border-bifrost-amber ring-1 ring-bifrost-amber/50 shadow-lg shadow-bifrost-amber/15'
             : episode.completed
-              ? 'bg-zinc-900/40 border-zinc-800/60 hover:bg-zinc-850 hover:border-zinc-700'
-              : 'bg-zinc-900/80 border-surface-border hover:bg-zinc-850 hover:border-zinc-700 hover:shadow-md'
+              ? 'liquid-glass-subtle hover:border-zinc-600'
+              : 'liquid-glass-interactive'
       }`}
     >
       {/* 16:9 Thumbnail Banner */}

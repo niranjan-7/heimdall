@@ -104,7 +104,7 @@ export const MobileRemoteModal: React.FC<MobileRemoteModalProps> = ({ isOpen, on
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in">
-      <div className="w-full max-w-md rounded-2xl bg-zinc-950 border border-surface-border shadow-2xl overflow-hidden flex flex-col">
+      <div className="w-full max-w-md rounded-2xl liquid-glass border border-white/10 shadow-2xl overflow-hidden flex flex-col backdrop-blur-2xl">
         {/* Header */}
         <div className="p-5 border-b border-surface-border flex items-center justify-between">
           <div className="flex items-center gap-3">

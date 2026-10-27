@@ -21,6 +21,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   discordClientId: '1343981881774346332',
   enableAniListScrobble: true,
   enableThumbnails: true,
+  enableLiquidGlass: true,
   enableRemoteServer: true,
   remotePort: 42125
 }

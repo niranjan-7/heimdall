@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { Series, Movie, LibraryData, VlcStateUpdate, AppNotification } from '../../shared/types'
+import { Series, Movie, LibraryData, VlcStateUpdate, AppNotification, AppSettings } from '../../shared/types'
 import { Sidebar } from './components/Sidebar'
 import { HeroBanner } from './components/HeroBanner'
 import { EpisodeGrid } from './components/EpisodeGrid'
@@ -25,6 +25,20 @@ export const App: React.FC = () => {
   const [activeVlcState, setActiveVlcState] = useState<VlcStateUpdate | null>(null)
   const [notification, setNotification] = useState<AppNotification | null>(null)
   const [hasUpdate, setHasUpdate] = useState(false)
+  const [appSettings, setAppSettings] = useState<AppSettings | null>(null)
+
+  const loadSettings = useCallback(async () => {
+    try {
+      const s = await window.api.getSettings()
+      setAppSettings(s)
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  useEffect(() => {
+    loadSettings()
+  }, [loadSettings])
 
   useEffect(() => {
     window.api
@@ -322,8 +336,19 @@ export const App: React.FC = () => {
     showToast('success', `Matched "${updatedMovie.title}" with TMDB`)
   }
 
+  const isLiquidGlass = appSettings?.enableLiquidGlass !== false
+
   return (
-    <div className="flex h-screen bg-background text-zinc-100 overflow-hidden font-sans">
+    <div className="flex h-screen bg-background text-zinc-100 overflow-hidden font-sans relative">
+      {/* Liquid Glass Ambient Background Caustics */}
+      {isLiquidGlass && (
+        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+          <div className="liquid-caustic-amber -top-40 -left-40" />
+          <div className="liquid-caustic-indigo top-1/4 -right-28" />
+          <div className="liquid-caustic-amber -bottom-48 left-1/3" />
+        </div>
+      )}
+
       {/* Left Sidebar */}
       <Sidebar
         viewMode={viewMode}
@@ -347,10 +372,10 @@ export const App: React.FC = () => {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 h-screen overflow-y-auto flex flex-col p-6 lg:p-8 relative">
+      <main className="flex-1 h-screen overflow-y-auto flex flex-col p-6 lg:p-8 relative z-10">
         {/* Top Header Update Pill */}
         {hasUpdate && (
-          <div className="mb-4 flex items-center justify-between px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs shadow-lg animate-in fade-in shrink-0">
+          <div className="mb-4 flex items-center justify-between px-4 py-2.5 rounded-xl liquid-glass border border-amber-500/40 text-amber-300 text-xs shadow-lg animate-in fade-in shrink-0">
             <div className="flex items-center gap-2.5">
               <span className="flex h-2 w-2 relative">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
@@ -488,7 +513,7 @@ export const App: React.FC = () => {
       <SettingsModal
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}
-        onSaved={() => {}}
+        onSaved={(updated) => setAppSettings(updated)}
       />
 
       {/* Mobile Remote Pairing Modal */}

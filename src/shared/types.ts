@@ -121,6 +121,7 @@ export interface AppSettings {
   aniListAvatar?: string
   enableAniListScrobble: boolean
   enableThumbnails: boolean
+  enableLiquidGlass?: boolean
   tmdbApiKey?: string
   enableRemoteServer?: boolean
   remotePort?: number
