@@ -59,7 +59,7 @@ export const HeroSection: React.FC = () => {
   const osLabels = {
     windows: {
       name: 'Windows (.exe)',
-      link: 'https://github.com/niranjan-7/heimdall/releases/download/v1.2.0/Heimdall.Setup.1.2.0.exe'
+      link: 'https://github.com/niranjan-7/heimdall/releases/download/v1.2.1/Heimdall.Setup.1.2.1.exe'
     },
     mac: { name: 'macOS (.dmg)', link: 'https://github.com/niranjan-7/heimdall/releases/latest' },
     linux: { name: 'Linux (.AppImage)', link: 'https://github.com/niranjan-7/heimdall/releases/latest' }
@@ -126,7 +126,7 @@ export const HeroSection: React.FC = () => {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
           </span>
-          <span className="tracking-wide">Heimdall v1.2.0 • Dual Engine Watchman</span>
+          <span className="tracking-wide">Heimdall v1.2.1 • Liquid Glass & Auto-Scrobbler</span>
           <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-200 font-mono">
             New
           </span>

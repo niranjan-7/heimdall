@@ -28,7 +28,7 @@ const SERIES_ITEMS: MediaItem[] = [
     totalDurationSec: 1440, // 24:00
     subDelay: 0.35,
     player: 'mpv',
-    badges: ['Anime4K Active', 'FLAC Audio', 'libass Vector']
+    badges: ['Liquid Glass UI', 'Anime4K Active', 'Discord RPC 2.0', 'AniList Scrobbler']
   },
   {
     id: 'oshinoko',
@@ -41,7 +41,7 @@ const SERIES_ITEMS: MediaItem[] = [
     totalDurationSec: 1420, // 23:40
     subDelay: -0.15,
     player: 'mpv',
-    badges: ['Anime4K Active', 'Opus 2.0', 'Auto-Sync 99.8%']
+    badges: ['Batch Select Active', 'Auto-Sync 99.8%', 'Zero Seek Bleed']
   },
   {
     id: 'dungeon',
@@ -54,7 +54,7 @@ const SERIES_ITEMS: MediaItem[] = [
     totalDurationSec: 1560, // 26:00
     subDelay: 0.0,
     player: 'mpv',
-    badges: ['Completed', 'Dual Audio', '0ms Push']
+    badges: ['Completed', 'Title Normalized', '0ms Push IPC']
   },
   {
     id: 'sololeveling',
@@ -67,7 +67,7 @@ const SERIES_ITEMS: MediaItem[] = [
     totalDurationSec: 1380, // 23:00
     subDelay: 0.05,
     player: 'mpv',
-    badges: ['Completed', '1080p Hi10P', 'AniList Scrobbler']
+    badges: ['Completed', 'AniList 1-Click Sync', 'Discord Active']
   }
 ]
 
