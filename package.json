@@ -1,6 +1,6 @@
 {
   "name": "heimdall",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Heimdall — Standalone Windows VLC Series & Watch-History Companion App",
   "main": "./out/main/index.js",
   "author": "Heimdall",
