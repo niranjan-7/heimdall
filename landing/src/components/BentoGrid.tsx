@@ -1,6 +1,17 @@
 import React from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
-import { Film, Download, ShieldCheck, Gamepad2, Sparkles, Check, Database, Lock } from 'lucide-react'
+import {
+  Film,
+  Gamepad2,
+  Sparkles,
+  Check,
+  Database,
+  Lock,
+  Droplets,
+  CheckSquare,
+  RefreshCw,
+  FolderSync
+} from 'lucide-react'
 import { MotionReveal } from './MotionReveal'
 import { TiltCard } from './TiltCard'
 
@@ -12,7 +23,7 @@ export const BentoGrid: React.FC = () => {
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.12
+        staggerChildren: 0.1
       }
     }
   }
@@ -59,7 +70,7 @@ export const BentoGrid: React.FC = () => {
           </MotionReveal>
         </div>
 
-        {/* 4-Tile Bento Grid with Staggered 3D Spring Cascade & 3D Tilt Cards */}
+        {/* 6-Tile Bento Grid with Staggered 3D Spring Cascade & 3D Tilt Cards */}
         <motion.div
           variants={containerVariants}
           initial="hidden"
@@ -87,7 +98,7 @@ export const BentoGrid: React.FC = () => {
               </div>
             </div>
 
-            {/* Visual preview strip inside Tile 1 with rich movie cards */}
+            {/* Visual preview strip inside Tile 1 */}
             <div className="mt-6 pt-6 border-t border-white/[0.08] grid grid-cols-3 gap-4">
               <div className="relative rounded-2xl overflow-hidden aspect-[16/10] bg-zinc-900 border border-white/[0.08] group/card shadow-lg">
                 <img
@@ -127,44 +138,102 @@ export const BentoGrid: React.FC = () => {
             </div>
           </TiltCard>
 
-          {/* Tile 2: Smart 64KB Hash Subtitle Downloader */}
+          {/* Tile 2: Liquid Glass & Windows 11 Acrylic Reactivity (1 Column) */}
           <TiltCard
             variants={shouldReduceMotion ? undefined : cardVariants}
-            accentColor="rgba(6, 182, 212, 0.22)"
-            className="hover:border-teal-400/40"
+            accentColor="rgba(56, 189, 248, 0.25)"
+            className="hover:border-sky-400/40"
           >
             <div className="space-y-4">
-              <div className="w-10 h-10 rounded-2xl bg-teal-500/15 border border-teal-500/30 text-teal-400 flex items-center justify-center shadow-md">
-                <Download className="w-5 h-5" />
+              <div className="w-10 h-10 rounded-2xl bg-sky-500/15 border border-sky-500/30 text-sky-400 flex items-center justify-center shadow-md">
+                <Droplets className="w-5 h-5" />
               </div>
               <div className="space-y-1">
-                <h3 className="text-2xl font-bold text-white group-hover:text-teal-300 transition-colors">
-                  64KB Hash Subtitle Fetcher
+                <h3 className="text-2xl font-bold text-white group-hover:text-sky-300 transition-colors">
+                  Liquid Glass & Live Acrylic
                 </h3>
                 <p className="text-zinc-300 text-sm leading-relaxed">
-                  Computes 64KB head & tail checksums to match exact release cuts on OpenSubtitles with multi-name fallback resolution (<code className="text-teal-300 font-mono text-xs bg-zinc-900 border border-white/10 px-1.5 py-0.5 rounded">sub-eng/</code>).
+                  Windows 11 DWM native Acrylic transparency. Optical refraction SVG filters and specular highlights dynamically blend and blur your desktop wallpaper directly behind the player interface.
                 </p>
               </div>
             </div>
 
-            <div className="mt-6 p-4 rounded-2xl bg-black/80 border border-white/[0.08] space-y-2 font-mono text-xs shadow-inner">
-              <div className="flex items-center justify-between text-zinc-400">
-                <span>File Checksum:</span>
-                <span className="text-teal-400 font-bold">8e245d969d2d02d0</span>
-              </div>
-              <div className="flex items-center justify-between text-zinc-400">
-                <span>Verification:</span>
-                <span className="text-emerald-400 font-bold flex items-center gap-1">
-                  <Check className="w-3.5 h-3.5" /> 100% Exact Match
+            <div className="mt-6 p-4 rounded-2xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/20 backdrop-blur-xl shadow-lg relative overflow-hidden space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-zinc-300 font-bold flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" /> Acrylic Blur
+                </span>
+                <span className="text-sky-300 font-mono text-[10px] px-2 py-0.5 rounded-full bg-sky-500/20 border border-sky-500/30">
+                  DWM Active
                 </span>
               </div>
-              <div className="text-[11px] text-zinc-500 truncate pt-1 border-t border-white/5">
-                Saved: ./Subs/Oppenheimer.srt
+              <p className="text-[11px] text-zinc-400">
+                Moves smoothly across desktop wallpapers with 60fps glass caustics.
+              </p>
+            </div>
+          </TiltCard>
+
+          {/* Tile 3: Smart Episode Name Cleaner & Normalizer (1 Column) */}
+          <TiltCard
+            variants={shouldReduceMotion ? undefined : cardVariants}
+            accentColor="rgba(245, 158, 11, 0.22)"
+            className="hover:border-amber-400/40"
+          >
+            <div className="space-y-4">
+              <div className="w-10 h-10 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center shadow-md">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-2xl font-bold text-white group-hover:text-amber-300 transition-colors">
+                  Smart Title Normalizer
+                </h3>
+                <p className="text-zinc-300 text-sm leading-relaxed">
+                  Multi-stage regex cleaning engine strips messy tracker tags (<code className="text-amber-300 font-mono text-xs bg-zinc-900 border border-white/10 px-1 py-0.5 rounded">[1080p]</code>, <code className="text-amber-300 font-mono text-xs bg-zinc-900 border border-white/10 px-1 py-0.5 rounded">epi - 12</code>) into clean, standard episode titles.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 p-3.5 rounded-2xl bg-black/80 border border-white/[0.08] space-y-2 font-mono text-xs shadow-inner">
+              <div className="text-[11px] text-red-300/80 line-through truncate">
+                [HorribleSubs] Fairy_Tail_-_epi_157_[720p].mkv
+              </div>
+              <div className="text-xs text-emerald-400 font-bold flex items-center gap-1.5 pt-1 border-t border-white/5">
+                <Check className="w-3.5 h-3.5" /> Episode 157
               </div>
             </div>
           </TiltCard>
 
-          {/* Tile 3: Discord Rich Presence & AniList Scrobbler */}
+          {/* Tile 4: Multi-Select Batch Actions (1 Column) */}
+          <TiltCard
+            variants={shouldReduceMotion ? undefined : cardVariants}
+            accentColor="rgba(16, 185, 129, 0.22)"
+            className="hover:border-emerald-400/40"
+          >
+            <div className="space-y-4">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shadow-md">
+                <CheckSquare className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-2xl font-bold text-white group-hover:text-emerald-300 transition-colors">
+                  Batch Actions & Prior-Watched
+                </h3>
+                <p className="text-zinc-300 text-sm leading-relaxed">
+                  Select ranges with Shift-click, batch mark whole seasons as watched or unwatched, and cascade &quot;Prior Watched&quot; with a single click from a floating glass HUD.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 p-3.5 rounded-2xl bg-emerald-950/30 border border-emerald-500/30 flex items-center justify-between text-xs">
+              <span className="font-bold text-emerald-300 flex items-center gap-1.5">
+                <CheckSquare className="w-3.5 h-3.5" /> 12 Episodes Selected
+              </span>
+              <span className="px-2 py-0.5 rounded-md bg-emerald-500 text-zinc-950 font-extrabold text-[10px]">
+                Mark Watched
+              </span>
+            </div>
+          </TiltCard>
+
+          {/* Tile 5: Discord Rich Presence & AniList 1-Click Sync (1 Column) */}
           <TiltCard
             variants={shouldReduceMotion ? undefined : cardVariants}
             accentColor="rgba(168, 85, 247, 0.22)"
@@ -176,10 +245,10 @@ export const BentoGrid: React.FC = () => {
               </div>
               <div className="space-y-1">
                 <h3 className="text-2xl font-bold text-white group-hover:text-purple-300 transition-colors">
-                  Discord RPC & AniList
+                  Discord RPC 2.0 & AniList
                 </h3>
                 <p className="text-zinc-300 text-sm leading-relaxed">
-                  Broadcasts your current watch state to Discord Rich Presence with movie posters and live elapsed timers. Automatically updates episode progress on AniList upon completion.
+                  Verified rich presence with album art, live elapsed timers, and auto-reconnect backoff. Instant AniList GraphQL scrobbling upon episode completion.
                 </p>
               </div>
             </div>
@@ -195,14 +264,14 @@ export const BentoGrid: React.FC = () => {
                 <div className="w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-[#1e1f22] absolute bottom-0 right-0 shadow-sm" />
               </div>
               <div className="min-w-0 flex-1 space-y-0.5">
-                <div className="text-xs font-bold text-white truncate">Playing on Heimdall</div>
-                <div className="text-[11px] text-zinc-300 truncate">Frieren: Beyond Journey's End</div>
-                <div className="text-[10px] text-zinc-400 font-mono">Ep 14 • 18:42 left</div>
+                <div className="text-xs font-bold text-white truncate">Watching via Heimdall</div>
+                <div className="text-[11px] text-zinc-300 truncate">Frieren: Beyond Journey&apos;s End</div>
+                <div className="text-[10px] text-zinc-400 font-mono">Episode 18 • 14:02 elapsed</div>
               </div>
             </div>
           </TiltCard>
 
-          {/* Tile 4: 100% Offline & Zero Telemetry (2 Columns Wide) */}
+          {/* Tile 6: Zero-Loss Updates & Automated Safety Snapshots (2 Columns Wide) */}
           <TiltCard
             variants={shouldReduceMotion ? undefined : cardVariants}
             accentColor="rgba(16, 185, 129, 0.2)"
@@ -210,14 +279,14 @@ export const BentoGrid: React.FC = () => {
           >
             <div className="space-y-4 z-10">
               <div className="w-10 h-10 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shadow-md">
-                <ShieldCheck className="w-5 h-5" />
+                <FolderSync className="w-5 h-5" />
               </div>
               <div className="space-y-1">
                 <h3 className="text-2xl font-bold text-white group-hover:text-emerald-300 transition-colors">
-                  100% Private, Local SQLite & Zero Tracking
+                  Zero-Loss In-App Updates & Automated Safety Backups
                 </h3>
                 <p className="text-zinc-300 text-sm leading-relaxed max-w-xl">
-                  Your watch history belongs to you alone. Heimdall stores all data in a local SQLite file (<code className="text-emerald-300 font-mono text-xs bg-zinc-900 border border-white/10 px-2 py-0.5 rounded">heimdall.db</code>). No cloud servers, no account registration, no telemetry, and zero ads.
+                  Update Heimdall seamlessly from inside the app with zero fear of data loss. Every update creates an automated pre-flight snapshot backup of your entire library (<code className="text-emerald-300 font-mono text-xs bg-zinc-900 border border-white/10 px-2 py-0.5 rounded">library_pre_update.json</code>), preserving 100% of your watch history, paths, and credentials.
                 </p>
               </div>
             </div>
@@ -225,21 +294,21 @@ export const BentoGrid: React.FC = () => {
             <div className="mt-6 pt-6 border-t border-white/[0.08] grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
               <div className="p-3.5 rounded-2xl bg-black/80 border border-white/[0.08] space-y-1 shadow-inner">
                 <span className="text-zinc-400 font-mono text-[10px] flex items-center gap-1.5">
-                  <Database className="w-3 h-3 text-emerald-400" /> STORAGE
+                  <Database className="w-3 h-3 text-emerald-400" /> BACKUP
                 </span>
-                <p className="text-white font-bold text-sm">Local SQLite Database</p>
+                <p className="text-white font-bold text-sm">Automated Pre-Flight Snapshot</p>
               </div>
               <div className="p-3.5 rounded-2xl bg-black/80 border border-white/[0.08] space-y-1 shadow-inner">
                 <span className="text-zinc-400 font-mono text-[10px] flex items-center gap-1.5">
-                  <Lock className="w-3 h-3 text-emerald-400" /> TELEMETRY
+                  <RefreshCw className="w-3 h-3 text-emerald-400" /> UPDATES
                 </span>
-                <p className="text-emerald-400 font-bold text-sm">0 Analytics Requests</p>
+                <p className="text-emerald-400 font-bold text-sm">1-Click In-App Upgrade</p>
               </div>
               <div className="p-3.5 rounded-2xl bg-black/80 border border-white/[0.08] space-y-1 shadow-inner">
                 <span className="text-zinc-400 font-mono text-[10px] flex items-center gap-1.5">
-                  <Sparkles className="w-3 h-3 text-emerald-400" /> LICENSE
+                  <Lock className="w-3 h-3 text-emerald-400" /> PRIVACY
                 </span>
-                <p className="text-white font-bold text-sm">MIT Open Source</p>
+                <p className="text-white font-bold text-sm">100% Offline & Local</p>
               </div>
             </div>
           </TiltCard>

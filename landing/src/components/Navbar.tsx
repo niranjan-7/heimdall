@@ -61,7 +61,7 @@ export const Navbar: React.FC = () => {
                     HEIMDALL
                   </span>
                   <span className="hidden sm:inline-block text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                    v1.2.0
+                    v1.2.1
                   </span>
                 </div>
                 <span className="text-[9px] font-mono text-zinc-400 hidden sm:flex items-center gap-1">
