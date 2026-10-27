@@ -3,8 +3,9 @@
 @tailwind utilities;
 
 @layer base {
-  body {
-    background-color: #09090b;
+  html, body, #root {
+    background-color: transparent !important;
+    background: transparent !important;
     color: #f4f4f5;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
@@ -67,14 +68,47 @@
     inset 0 1px 0.5px 0 rgba(255, 255, 255, 0.1);
 }
 
+.liquid-glass-card {
+  background: rgba(18, 20, 28, 0.42);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 
+    0 12px 35px -10px rgba(0, 0, 0, 0.5),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 1px 0 rgba(0, 0, 0, 0.25);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.liquid-glass-card:hover {
+  background: rgba(26, 30, 42, 0.68);
+  border-color: rgba(245, 158, 11, 0.5);
+  box-shadow: 
+    0 20px 45px -12px rgba(245, 158, 11, 0.25),
+    0 8px 24px -6px rgba(0, 0, 0, 0.6),
+    inset 0 1px 2px 0 rgba(255, 255, 255, 0.32),
+    inset 0 0 15px 0 rgba(245, 158, 11, 0.12);
+  transform: translateY(-2px);
+}
+
+.liquid-glass-selected {
+  background: rgba(32, 28, 20, 0.7);
+  backdrop-filter: blur(24px) saturate(200%);
+  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  border: 1px solid rgba(245, 158, 11, 0.8);
+  box-shadow: 
+    0 15px 35px -8px rgba(245, 158, 11, 0.35),
+    inset 0 1px 2px 0 rgba(255, 255, 255, 0.3);
+}
+
 .liquid-glass-interactive {
-  background: rgba(18, 18, 24, 0.6);
+  background: rgba(18, 18, 24, 0.55);
   backdrop-filter: blur(20px) saturate(170%);
   -webkit-backdrop-filter: blur(20px) saturate(170%);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.09);
   box-shadow: 
     0 10px 30px -10px rgba(0, 0, 0, 0.5),
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.12);
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.14);
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 

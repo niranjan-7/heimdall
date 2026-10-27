@@ -339,7 +339,11 @@ export const App: React.FC = () => {
   const isLiquidGlass = appSettings?.enableLiquidGlass !== false
 
   return (
-    <div className="flex h-screen bg-background text-zinc-100 overflow-hidden font-sans relative">
+    <div
+      className={`flex h-screen text-zinc-100 overflow-hidden font-sans relative ${
+        isLiquidGlass ? 'bg-black/25' : 'bg-[#09090b]'
+      }`}
+    >
       {/* Liquid Glass Ambient Background Caustics */}
       {isLiquidGlass && (
         <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">

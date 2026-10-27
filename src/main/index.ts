@@ -53,7 +53,13 @@ function createWindow(): void {
     show: true,
     autoHideMenuBar: true,
     title: 'Heimdall',
-    backgroundColor: '#09090b',
+    icon:
+      process.platform === 'win32'
+        ? join(__dirname, '../../build/icon.ico')
+        : join(__dirname, '../../build/icon.png'),
+    backgroundColor: '#00000000',
+    backgroundMaterial: 'acrylic',
+    vibrancy: 'under-window',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
@@ -63,6 +69,11 @@ function createWindow(): void {
 
   mainWindow.on('ready-to-show', () => {
     if (mainWindow) {
+      if (process.platform === 'win32') {
+        try {
+          mainWindow.setBackgroundMaterial('acrylic')
+        } catch {}
+      }
       mainWindow.show()
       mainWindow.focus()
     }

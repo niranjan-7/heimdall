@@ -29,12 +29,12 @@ export const MovieCard: React.FC<MovieCardProps> = ({
         isCurrentPlaying
           ? 'liquid-glass border-bifrost-amber ring-2 ring-bifrost-amber/40 shadow-xl shadow-bifrost-amber/25 scale-[1.01]'
           : movie.completed
-            ? 'liquid-glass-subtle hover:border-zinc-600'
-            : 'liquid-glass-interactive'
+            ? 'liquid-glass-card opacity-75 hover:opacity-100 hover:border-white/20'
+            : 'liquid-glass-card'
       }`}
     >
       {/* Poster / Hover Video Frame Container (2:3 Aspect Ratio) */}
-      <div className="relative w-full aspect-[2/3] bg-zinc-950 overflow-hidden flex items-center justify-center">
+      <div className="relative w-full aspect-[2/3] bg-black/40 backdrop-blur-md overflow-hidden flex items-center justify-center border-b border-white/5">
         {/* Resting View: Official TMDB Poster if available */}
         {movie.posterUrl ? (
           <img
@@ -137,12 +137,13 @@ export const MovieCard: React.FC<MovieCardProps> = ({
       </div>
 
       {/* Title & Info Section */}
-      <div className="p-3.5 space-y-1">
+      <div className="p-3.5 space-y-1 bg-black/20 backdrop-blur-sm">
         <div className="flex items-center justify-between gap-1">
           <h4
-            className={`text-sm font-bold truncate group-hover:text-bifrost-amber transition-colors ${
+            className={`text-sm font-bold truncate group-hover:text-amber-300 transition-colors ${
               movie.completed ? 'text-zinc-400 line-through' : 'text-zinc-100'
             }`}
+            style={{ textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}
             title={movie.title}
           >
             {movie.title}
@@ -163,13 +164,13 @@ export const MovieCard: React.FC<MovieCardProps> = ({
       </div>
 
       {/* Progress Bar along bottom edge */}
-      <div className="w-full h-1.5 bg-zinc-950 overflow-hidden relative">
+      <div className="w-full h-1.5 bg-black/40 overflow-hidden relative border-t border-white/5">
         <div
           className={`h-full transition-all duration-300 ${
             movie.completed
-              ? 'bg-emerald-500'
+              ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]'
               : progressPercent > 0
-                ? 'bg-gradient-to-r from-amber-600 to-bifrost-amber'
+                ? 'bg-gradient-to-r from-amber-600 via-amber-400 to-amber-300 shadow-[0_0_8px_rgba(245,158,11,0.5)]'
                 : 'bg-transparent'
           }`}
           style={{ width: movie.completed ? '100%' : `${progressPercent}%` }}

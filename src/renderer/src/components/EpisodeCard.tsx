@@ -41,18 +41,18 @@ export const EpisodeCard: React.FC<EpisodeCardProps> = ({
   return (
     <div
       onClick={handleCardClick}
-      className={`group relative rounded-xl border transition-all duration-300 cursor-pointer overflow-hidden flex flex-col justify-between ${
+      className={`group relative rounded-2xl border transition-all duration-300 cursor-pointer overflow-hidden flex flex-col justify-between ${
         isSelected
-          ? 'liquid-glass border-bifrost-amber ring-2 ring-bifrost-amber shadow-xl shadow-bifrost-amber/25'
+          ? 'liquid-glass-selected ring-2 ring-amber-400/50 shadow-xl shadow-amber-500/20'
           : isCurrentPlaying
-            ? 'liquid-glass border-bifrost-amber ring-1 ring-bifrost-amber/50 shadow-lg shadow-bifrost-amber/15'
+            ? 'liquid-glass border-amber-500/70 ring-1 ring-amber-500/40 shadow-lg shadow-amber-500/20'
             : episode.completed
-              ? 'liquid-glass-subtle hover:border-zinc-600'
-              : 'liquid-glass-interactive'
+              ? 'liquid-glass-card opacity-75 hover:opacity-100 hover:border-white/20'
+              : 'liquid-glass-card'
       }`}
     >
       {/* 16:9 Thumbnail Banner */}
-      <div className="relative w-full h-32 sm:h-36 bg-zinc-950 overflow-hidden flex items-center justify-center">
+      <div className="relative w-full h-32 sm:h-36 bg-black/40 backdrop-blur-md overflow-hidden flex items-center justify-center border-b border-white/5">
         {!thumbError ? (
           <img
             src={thumbUrl}
@@ -61,16 +61,18 @@ export const EpisodeCard: React.FC<EpisodeCardProps> = ({
             className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-300"
           />
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-zinc-900 to-zinc-950 text-zinc-600">
-            <Film className="w-8 h-8 stroke-1 mb-1 text-zinc-700" />
-            <span className="text-[10px] uppercase font-mono tracking-wider text-zinc-600">
+          <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-white/[0.04] to-black/30 text-zinc-500">
+            <div className="w-10 h-10 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center mb-1.5 shadow-inner">
+              <Film className="w-5 h-5 text-amber-400/80 group-hover:text-amber-300 transition-colors" />
+            </div>
+            <span className="text-[10px] uppercase font-mono tracking-widest text-zinc-400 font-semibold">
               Heimdall Frame
             </span>
           </div>
         )}
 
         {/* Gradient shadow overlay over thumbnail */}
-        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/30 to-black/60" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/50 pointer-events-none" />
 
         {/* Top Badges (Select Checkbox, Ep Number & Watched Toggle) */}
         <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between gap-1.5 z-10">
@@ -94,12 +96,12 @@ export const EpisodeCard: React.FC<EpisodeCardProps> = ({
             )}
 
             <span
-              className={`px-2 py-0.5 rounded text-[11px] font-mono font-bold tracking-tight shadow-md ${
+              className={`px-2.5 py-0.5 rounded-lg text-[11px] font-mono font-bold tracking-tight shadow-md backdrop-blur-md ${
                 isCurrentPlaying
-                  ? 'bg-bifrost-amber text-zinc-950'
+                  ? 'bg-bifrost-amber text-zinc-950 font-black'
                   : episode.completed
-                    ? 'bg-zinc-800/90 text-zinc-400'
-                    : 'bg-black/75 backdrop-blur-sm text-bifrost-amber border border-bifrost-amber/30'
+                    ? 'bg-white/10 text-zinc-400 border border-white/10'
+                    : 'bg-amber-500/15 text-amber-300 border border-amber-500/40'
               }`}
             >
               EP {episode.episodeNumber ?? '?'}
@@ -133,7 +135,7 @@ export const EpisodeCard: React.FC<EpisodeCardProps> = ({
 
         {/* Duration badge on bottom right of thumbnail */}
         <div className="absolute bottom-2 right-2.5 z-10">
-          <span className="px-1.5 py-0.5 rounded bg-black/80 backdrop-blur-sm text-[10px] font-mono text-zinc-300 border border-zinc-800">
+          <span className="px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-[10px] font-mono text-zinc-300 border border-white/10 shadow-sm">
             {episode.durationSec > 0
               ? `${formatTime(episode.timeSec)} / ${formatTime(episode.durationSec)}`
               : episode.timeSec > 0
@@ -153,11 +155,12 @@ export const EpisodeCard: React.FC<EpisodeCardProps> = ({
       </div>
 
       {/* Card Info Section */}
-      <div className="p-3.5 space-y-1.5">
+      <div className="p-3.5 space-y-1.5 bg-black/20 backdrop-blur-sm">
         <h4
-          className={`text-sm font-semibold line-clamp-1 group-hover:text-bifrost-amber transition-colors ${
+          className={`text-sm font-bold line-clamp-1 group-hover:text-amber-300 transition-colors ${
             episode.completed ? 'text-zinc-400 line-through' : 'text-zinc-100'
           }`}
+          style={{ textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}
           title={episode.title}
         >
           {episode.title}
@@ -187,13 +190,13 @@ export const EpisodeCard: React.FC<EpisodeCardProps> = ({
       </div>
 
       {/* Progress Bar along bottom edge */}
-      <div className="w-full h-1.5 bg-zinc-950 overflow-hidden relative">
+      <div className="w-full h-1.5 bg-black/40 overflow-hidden relative border-t border-white/5">
         <div
           className={`h-full transition-all duration-300 ${
             episode.completed
-              ? 'bg-emerald-500'
+              ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]'
               : progressPercent > 0
-                ? 'bg-gradient-to-r from-amber-600 to-bifrost-amber'
+                ? 'bg-gradient-to-r from-amber-600 via-amber-400 to-amber-300 shadow-[0_0_8px_rgba(245,158,11,0.5)]'
                 : 'bg-transparent'
           }`}
           style={{ width: episode.completed ? '100%' : `${progressPercent}%` }}

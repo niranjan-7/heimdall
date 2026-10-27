@@ -234,12 +234,12 @@ export const EpisodeGrid: React.FC<EpisodeGridProps> = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Jump to ep or search..."
-              className="w-full pl-8 pr-3 py-1.5 text-xs bg-zinc-950 border border-surface-border rounded-lg text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-bifrost-amber"
+              className="w-full pl-8 pr-3 py-1.5 text-xs bg-black/40 border border-white/10 rounded-lg text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-bifrost-amber backdrop-blur-md"
             />
           </div>
 
           {/* Status Segmented Control */}
-          <div className="flex items-center bg-zinc-950 p-1 rounded-lg border border-surface-border">
+          <div className="flex items-center bg-black/40 p-1 rounded-lg border border-white/10 backdrop-blur-md">
             {(
               [
                 { id: 'all', label: 'All' },
