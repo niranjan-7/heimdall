@@ -348,6 +348,26 @@ export const App: React.FC = () => {
 
       {/* Main Content Area */}
       <main className="flex-1 h-screen overflow-y-auto flex flex-col p-6 lg:p-8 relative">
+        {/* Top Header Update Pill */}
+        {hasUpdate && (
+          <div className="mb-4 flex items-center justify-between px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs shadow-lg animate-in fade-in shrink-0">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-2 w-2 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+              </span>
+              <span className="font-semibold text-zinc-100">Heimdall Update Available</span>
+              <span className="text-zinc-400 hidden sm:inline">• Automated safety backup retains 100% of your data</span>
+            </div>
+            <button
+              onClick={() => setSettingsOpen(true)}
+              className="px-3 py-1 text-xs font-bold bg-amber-500 hover:bg-amber-400 text-zinc-950 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
+            >
+              Update Now
+            </button>
+          </div>
+        )}
+
         {/* Floating Notification Toast */}
         {notification && (
           <div
@@ -385,6 +405,7 @@ export const App: React.FC = () => {
                 onOpenAniListSearch={() => setAniListModalOpen(true)}
                 onNotification={showToast}
                 onDelayUpdated={loadLibrary}
+                onSeriesUpdated={loadLibrary}
               />
               <EpisodeGrid
                 series={currentSeries}

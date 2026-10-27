@@ -25,6 +25,7 @@ interface HeroBannerProps {
   onOpenAniListSearch: () => void
   onNotification: (type: 'success' | 'info' | 'error', message: string) => void
   onDelayUpdated: () => void
+  onSeriesUpdated?: (updatedSeries: Series) => void
 }
 
 export const HeroBanner: React.FC<HeroBannerProps> = ({
@@ -37,8 +38,20 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
   onDeleteSeries,
   onOpenAniListSearch,
   onNotification,
-  onDelayUpdated
+  onDelayUpdated,
+  onSeriesUpdated
 }) => {
+  const handleCleanTitles = async () => {
+    try {
+      const updated = await window.api.batchNormalizeEpisodeTitles(series.id)
+      if (updated && onSeriesUpdated) {
+        onSeriesUpdated(updated)
+      }
+      onNotification('success', `Normalized episode titles for ${series.title}`)
+    } catch {
+      onNotification('error', 'Failed to normalize titles')
+    }
+  }
   // Find current resume episode
   let resumeEpisode: Episode | undefined
   if (series.lastActiveEpisodeId) {
@@ -160,6 +173,15 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
               >
                 <RefreshCw className="w-3.5 h-3.5 text-zinc-400" />
                 Rescan
+              </button>
+
+              <button
+                onClick={handleCleanTitles}
+                title="Normalize all episode titles in this series into clean 'Episode X' format"
+                className="px-3 py-1.5 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-zinc-100 border border-zinc-700/60 text-xs font-medium flex items-center gap-1.5 transition-colors"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-bifrost-amber" />
+                Clean Titles
               </button>
 
               <button

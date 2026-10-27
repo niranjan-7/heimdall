@@ -214,17 +214,26 @@ export class SyncWorker {
     // 2. Series handling
     if (!this.activeSeries) return
 
+    let currentEpTime = currentTime
+    const previousEpId = this.activeEpisode?.id
     const matchedEpisode = this.matchEpisode(filename, filePath)
-    if (matchedEpisode) {
+
+    // Telemetry Guard: track change detection (e.g. transition from 154.mkv -> 155.mkv)
+    if (matchedEpisode && matchedEpisode.id !== previousEpId) {
       this.activeEpisode = matchedEpisode
+      // Ensure watch progress for the new episode starts cleanly from 0
+      // unless an existing saved timestamp is intentionally loaded
+      if (!matchedEpisode.completed && matchedEpisode.timeSec === 0 && currentEpTime > 5) {
+        currentEpTime = 0
+      }
     }
 
     const currentEp = this.activeEpisode
     let isCompleted = false
 
-    if (currentEp && (state === 'playing' || state === 'paused') && currentTime > 2) {
+    if (currentEp && (state === 'playing' || state === 'paused') && currentEpTime > 2) {
       const threshold = settings.completionThreshold || 0.9
-      isCompleted = duration > 0 ? currentTime / duration >= threshold : false
+      isCompleted = duration > 0 ? currentEpTime / duration >= threshold : false
 
       if (
         (isCompleted || currentEp.completed) &&
@@ -236,7 +245,7 @@ export class SyncWorker {
       }
 
       this.storageService.updateEpisodeProgress(this.activeSeries.id, currentEp.id, {
-        timeSec: currentTime,
+        timeSec: currentEpTime,
         durationSec: duration > 0 ? duration : currentEp.durationSec,
         completed: isCompleted || currentEp.completed,
         lastWatchedAt: Date.now()
@@ -248,7 +257,7 @@ export class SyncWorker {
         .updateActivity({
           seriesTitle: this.activeSeries.title,
           episodeNumber: currentEp.episodeNumber,
-          currentTime,
+          currentTime: currentEpTime,
           duration,
           isPlaying: state === 'playing',
           coverImage: this.activeSeries.coverImage
@@ -264,7 +273,7 @@ export class SyncWorker {
       filePath: currentEp ? currentEp.filePath : null,
       filename: currentEp ? currentEp.fileName : filename,
       state,
-      currentTime,
+      currentTime: currentEpTime,
       duration,
       completed: currentEp ? currentEp.completed || isCompleted : false,
       playerType

@@ -28,6 +28,7 @@ export class UpdateService {
 
       const dateStr = new Date().toISOString().replace(/[:.]/g, '-')
       const snapshotPath = path.join(backupsDir, `heimdall_backup_${dateStr}.json`)
+      const latestPreUpdatePath = path.join(backupsDir, 'library_pre_update.json')
 
       const libraryContent = fs.existsSync(libraryPath)
         ? JSON.parse(fs.readFileSync(libraryPath, 'utf-8'))
@@ -45,6 +46,7 @@ export class UpdateService {
       }
 
       fs.writeFileSync(snapshotPath, JSON.stringify(backupBundle, null, 2), 'utf-8')
+      fs.writeFileSync(latestPreUpdatePath, JSON.stringify(backupBundle, null, 2), 'utf-8')
       return { success: true, backupPath: snapshotPath }
     } catch (err: any) {
       console.error('Backup creation error:', err)
