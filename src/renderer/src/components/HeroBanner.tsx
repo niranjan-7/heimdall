@@ -11,7 +11,8 @@ import {
   Tv,
   Radio,
   Clock,
-  Sparkles
+  Sparkles,
+  BookOpen
 } from 'lucide-react'
 
 interface HeroBannerProps {
@@ -42,6 +43,23 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
   onSeriesUpdated
 }) => {
   const [syncingAniList, setSyncingAniList] = useState(false)
+
+  const [fetchingFiller, setFetchingFiller] = useState(false)
+
+  const handleFetchFiller = async () => {
+    if (fetchingFiller) return
+    setFetchingFiller(true)
+    try {
+      const updated = await window.api.fetchSeriesFillerData(series.id)
+      if (updated && onSeriesUpdated) {
+        onSeriesUpdated(updated)
+      }
+    } catch (err: any) {
+      onNotification('error', err?.message || 'Failed to fetch filler guide')
+    } finally {
+      setFetchingFiller(false)
+    }
+  }
 
   const handleSyncToAniList = async () => {
     if (syncingAniList) return
@@ -149,6 +167,16 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                 </span>
               ) : null}
 
+              {series.fillerStats && (
+                <span
+                  title={`${series.fillerStats.fillerCount} filler episodes out of ${series.episodes.length} total (${series.fillerStats.mangaCanonCount} Manga Canon, ${series.fillerStats.mixedCanonCount} Mixed, ${series.fillerStats.animeCanonCount} Anime Canon)`}
+                  className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-rose-500/15 text-rose-300 border border-rose-500/30 flex items-center gap-1.5 shadow-sm"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+                  {series.fillerStats.fillerCount} Fillers ({series.fillerStats.fillerPercentage}%)
+                </span>
+              )}
+
               <span className="text-xs text-zinc-400 font-mono">
                 {completedEpisodes} of {totalEpisodes} watched ({completionPercent}%)
               </span>
@@ -186,6 +214,16 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                   {syncingAniList ? 'Syncing...' : 'Sync to AniList'}
                 </button>
               ) : null}
+
+              <button
+                onClick={handleFetchFiller}
+                disabled={fetchingFiller}
+                title="Fetch or refresh manga canon & filler breakdown from AnimeFillerList"
+                className="px-3 py-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900/50 text-rose-300 hover:text-rose-100 border border-rose-800/40 text-xs font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-50 cursor-pointer shadow-sm"
+              >
+                <BookOpen className={`w-3.5 h-3.5 text-rose-400 ${fetchingFiller ? 'animate-spin' : ''}`} />
+                {fetchingFiller ? 'Fetching...' : series.fillerStats ? 'Refresh Filler Guide' : 'Fetch Filler Guide'}
+              </button>
 
               <button
                 onClick={onAddSeason}

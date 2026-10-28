@@ -9,6 +9,7 @@ import { VlcController } from './vlcController'
 import { ThumbnailService } from './thumbnailService'
 import { DiscordService } from './discordService'
 import { AniListService } from './anilistService'
+import { FillerService } from './fillerService'
 import { SubtitleSyncService } from './subtitleSyncService'
 import { SubtitleDownloadService } from './subtitleDownloadService'
 import { RemoteServer } from './remoteServer'
@@ -38,6 +39,7 @@ let vlcController: VlcController
 let thumbnailService: ThumbnailService
 let discordService: DiscordService
 let anilistService: AniListService
+let fillerService: FillerService
 let subtitleSyncService: SubtitleSyncService
 let subtitleDownloadService: SubtitleDownloadService
 let remoteServer: RemoteServer
@@ -211,6 +213,48 @@ async function syncAllSeriesToAniList(): Promise<{
     return { success: true, count: successCount }
   } catch (err: any) {
     return { success: false, count: 0, message: err?.message || 'Failed to sync series' }
+  }
+}
+
+async function syncSeriesFillerData(
+  seriesId: string,
+  notify = false
+): Promise<Series | null> {
+  try {
+    const series = storageService.getSeries(seriesId)
+    if (!series) return null
+
+    const enriched = await fillerService.enrichSeries(series)
+    storageService.addOrUpdateSeries(enriched)
+
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('series:updated', enriched)
+      if (notify) {
+        const stats = enriched.fillerStats
+        if (stats) {
+          mainWindow.webContents.send('app:notification', {
+            type: 'success',
+            message: `🍃 Loaded filler guide for ${enriched.aniListTitle || enriched.title} (${stats.fillerCount} filler episodes identified)`
+          })
+        } else {
+          mainWindow.webContents.send('app:notification', {
+            type: 'info',
+            message: `No filler breakdown found for ${enriched.aniListTitle || enriched.title}`
+          })
+        }
+      }
+    }
+
+    return enriched
+  } catch (err: any) {
+    console.error('[FillerService] Error syncing filler data:', err)
+    if (notify && mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('app:notification', {
+        type: 'error',
+        message: `Failed to load filler guide: ${err?.message || 'Error'}`
+      })
+    }
+    return null
   }
 }
 
@@ -578,6 +622,7 @@ function registerIpcHandlers(): void {
       series.updatedAt = Date.now()
       storageService.addOrUpdateSeries(series)
       syncSeriesToAniList(seriesId, true).catch(() => {})
+      syncSeriesFillerData(seriesId, false).catch(() => {})
       return series
     }
   )
@@ -588,6 +633,10 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle('anilist:sync-all', async () => {
     return await syncAllSeriesToAniList()
+  })
+
+  ipcMain.handle('filler:fetch-series', async (_event, seriesId: string) => {
+    return await syncSeriesFillerData(seriesId, true)
   })
 
   ipcMain.handle('anilist:unlink-series', async (_event, seriesId: string) => {
@@ -720,6 +769,7 @@ app.whenReady().then(() => {
   storageService = new StorageService()
   discordService = new DiscordService(storageService)
   anilistService = new AniListService()
+  fillerService = new FillerService()
   thumbnailService = new ThumbnailService(storageService)
   syncWorker = new SyncWorker(storageService, discordService, anilistService, () => mainWindow)
   vlcController = new VlcController(storageService, syncWorker)

@@ -1,3 +1,15 @@
+export type FillerCategory = 'manga_canon' | 'anime_canon' | 'mixed_canon' | 'filler'
+
+export interface SeriesFillerStats {
+  mangaCanonCount: number
+  animeCanonCount: number
+  mixedCanonCount: number
+  fillerCount: number
+  fillerPercentage: number
+  sourceUrl?: string
+  lastSyncedAt?: number
+}
+
 export interface Episode {
   id: string
   filePath: string
@@ -12,6 +24,8 @@ export interface Episode {
   lastWatchedAt: number | null
   hasThumbnail?: boolean
   subDelaySec?: number
+  fillerType?: FillerCategory
+  fillerLabel?: string
 }
 
 export interface AniListMediaInfo {
@@ -47,6 +61,8 @@ export interface Series {
   bannerImage?: string | null
   aniListTitle?: string | null
   defaultSubDelaySec?: number
+  fillerStats?: SeriesFillerStats
+  lastFillerSyncAt?: number
 }
 
 export interface Movie {
@@ -125,6 +141,7 @@ export interface AppSettings {
   enableThumbnails: boolean
   enableLiquidGlass?: boolean
   uiTheme?: UITheme
+  dimFillerEpisodes?: boolean
   tmdbApiKey?: string
   enableRemoteServer?: boolean
   remotePort?: number

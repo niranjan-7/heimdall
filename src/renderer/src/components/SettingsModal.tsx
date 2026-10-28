@@ -949,6 +949,34 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
             </div>
           </div>
 
+          {/* Feature 4: Anime Filler Dimming */}
+          <div className="p-4 rounded-xl bg-zinc-950/60 border border-surface-border flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="p-1.5 rounded-lg bg-rose-500/15 text-rose-400">
+                <Shield className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wider">
+                  Dim Filler Episode Cards
+                </h4>
+                <p className="text-[11px] text-zinc-400">
+                  Subtly dim non-manga filler cards in the episode grid so official canon story episodes stand out
+                </p>
+              </div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={settings.dimFillerEpisodes !== false}
+                onChange={(e) =>
+                  setSettings({ ...settings, dimFillerEpisodes: e.target.checked })
+                }
+                className="sr-only peer"
+              />
+              <div className="w-9 h-5 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-500" />
+            </label>
+          </div>
+
           {/* Section: Updates & Data Safety */}
           <div className="p-4 rounded-xl bg-zinc-950/70 border border-surface-border space-y-4">
             <div className="flex items-center justify-between">

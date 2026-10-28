@@ -8,6 +8,7 @@ interface EpisodeCardProps {
   isCurrentPlaying: boolean
   isSelectionMode?: boolean
   isSelected?: boolean
+  dimFiller?: boolean
   onPlay: (episodeId: string) => void
   onToggleWatched: (episodeId: string, e: React.MouseEvent) => void
   onResetProgress: (episodeId: string, e: React.MouseEvent) => void
@@ -19,6 +20,7 @@ export const EpisodeCard: React.FC<EpisodeCardProps> = ({
   isCurrentPlaying,
   isSelectionMode = false,
   isSelected = false,
+  dimFiller = true,
   onPlay,
   onToggleWatched,
   onResetProgress,
@@ -49,6 +51,10 @@ export const EpisodeCard: React.FC<EpisodeCardProps> = ({
             : episode.completed
               ? 'liquid-glass-card opacity-80 hover:opacity-100 hover:border-white/30'
               : 'liquid-glass-card hover:border-amber-500/50'
+      } ${
+        dimFiller && episode.fillerType === 'filler' && !isSelected && !isCurrentPlaying && !episode.completed
+          ? 'opacity-65 hover:opacity-100 transition-opacity'
+          : ''
       }`}
     >
       {/* Specular Liquid Edge Sheen (Top & Bottom) */}
@@ -109,6 +115,52 @@ export const EpisodeCard: React.FC<EpisodeCardProps> = ({
             >
               EP {episode.episodeNumber ?? '?'}
             </span>
+
+            {/* Filler / Canon Badge */}
+            {episode.fillerType && (
+              <span
+                title={
+                  episode.fillerType === 'filler'
+                    ? 'Filler Episode — Non-manga story arc (safe to skip)'
+                    : episode.fillerType === 'mixed_canon'
+                      ? 'Mixed Canon / Filler — Contains both manga storyline and filler scenes'
+                      : episode.fillerType === 'anime_canon'
+                        ? 'Anime Canon — Official story arc created for the anime adaptation'
+                        : 'Manga Canon — 100% official manga story'
+                }
+                className={`px-2 py-0.5 rounded-lg text-[10px] font-bold tracking-tight shadow-md backdrop-blur-md flex items-center gap-1 border ${
+                  episode.fillerType === 'filler'
+                    ? 'bg-rose-500/25 text-rose-200 border-rose-500/50 shadow-sm shadow-rose-950/40'
+                    : episode.fillerType === 'mixed_canon'
+                      ? 'bg-amber-500/20 text-amber-200 border-amber-500/40'
+                      : episode.fillerType === 'anime_canon'
+                        ? 'bg-sky-500/20 text-sky-200 border-sky-500/40'
+                        : 'bg-emerald-500/15 text-emerald-200 border-emerald-500/30'
+                }`}
+              >
+                {episode.fillerType === 'filler' ? (
+                  <>
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
+                    Filler
+                  </>
+                ) : episode.fillerType === 'mixed_canon' ? (
+                  <>
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                    Mixed
+                  </>
+                ) : episode.fillerType === 'anime_canon' ? (
+                  <>
+                    <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />
+                    Anime Canon
+                  </>
+                ) : (
+                  <>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    Canon
+                  </>
+                )}
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-1.5">

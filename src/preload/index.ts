@@ -113,6 +113,7 @@ export interface IElectronAPI {
     seriesId: string
   ) => Promise<{ success: boolean; progress?: number; message?: string }>
   syncAllToAniList: () => Promise<{ success: boolean; count: number; message?: string }>
+  fetchSeriesFillerData: (seriesId: string) => Promise<Series | null>
 
   // Feature 2: Thumbnails
   queueThumbnails: (seriesId: string) => Promise<void>
@@ -219,6 +220,7 @@ const api: IElectronAPI = {
   unlinkAniListMedia: (seriesId) => ipcRenderer.invoke('anilist:unlink-series', seriesId),
   syncSeriesToAniList: (seriesId) => ipcRenderer.invoke('anilist:sync-series', seriesId),
   syncAllToAniList: () => ipcRenderer.invoke('anilist:sync-all'),
+  fetchSeriesFillerData: (seriesId) => ipcRenderer.invoke('filler:fetch-series', seriesId),
   queueThumbnails: (seriesId) => ipcRenderer.invoke('thumbnails:queue-series', seriesId),
 
   // Batch Episode Actions & Cleaner

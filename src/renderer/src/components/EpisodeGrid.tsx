@@ -10,6 +10,7 @@ interface EpisodeGridProps {
   onToggleWatched: (episodeId: string, e: React.MouseEvent) => void
   onResetProgress: (episodeId: string, e: React.MouseEvent) => void
   onSeriesUpdated?: (updatedSeries: Series) => void
+  dimFiller?: boolean
 }
 
 export const EpisodeGrid: React.FC<EpisodeGridProps> = ({
@@ -18,11 +19,15 @@ export const EpisodeGrid: React.FC<EpisodeGridProps> = ({
   onPlayEpisode,
   onToggleWatched,
   onResetProgress,
-  onSeriesUpdated
+  onSeriesUpdated,
+  dimFiller = true
 }) => {
   const [selectedSeason, setSelectedSeason] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all')
+  const [canonFilter, setCanonFilter] = useState<'all' | 'canon_only' | 'fillers_only'>('all')
+
+  const hasFillerData = useMemo(() => series.episodes.some((e) => Boolean(e.fillerType)), [series.episodes])
 
   // Multi-Selection state
   const [isSelectionMode, setIsSelectionMode] = useState<boolean>(false)
@@ -52,6 +57,10 @@ export const EpisodeGrid: React.FC<EpisodeGridProps> = ({
       if (filterStatus === 'unwatched' && (ep.completed || ep.timeSec > 0)) return false
       if (filterStatus === 'in_progress' && (ep.completed || ep.timeSec === 0)) return false
 
+      // Canon / Filler filter
+      if (canonFilter === 'canon_only' && ep.fillerType === 'filler') return false
+      if (canonFilter === 'fillers_only' && ep.fillerType !== 'filler') return false
+
       // Search query (matches title, filename, or episode number)
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase().trim()
@@ -64,7 +73,7 @@ export const EpisodeGrid: React.FC<EpisodeGridProps> = ({
 
       return true
     })
-  }, [series.episodes, selectedSeason, filterStatus, searchQuery])
+  }, [series.episodes, selectedSeason, filterStatus, canonFilter, searchQuery])
 
   // Toggle selection for a single episode (with Shift-click range support)
   const handleToggleSelect = (episodeId: string, e: React.MouseEvent) => {
@@ -262,6 +271,35 @@ export const EpisodeGrid: React.FC<EpisodeGridProps> = ({
             ))}
           </div>
 
+          {/* Canon vs Filler Filter (Visible when series has filler data) */}
+          {hasFillerData && (
+            <div className="flex items-center bg-white/[0.04] p-1 rounded-xl border border-white/10 backdrop-blur-md">
+              {(
+                [
+                  { id: 'all', label: 'All Story' },
+                  { id: 'canon_only', label: '🟢 Canon Only' },
+                  { id: 'fillers_only', label: '🛑 Fillers' }
+                ] as const
+              ).map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => setCanonFilter(item.id)}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${
+                    canonFilter === item.id
+                      ? item.id === 'canon_only'
+                        ? 'bg-emerald-500/25 text-emerald-200 border border-emerald-500/40 shadow-sm font-bold'
+                        : item.id === 'fillers_only'
+                          ? 'bg-rose-500/25 text-rose-200 border border-rose-500/40 shadow-sm font-bold'
+                          : 'bg-white/15 text-zinc-100 shadow-sm font-bold'
+                      : 'text-zinc-400 hover:text-zinc-200'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Multi-Select Toggle Button */}
           <button
             type="button"
@@ -314,6 +352,7 @@ export const EpisodeGrid: React.FC<EpisodeGridProps> = ({
               isCurrentPlaying={currentPlayingEpisodeId === episode.id}
               isSelectionMode={isSelectionMode}
               isSelected={selectedEpisodeIds.has(episode.id)}
+              dimFiller={dimFiller}
               onPlay={onPlayEpisode}
               onToggleWatched={onToggleWatched}
               onResetProgress={onResetProgress}

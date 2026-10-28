@@ -477,6 +477,7 @@ export const App: React.FC = () => {
                 currentPlayingEpisodeId={
                   activeVlcState?.seriesId === currentSeries.id ? activeVlcState.episodeId : null
                 }
+                dimFiller={appSettings?.dimFillerEpisodes !== false}
                 onPlayEpisode={handlePlayEpisode}
                 onToggleWatched={handleToggleEpisodeWatched}
                 onResetProgress={handleResetEpisodeProgress}

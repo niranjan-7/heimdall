@@ -22,6 +22,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   enableAniListScrobble: true,
   enableThumbnails: true,
   enableLiquidGlass: true,
+  dimFillerEpisodes: true,
   uiTheme: 'liquid_glass',
   enableRemoteServer: true,
   remotePort: 42125
