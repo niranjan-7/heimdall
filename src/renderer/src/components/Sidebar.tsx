@@ -309,7 +309,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 Update
               </span>
             ) : (
-              <span className="text-[10px] text-zinc-500 font-mono">v1.2.1</span>
+              <span className="text-[10px] text-zinc-500 font-mono">v1.3.0</span>
             )}
           </div>
         </button>
