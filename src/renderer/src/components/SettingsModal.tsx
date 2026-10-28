@@ -53,6 +53,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
   const [backingUp, setBackingUp] = useState(false)
   const [discordStatus, setDiscordStatus] = useState<{ isConnected: boolean; username: string; clientId: string } | null>(null)
   const [isReconnectingDiscord, setIsReconnectingDiscord] = useState(false)
+  const [syncingAllAniList, setSyncingAllAniList] = useState(false)
 
   useEffect(() => {
     if (isOpen) {
@@ -230,7 +231,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
     }
   }
 
-  const [syncingAllAniList, setSyncingAllAniList] = useState(false)
 
   const handleSyncAllAniList = async () => {
     if (syncingAllAniList) return
@@ -1104,7 +1104,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
               </div>
             ) : (
               <div className="text-[11px] px-3 py-2 rounded-lg bg-zinc-900/60 border border-surface-border text-zinc-400 flex items-center justify-between">
-                <span>Current version: <span className="font-mono text-zinc-200 font-medium">v1.2.0</span></span>
+                <span>Current version: <span className="font-mono text-zinc-200 font-medium">v1.3.1</span></span>
                 <span className="text-[10px] text-zinc-500">Auto-backup enabled</span>
               </div>
             )}

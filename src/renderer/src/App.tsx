@@ -6,6 +6,7 @@ import { EpisodeGrid } from './components/EpisodeGrid'
 import { MovieHeroBanner } from './components/MovieHeroBanner'
 import { MovieGrid } from './components/MovieGrid'
 import { SettingsModal } from './components/SettingsModal'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { AniListSearchModal } from './components/AniListSearchModal'
 import { MovieMatchModal } from './components/MovieMatchModal'
 import { MobileRemoteModal } from './components/MobileRemoteModal'
@@ -551,11 +552,13 @@ export const App: React.FC = () => {
       </main>
 
       {/* Settings Modal */}
-      <SettingsModal
-        isOpen={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-        onSaved={(updated) => setAppSettings(updated)}
-      />
+      <ErrorBoundary>
+        <SettingsModal
+          isOpen={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+          onSaved={(updated) => setAppSettings(updated)}
+        />
+      </ErrorBoundary>
 
       {/* Mobile Remote Pairing Modal */}
       <MobileRemoteModal

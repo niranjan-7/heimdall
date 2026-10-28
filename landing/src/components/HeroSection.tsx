@@ -59,7 +59,7 @@ export const HeroSection: React.FC = () => {
   const osLabels = {
     windows: {
       name: 'Windows (.exe)',
-      link: 'https://github.com/niranjan-7/heimdall/releases/download/v1.3.0/Heimdall.Setup.1.3.0.exe'
+      link: 'https://github.com/niranjan-7/heimdall/releases/download/v1.3.1/Heimdall.Setup.1.3.1.exe'
     },
     mac: { name: 'macOS (.dmg)', link: 'https://github.com/niranjan-7/heimdall/releases/latest' },
     linux: { name: 'Linux (.AppImage)', link: 'https://github.com/niranjan-7/heimdall/releases/latest' }
