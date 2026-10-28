@@ -59,7 +59,7 @@ export const Footer: React.FC = () => {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4 relative z-10">
             <a
-              href="https://github.com/niranjan-7/heimdall/releases/download/v1.2.1/Heimdall.Setup.1.2.1.exe"
+              href="https://github.com/niranjan-7/heimdall/releases/download/v1.4.0/Heimdall.Setup.1.4.0.exe"
               className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-zinc-950 font-black text-sm flex items-center justify-center gap-2.5 shadow-[0_0_25px_rgba(245,158,11,0.4),inset_0_1px_1px_rgba(255,255,255,0.4)] hover:shadow-[0_0_35px_rgba(245,158,11,0.6)] transition-all hover:scale-105 active:scale-95 cursor-pointer"
             >
               <Download className="w-4 h-4 stroke-[2.5]" />
@@ -94,7 +94,7 @@ export const Footer: React.FC = () => {
             </div>
             <div>
               <span className="font-extrabold text-white text-sm tracking-wider uppercase">HEIMDALL</span>
-              <span className="text-zinc-500 ml-2 font-mono text-[11px]">v1.2.1</span>
+              <span className="text-zinc-500 ml-2 font-mono text-[11px]">v1.4.0</span>
             </div>
           </div>
 

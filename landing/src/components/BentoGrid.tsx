@@ -2,15 +2,17 @@ import React from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import {
   Film,
-  Gamepad2,
   Sparkles,
   Check,
   Database,
   Lock,
-  Droplets,
-  CheckSquare,
   RefreshCw,
-  FolderSync
+  FolderSync,
+  Trash2,
+  HardDrive,
+  BookOpen,
+  Palette,
+  Archive
 } from 'lucide-react'
 import { MotionReveal } from './MotionReveal'
 import { TiltCard } from './TiltCard'
@@ -72,73 +74,127 @@ export const BentoGrid: React.FC = () => {
 
         {/* 6-Tile Bento Grid with Staggered 3D Spring Cascade & 3D Tilt Cards */}
         <motion.div
+          id="filler-features"
           variants={containerVariants}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: '-80px' }}
           className="grid grid-cols-1 md:grid-cols-3 gap-6"
         >
-          {/* Tile 1: Dedicated Movies & TV Library (2 Columns Wide) */}
+          {/* Tile 1: Anime Filler Detection & Episode Badges (2 Columns Wide) */}
           <TiltCard
             variants={shouldReduceMotion ? undefined : cardVariants}
-            accentColor="rgba(245, 158, 11, 0.22)"
-            className="md:col-span-2 hover:border-amber-500/40"
+            accentColor="rgba(244, 63, 94, 0.25)"
+            className="md:col-span-2 hover:border-rose-500/40"
           >
             <div className="space-y-4 z-10">
-              <div className="w-10 h-10 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center shadow-md">
-                <Film className="w-5 h-5" />
+              <div className="w-10 h-10 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-400 flex items-center justify-center shadow-md">
+                <BookOpen className="w-5 h-5" />
               </div>
               <div className="space-y-1">
-                <h3 className="text-2xl font-bold text-white group-hover:text-amber-300 transition-colors">
-                  Dedicated Movies & TV Series Library
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                    New in v1.4
+                  </span>
+                  <span className="text-[10px] text-zinc-400 font-mono">AnimeFillerList API</span>
+                </div>
+                <h3 className="text-2xl font-bold text-white group-hover:text-rose-300 transition-colors">
+                  Anime Filler Detection & Smart Episode Badges
                 </h3>
                 <p className="text-zinc-300 text-sm leading-relaxed max-w-xl">
-                  Automatic TMDB metadata enrichment with high-res backdrops, release years, cast, and genres. Seamlessly groups multi-part films (<code className="text-amber-300 font-mono text-xs bg-zinc-900 border border-white/10 px-2 py-0.5 rounded">CD1 / CD2</code>) and handles offline tech-spec extraction with zero missing data.
+                  Automated synchronization with AnimeFillerList. High-contrast indicators tag every episode card: <span className="text-rose-400 font-semibold">🛑 Filler</span>, <span className="text-amber-400 font-semibold">⚡ Mixed Canon</span>, <span className="text-sky-400 font-semibold">📘 Anime Canon</span>, and <span className="text-emerald-400 font-semibold">🟢 Manga Canon</span>. Toggle the <strong>1-Click &quot;Canon Only&quot; Filter</strong> to binge pure manga storylines without distraction.
                 </p>
               </div>
             </div>
 
-            {/* Visual preview strip inside Tile 1 */}
-            <div className="mt-6 pt-6 border-t border-white/[0.08] grid grid-cols-3 gap-4">
-              <div className="relative rounded-2xl overflow-hidden aspect-[16/10] bg-zinc-900 border border-white/[0.08] group/card shadow-lg">
-                <img
-                  src="https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80"
-                  alt="Blade Runner 2049"
-                  className="w-full h-full object-cover group-hover/card:scale-105 transition-transform duration-300 opacity-80"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent flex flex-col justify-end p-3">
-                  <span className="text-xs font-bold text-white truncate">Blade Runner 2049</span>
-                  <span className="text-[10px] text-amber-300 font-mono font-semibold">4K HDR • 8.0 ★</span>
+            {/* Visual Episode Badges Preview Strip */}
+            <div className="mt-6 pt-6 border-t border-white/[0.08] grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+              <div className="p-3 rounded-2xl bg-rose-950/40 border border-rose-500/40 space-y-1.5 shadow-md">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-rose-200 text-xs">EP 125–150</span>
+                  <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse" />
                 </div>
+                <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/30 text-rose-200 border border-rose-500/40">
+                  🛑 Filler
+                </span>
+                <p className="text-[10px] text-zinc-400 leading-snug">Safe to skip arc</p>
               </div>
 
-              <div className="relative rounded-2xl overflow-hidden aspect-[16/10] bg-zinc-900 border border-white/[0.08] group/card shadow-lg">
-                <img
-                  src="https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?auto=format&fit=crop&w=600&q=80"
-                  alt="Interstellar"
-                  className="w-full h-full object-cover group-hover/card:scale-105 transition-transform duration-300 opacity-80"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent flex flex-col justify-end p-3">
-                  <span className="text-xs font-bold text-white truncate">Interstellar</span>
-                  <span className="text-[10px] text-amber-300 font-mono font-semibold">IMAX • 8.7 ★</span>
+              <div className="p-3 rounded-2xl bg-amber-950/40 border border-amber-500/40 space-y-1.5 shadow-md">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-amber-200 text-xs">EP 151</span>
+                  <span className="w-2 h-2 rounded-full bg-amber-400" />
                 </div>
+                <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/30 text-amber-200 border border-amber-500/40">
+                  ⚡ Mixed Canon
+                </span>
+                <p className="text-[10px] text-zinc-400 leading-snug">Manga + filler scenes</p>
               </div>
 
-              <div className="relative rounded-2xl overflow-hidden aspect-[16/10] bg-zinc-900 border border-white/[0.08] group/card shadow-lg">
-                <img
-                  src="https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=600&q=80"
-                  alt="Dune Part Two"
-                  className="w-full h-full object-cover group-hover/card:scale-105 transition-transform duration-300 opacity-80"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent flex flex-col justify-end p-3">
-                  <span className="text-xs font-bold text-white truncate">Dune: Part Two</span>
-                  <span className="text-[10px] text-amber-300 font-mono font-semibold">Dolby Atmos • 8.5 ★</span>
+              <div className="p-3 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 space-y-1.5 shadow-md">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-emerald-200 text-xs">EP 152–175</span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-400" />
                 </div>
+                <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/30 text-emerald-200 border border-emerald-500/40">
+                  🟢 Manga Canon
+                </span>
+                <p className="text-[10px] text-zinc-400 leading-snug">100% official manga story</p>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-sky-950/40 border border-sky-500/40 space-y-1.5 shadow-md">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-sky-200 text-xs">Canon Filter</span>
+                  <Check className="w-3.5 h-3.5 text-sky-400" />
+                </div>
+                <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-500/30 text-sky-200 border border-sky-500/40">
+                  1-Click Filter
+                </span>
+                <p className="text-[10px] text-zinc-400 leading-snug">Auto-hide all non-canon</p>
               </div>
             </div>
           </TiltCard>
 
-          {/* Tile 2: Liquid Glass & Windows 11 Acrylic Reactivity (1 Column) */}
+          {/* Tile 2: Smart Disk Space Management & 1-Click Cleaners (1 Column) */}
+          <TiltCard
+            variants={shouldReduceMotion ? undefined : cardVariants}
+            accentColor="rgba(245, 158, 11, 0.25)"
+            className="hover:border-amber-500/40"
+          >
+            <div className="space-y-4">
+              <div className="w-10 h-10 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center shadow-md">
+                <HardDrive className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  Space Guard
+                </span>
+                <h3 className="text-2xl font-bold text-white group-hover:text-amber-300 transition-colors">
+                  1-Click Space Cleaners
+                </h3>
+                <p className="text-zinc-300 text-sm leading-relaxed">
+                  Purge 60+ filler episodes or watched files straight to the Windows Recycle Bin to free up 30+ GB.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 p-3.5 rounded-2xl bg-black/80 border border-white/[0.08] space-y-2.5 shadow-inner text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-zinc-300 font-semibold flex items-center gap-1.5">
+                  <Trash2 className="w-3.5 h-3.5 text-rose-400" /> Clean Fillers
+                </span>
+                <span className="font-mono text-rose-400 font-bold">~28.4 GB Free</span>
+              </div>
+              <div className="flex items-center justify-between border-t border-white/5 pt-2">
+                <span className="text-zinc-300 font-semibold flex items-center gap-1.5">
+                  <Archive className="w-3.5 h-3.5 text-amber-400" /> Watch History
+                </span>
+                <span className="text-[10px] text-emerald-400 font-mono font-bold">100% Preserved</span>
+              </div>
+            </div>
+          </TiltCard>
+
+          {/* Tile 3: Multi-Theme UI System (1 Column) */}
           <TiltCard
             variants={shouldReduceMotion ? undefined : cardVariants}
             accentColor="rgba(56, 189, 248, 0.25)"
@@ -146,128 +202,83 @@ export const BentoGrid: React.FC = () => {
           >
             <div className="space-y-4">
               <div className="w-10 h-10 rounded-2xl bg-sky-500/15 border border-sky-500/30 text-sky-400 flex items-center justify-center shadow-md">
-                <Droplets className="w-5 h-5" />
+                <Palette className="w-5 h-5" />
               </div>
               <div className="space-y-1">
                 <h3 className="text-2xl font-bold text-white group-hover:text-sky-300 transition-colors">
-                  Liquid Glass & Live Acrylic
+                  Multi-Theme Visual Engine
                 </h3>
                 <p className="text-zinc-300 text-sm leading-relaxed">
-                  Windows 11 DWM native Acrylic transparency. Optical refraction SVG filters and specular highlights dynamically blend and blur your desktop wallpaper directly behind the player interface.
+                  Switch instantly between <strong>🌊 Liquid Glass</strong> (VisionOS acrylic desktop blur), <strong>🌙 Classic Dark</strong> (Obsidian), or <strong>🖤 OLED Black</strong> with true #000000 contrast.
                 </p>
               </div>
             </div>
 
-            <div className="mt-6 p-4 rounded-2xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/20 backdrop-blur-xl shadow-lg relative overflow-hidden space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-zinc-300 font-bold flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" /> Acrylic Blur
-                </span>
-                <span className="text-sky-300 font-mono text-[10px] px-2 py-0.5 rounded-full bg-sky-500/20 border border-sky-500/30">
-                  DWM Active
-                </span>
+            <div className="mt-6 grid grid-cols-3 gap-2 text-center text-[10px] font-bold">
+              <div className="p-2.5 rounded-xl bg-sky-500/10 border border-sky-500/30 text-sky-300">
+                Liquid Glass
               </div>
-              <p className="text-[11px] text-zinc-400">
-                Moves smoothly across desktop wallpapers with 60fps glass caustics.
-              </p>
-            </div>
-          </TiltCard>
-
-          {/* Tile 3: Smart Episode Name Cleaner & Normalizer (1 Column) */}
-          <TiltCard
-            variants={shouldReduceMotion ? undefined : cardVariants}
-            accentColor="rgba(245, 158, 11, 0.22)"
-            className="hover:border-amber-400/40"
-          >
-            <div className="space-y-4">
-              <div className="w-10 h-10 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center shadow-md">
-                <Sparkles className="w-5 h-5" />
+              <div className="p-2.5 rounded-xl bg-zinc-900 border border-zinc-700 text-zinc-300">
+                Classic Dark
               </div>
-              <div className="space-y-1">
-                <h3 className="text-2xl font-bold text-white group-hover:text-amber-300 transition-colors">
-                  Smart Title Normalizer
-                </h3>
-                <p className="text-zinc-300 text-sm leading-relaxed">
-                  Multi-stage regex cleaning engine strips messy tracker tags (<code className="text-amber-300 font-mono text-xs bg-zinc-900 border border-white/10 px-1 py-0.5 rounded">[1080p]</code>, <code className="text-amber-300 font-mono text-xs bg-zinc-900 border border-white/10 px-1 py-0.5 rounded">epi - 12</code>) into clean, standard episode titles.
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-6 p-3.5 rounded-2xl bg-black/80 border border-white/[0.08] space-y-2 font-mono text-xs shadow-inner">
-              <div className="text-[11px] text-red-300/80 line-through truncate">
-                [HorribleSubs] Fairy_Tail_-_epi_157_[720p].mkv
-              </div>
-              <div className="text-xs text-emerald-400 font-bold flex items-center gap-1.5 pt-1 border-t border-white/5">
-                <Check className="w-3.5 h-3.5" /> Episode 157
+              <div className="p-2.5 rounded-xl bg-black border border-amber-500/40 text-amber-400">
+                OLED Black
               </div>
             </div>
           </TiltCard>
 
-          {/* Tile 4: Multi-Select Batch Actions (1 Column) */}
+          {/* Tile 4: AniList Global Progress & Scrobbling (1 Column) */}
           <TiltCard
             variants={shouldReduceMotion ? undefined : cardVariants}
-            accentColor="rgba(16, 185, 129, 0.22)"
-            className="hover:border-emerald-400/40"
-          >
-            <div className="space-y-4">
-              <div className="w-10 h-10 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shadow-md">
-                <CheckSquare className="w-5 h-5" />
-              </div>
-              <div className="space-y-1">
-                <h3 className="text-2xl font-bold text-white group-hover:text-emerald-300 transition-colors">
-                  Batch Actions & Prior-Watched
-                </h3>
-                <p className="text-zinc-300 text-sm leading-relaxed">
-                  Select ranges with Shift-click, batch mark whole seasons as watched or unwatched, and cascade &quot;Prior Watched&quot; with a single click from a floating glass HUD.
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-6 p-3.5 rounded-2xl bg-emerald-950/30 border border-emerald-500/30 flex items-center justify-between text-xs">
-              <span className="font-bold text-emerald-300 flex items-center gap-1.5">
-                <CheckSquare className="w-3.5 h-3.5" /> 12 Episodes Selected
-              </span>
-              <span className="px-2 py-0.5 rounded-md bg-emerald-500 text-zinc-950 font-extrabold text-[10px]">
-                Mark Watched
-              </span>
-            </div>
-          </TiltCard>
-
-          {/* Tile 5: Discord Rich Presence & AniList 1-Click Sync (1 Column) */}
-          <TiltCard
-            variants={shouldReduceMotion ? undefined : cardVariants}
-            accentColor="rgba(168, 85, 247, 0.22)"
+            accentColor="rgba(168, 85, 247, 0.25)"
             className="hover:border-purple-500/40"
           >
             <div className="space-y-4">
               <div className="w-10 h-10 rounded-2xl bg-purple-500/15 border border-purple-500/30 text-purple-400 flex items-center justify-center shadow-md">
-                <Gamepad2 className="w-5 h-5" />
+                <Sparkles className="w-5 h-5" />
               </div>
               <div className="space-y-1">
                 <h3 className="text-2xl font-bold text-white group-hover:text-purple-300 transition-colors">
-                  Discord RPC 2.0 & AniList
+                  AniList Global Progress
                 </h3>
                 <p className="text-zinc-300 text-sm leading-relaxed">
-                  Verified rich presence with album art, live elapsed timers, and auto-reconnect backoff. Instant AniList GraphQL scrobbling upon episode completion.
+                  Track total story progress (<code className="text-purple-300 font-mono text-xs bg-zinc-900 border border-white/10 px-1 py-0.5 rounded">Ep 158 of 175</code>) alongside local files on disk. Real-time scrobbling and official titles everywhere.
                 </p>
               </div>
             </div>
 
-            {/* Discord Status Mockup Card */}
-            <div className="mt-6 p-4 rounded-2xl bg-[#1e1f22] border border-white/[0.08] flex items-center gap-3.5 shadow-md">
-              <div className="relative w-12 h-12 rounded-xl bg-zinc-800 overflow-hidden flex-shrink-0">
-                <img
-                  src="https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=200&q=80"
-                  alt="Anime Cover"
-                  className="w-full h-full object-cover"
-                />
-                <div className="w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-[#1e1f22] absolute bottom-0 right-0 shadow-sm" />
+            <div className="mt-6 p-3.5 rounded-2xl bg-purple-950/30 border border-purple-500/30 text-xs space-y-1">
+              <div className="flex items-center justify-between text-purple-300 font-semibold">
+                <span>Story Progress</span>
+                <span className="font-mono font-bold">158 / 175 (90%)</span>
               </div>
-              <div className="min-w-0 flex-1 space-y-0.5">
-                <div className="text-xs font-bold text-white truncate">Watching via Heimdall</div>
-                <div className="text-[11px] text-zinc-300 truncate">Frieren: Beyond Journey&apos;s End</div>
-                <div className="text-[10px] text-zinc-400 font-mono">Episode 18 • 14:02 elapsed</div>
+              <p className="text-[10px] text-zinc-400">70 episodes on local drive</p>
+            </div>
+          </TiltCard>
+
+          {/* Tile 5: Dedicated Movies & TV Library with TMDB (1 Column) */}
+          <TiltCard
+            variants={shouldReduceMotion ? undefined : cardVariants}
+            accentColor="rgba(245, 158, 11, 0.22)"
+            className="hover:border-amber-500/40"
+          >
+            <div className="space-y-4">
+              <div className="w-10 h-10 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center shadow-md">
+                <Film className="w-5 h-5" />
               </div>
+              <div className="space-y-1">
+                <h3 className="text-2xl font-bold text-white group-hover:text-amber-300 transition-colors">
+                  Movies & TV with TMDB
+                </h3>
+                <p className="text-zinc-300 text-sm leading-relaxed">
+                  Automatic TMDB metadata enrichment with high-res backdrops, release years, cast, and genres. Merges multi-part films (<code className="text-amber-300 font-mono text-xs bg-zinc-900 border border-white/10 px-1 py-0.5 rounded">CD1/CD2</code>) effortlessly.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 p-3.5 rounded-2xl bg-black/80 border border-white/[0.08] flex items-center justify-between text-xs">
+              <span className="text-zinc-300 font-bold truncate">Oppenheimer (2023)</span>
+              <span className="text-amber-400 font-mono text-[10px] font-bold">4K IMAX • 8.9 ★</span>
             </div>
           </TiltCard>
 

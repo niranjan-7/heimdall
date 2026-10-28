@@ -61,7 +61,7 @@ export const Navbar: React.FC = () => {
                     HEIMDALL
                   </span>
                   <span className="hidden sm:inline-block text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                    v1.2.1
+                    v1.4.0
                   </span>
                 </div>
                 <span className="text-[9px] font-mono text-zinc-400 hidden sm:flex items-center gap-1">
@@ -103,11 +103,18 @@ export const Navbar: React.FC = () => {
               Couch Remote
             </a>
             <a
+              href="#filler-features"
+              className="px-3 py-1.5 rounded-lg text-xs font-medium text-rose-300/90 hover:text-rose-200 hover:bg-rose-500/10 transition-all flex items-center gap-1.5"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
+              Filler & Space
+            </a>
+            <a
               href="#features"
               className="px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-300 hover:text-white hover:bg-white/[0.07] transition-all flex items-center gap-1.5"
             >
               <span className="w-1 h-1 rounded-full bg-zinc-500" />
-              Specs
+              Features
             </a>
           </nav>
 

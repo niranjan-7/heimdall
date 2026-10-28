@@ -126,7 +126,7 @@ export const HeroSection: React.FC = () => {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
           </span>
-          <span className="tracking-wide">Heimdall v1.2.1 • Liquid Glass & Auto-Scrobbler</span>
+          <span className="tracking-wide">Heimdall v1.4.0 • Filler Detection, Space Cleaners & Multi-Theme</span>
           <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-200 font-mono">
             New
           </span>
@@ -147,12 +147,13 @@ export const HeroSection: React.FC = () => {
         {/* Subtitle */}
         <motion.p
           variants={textItemVariants}
-          className="max-w-2xl mx-auto text-base sm:text-lg text-zinc-300 font-normal leading-relaxed"
+          className="max-w-3xl mx-auto text-base sm:text-lg text-zinc-300 font-normal leading-relaxed"
         >
-          Zero manual tracking. Heimdall connects directly to your local players with{' '}
-          <span className="text-white font-semibold underline decoration-teal-400/50 underline-offset-4">0ms push telemetry</span>,{' '}
-          <span className="text-white font-semibold underline decoration-amber-400/50 underline-offset-4">AI audio speech auto-sync</span>,{' '}
-          AniList & Discord scrobbling, and an instant couch remote for your phone.
+          Elevate your local anime & cinema. Connects directly to local VLC & mpv with{' '}
+          <span className="text-white font-semibold underline decoration-amber-400/50 underline-offset-4">AnimeFillerList smart badges</span>,{' '}
+          <span className="text-white font-semibold underline decoration-rose-400/50 underline-offset-4">1-click filler & watched space cleaners</span>,{' '}
+          <span className="text-white font-semibold underline decoration-sky-400/50 underline-offset-4">Liquid Glass & OLED themes</span>,{' '}
+          and two-way AniList scrobbling with zero watch history loss.
         </motion.p>
 
         {/* CTA Buttons */}
@@ -187,9 +188,13 @@ export const HeroSection: React.FC = () => {
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
             <span>100% Free & Open Source</span>
           </div>
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-rose-950/40 border border-rose-500/30 text-rose-300 shadow-sm">
+            <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse" />
+            <span>Anime Filler Detection</span>
+          </div>
           <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-zinc-900/60 border border-white/[0.06] shadow-sm">
             <Shield className="w-3.5 h-3.5 text-amber-400" />
-            <span>Zero Tracking • Fully Local</span>
+            <span>Zero Data Loss • Storage Guard</span>
           </div>
           <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-zinc-900/60 border border-white/[0.06] shadow-sm">
             <Zap className="w-3.5 h-3.5 text-teal-400" />
