@@ -12,7 +12,8 @@ import {
   Radio,
   Clock,
   Sparkles,
-  BookOpen
+  BookOpen,
+  HardDrive
 } from 'lucide-react'
 
 interface HeroBannerProps {
@@ -27,6 +28,7 @@ interface HeroBannerProps {
   onNotification: (type: 'success' | 'info' | 'error', message: string) => void
   onDelayUpdated: () => void
   onSeriesUpdated?: (updatedSeries: Series) => void
+  onOpenFreeSpace?: (type: 'fillers' | 'watched') => void
 }
 
 export const HeroBanner: React.FC<HeroBannerProps> = ({
@@ -40,7 +42,8 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
   onOpenAniListSearch,
   onNotification,
   onDelayUpdated,
-  onSeriesUpdated
+  onSeriesUpdated,
+  onOpenFreeSpace
 }) => {
   const [syncingAniList, setSyncingAniList] = useState(false)
 
@@ -87,14 +90,34 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
       onNotification('error', 'Failed to normalize titles')
     }
   }
-  // Find current resume episode
+  // Find current resume episode (preferring files on disk)
   let resumeEpisode: Episode | undefined
   if (series.lastActiveEpisodeId) {
-    resumeEpisode = series.episodes.find((e) => e.id === series.lastActiveEpisodeId)
+    const candidate = series.episodes.find((e) => e.id === series.lastActiveEpisodeId)
+    if (candidate && !candidate.fileMissing) {
+      resumeEpisode = candidate
+    }
   }
   if (!resumeEpisode && series.episodes.length > 0) {
-    resumeEpisode = series.episodes.find((e) => !e.completed) || series.episodes[0]
+    resumeEpisode =
+      series.episodes.find((e) => !e.completed && !e.fileMissing) ||
+      series.episodes.find((e) => !e.fileMissing) ||
+      series.episodes[0]
   }
+
+  const totalEpisodes = series.episodes.length
+  const completedEpisodes = series.episodes.filter((e) => e.completed).length
+  const completionPercent =
+    totalEpisodes > 0 ? Math.round((completedEpisodes / totalEpisodes) * 100) : 0
+
+  const onDiskEpisodes = series.episodes.filter((e) => !e.fileMissing).length
+  const fillersOnDisk = series.episodes.filter((e) => !e.fileMissing && e.fillerType === 'filler').length
+  const watchedOnDisk = series.episodes.filter((e) => !e.fileMissing && e.completed).length
+
+  const isAniList = Boolean(series.aniListId && series.aniListTotalEpisodes)
+  const aniProgress = series.aniListProgress || completedEpisodes
+  const aniTotal = series.aniListTotalEpisodes || totalEpisodes
+  const aniPercent = Math.min(100, Math.round((aniProgress / aniTotal) * 100))
 
   const resumeIndex = resumeEpisode
     ? series.episodes.findIndex((e) => e.id === resumeEpisode!.id)
@@ -103,11 +126,6 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
     resumeIndex >= 0 && resumeIndex + 1 < series.episodes.length
       ? series.episodes[resumeIndex + 1]
       : null
-
-  const totalEpisodes = series.episodes.length
-  const completedEpisodes = series.episodes.filter((e) => e.completed).length
-  const completionPercent =
-    totalEpisodes > 0 ? Math.round((completedEpisodes / totalEpisodes) * 100) : 0
 
   const isPlayingThisSeries =
     activeVlcState?.isRunning && activeVlcState?.seriesId === series.id
@@ -177,9 +195,17 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                 </span>
               )}
 
-              <span className="text-xs text-zinc-400 font-mono">
-                {completedEpisodes} of {totalEpisodes} watched ({completionPercent}%)
-              </span>
+              {isAniList ? (
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold font-mono tracking-wider bg-sky-500/15 text-sky-300 border border-sky-500/30 flex items-center gap-1.5 shadow-sm">
+                  <Sparkles className="w-3 h-3 text-sky-400" />
+                  AniList: Ep {aniProgress} of {aniTotal} ({aniPercent}%) • {onDiskEpisodes} on disk
+                </span>
+              ) : (
+                <span className="text-xs text-zinc-400 font-mono">
+                  {completedEpisodes} of {totalEpisodes} watched ({completionPercent}%)
+                  {onDiskEpisodes < totalEpisodes && ` • ${onDiskEpisodes} on disk`}
+                </span>
+              )}
             </div>
 
             <h2 className="text-2xl lg:text-3xl font-black text-zinc-100 tracking-tight leading-tight">
@@ -250,6 +276,32 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                 <Sparkles className="w-3.5 h-3.5 text-bifrost-amber" />
                 Clean Titles
               </button>
+
+              {/* Clean Complete Fillers Button */}
+              {fillersOnDisk > 0 && onOpenFreeSpace && (
+                <button
+                  type="button"
+                  onClick={() => onOpenFreeSpace('fillers')}
+                  title={`Delete ${fillersOnDisk} filler episodes from disk into Recycle Bin`}
+                  className="px-3 py-1.5 rounded-lg bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 hover:text-rose-100 border border-rose-700/50 text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                  Delete Fillers ({fillersOnDisk})
+                </button>
+              )}
+
+              {/* Free Watched Episodes Button */}
+              {watchedOnDisk > 0 && onOpenFreeSpace && (
+                <button
+                  type="button"
+                  onClick={() => onOpenFreeSpace('watched')}
+                  title={`Delete ${watchedOnDisk} watched video files from disk to free space (preserves watch history)`}
+                  className="px-3 py-1.5 rounded-lg bg-amber-950/60 hover:bg-amber-900/80 text-amber-300 hover:text-amber-100 border border-amber-700/50 text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+                >
+                  <HardDrive className="w-3.5 h-3.5 text-amber-400" />
+                  Free Watched ({watchedOnDisk})
+                </button>
+              )}
 
               <button
                 onClick={onDeleteSeries}

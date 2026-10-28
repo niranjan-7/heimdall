@@ -1104,7 +1104,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
               </div>
             ) : (
               <div className="text-[11px] px-3 py-2 rounded-lg bg-zinc-900/60 border border-surface-border text-zinc-400 flex items-center justify-between">
-                <span>Current version: <span className="font-mono text-zinc-200 font-medium">v1.3.1</span></span>
+                <span>Current version: <span className="font-mono text-zinc-200 font-medium">v1.4.0</span></span>
                 <span className="text-[10px] text-zinc-500">Auto-backup enabled</span>
               </div>
             )}

@@ -1,3 +1,12 @@
+
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
+
 import { app, shell, BrowserWindow, ipcMain, dialog, protocol, net } from 'electron'
 import { join, basename } from 'path'
 import { pathToFileURL } from 'url'
@@ -17,7 +26,7 @@ import { TmdbService } from './tmdbService'
 import { UpdateService } from './updateService'
 import { scanSeriesFolders } from './folderScanner'
 import { scanMoviesFolder } from './movieScanner'
-import { Series, Movie } from '../shared/types'
+import { Series, Movie, Episode, FreeSpacePreview, DeleteEpisodesResult } from '../shared/types'
 
 // Register privileged custom scheme for video thumbnails
 protocol.registerSchemesAsPrivileged([
@@ -134,6 +143,11 @@ async function syncSeriesToAniList(
 
     const maxEp = Math.max(...completedEpisodes.map((e) => e.episodeNumber!))
     const res = await anilistService.scrobbleProgress(series.aniListId, maxEp, settings.aniListToken)
+
+    if (res.success) {
+      series.aniListProgress = maxEp
+      storageService.addOrUpdateSeries(series)
+    }
 
     if (notify && mainWindow && !mainWindow.isDestroyed()) {
       if (res.success) {
@@ -396,6 +410,101 @@ function registerIpcHandlers(): void {
     return series
   })
 
+
+  // Disk Space Management & Filler Cleaner Handlers
+  ipcMain.handle(
+    'series:preview-free-space',
+    async (_event, seriesId: string, type: 'fillers' | 'watched') => {
+      const series = storageService.getSeries(seriesId)
+      if (!series) throw new Error('Series not found')
+
+      const targetEpisodes = series.episodes.filter((ep) => {
+        if (ep.fileMissing || !fs.existsSync(ep.filePath)) return false
+        if (type === 'fillers') {
+          return ep.fillerType === 'filler'
+        } else {
+          return ep.completed
+        }
+      })
+
+      let totalBytes = 0
+      for (const ep of targetEpisodes) {
+        try {
+          totalBytes += fs.statSync(ep.filePath).size
+        } catch {
+          // ignore
+        }
+      }
+
+      return {
+        type,
+        count: targetEpisodes.length,
+        totalBytes,
+        totalFormatted: formatBytes(totalBytes),
+        episodeIds: targetEpisodes.map((e) => e.id)
+      } as FreeSpacePreview
+    }
+  )
+
+  ipcMain.handle(
+    'series:delete-episodes',
+    async (_event, seriesId: string, episodeIds: string[]) => {
+      const series = storageService.getSeries(seriesId)
+      if (!series) throw new Error('Series not found')
+
+      const idSet = new Set(episodeIds)
+      let deletedCount = 0
+      let freedBytes = 0
+
+      const remainingEpisodes: Episode[] = []
+
+      for (const ep of series.episodes) {
+        if (idSet.has(ep.id)) {
+          try {
+            if (fs.existsSync(ep.filePath)) {
+              const size = fs.statSync(ep.filePath).size
+              await shell.trashItem(ep.filePath)
+              freedBytes += size
+              deletedCount++
+            }
+          } catch (err) {
+            console.error(`Failed to trash file ${ep.filePath}:`, err)
+          }
+
+          // If this episode was completed, keep it as an archived ghost episode
+          if (ep.completed) {
+            remainingEpisodes.push({
+              ...ep,
+              fileMissing: true
+            })
+          }
+          // If not completed (e.g. unwatched filler), omit it from remaining episodes
+        } else {
+          remainingEpisodes.push(ep)
+        }
+      }
+
+      series.episodes = remainingEpisodes
+      series.updatedAt = Date.now()
+      storageService.addOrUpdateSeries(series)
+
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('series:updated', series)
+        mainWindow.webContents.send('app:notification', {
+          type: 'success',
+          message: `🗑️ Removed ${deletedCount} files and freed ${formatBytes(freedBytes)} into Recycle Bin!`
+        })
+      }
+
+      return {
+        success: true,
+        deletedCount,
+        freedBytes,
+        freedFormatted: formatBytes(freedBytes)
+      } as DeleteEpisodesResult
+    }
+  )
+
   ipcMain.handle('series:rescan', async (_event, seriesId: string) => {
     const series = storageService.getSeries(seriesId)
     if (!series) throw new Error('Series not found')
@@ -618,6 +727,17 @@ function registerIpcHandlers(): void {
       series.aniListTitle = media.title || null
       if (media.title) {
         series.title = media.title
+      }
+      const settings = storageService.getSettings()
+      try {
+        const details = await anilistService.getAnimeDetails(media.id, settings.aniListToken)
+        if (details) {
+          series.aniListTotalEpisodes = details.episodes || null
+          series.aniListProgress = details.userProgress || null
+          series.aniListStatus = details.status || null
+        }
+      } catch (err) {
+        console.warn('Failed to fetch anime details on link:', err)
       }
       series.updatedAt = Date.now()
       storageService.addOrUpdateSeries(series)

@@ -18,6 +18,7 @@ export const AniListSearchModal: React.FC<AniListSearchModalProps> = ({
   const [query, setQuery] = useState(series.aniListTitle || series.title)
   const [results, setResults] = useState<AniListMediaInfo[]>([])
   const [searching, setSearching] = useState(false)
+  const [hasSearched, setHasSearched] = useState(false)
   const [linkingId, setLinkingId] = useState<number | null>(null)
 
   if (!isOpen) return null
@@ -27,6 +28,7 @@ export const AniListSearchModal: React.FC<AniListSearchModalProps> = ({
     if (!query.trim()) return
 
     setSearching(true)
+    setHasSearched(true)
     try {
       const data = await window.api.searchAniList(query)
       setResults(data)
@@ -42,7 +44,8 @@ export const AniListSearchModal: React.FC<AniListSearchModalProps> = ({
         id: media.id,
         title: media.title.english || media.title.romaji,
         coverImage: media.coverImage?.extraLarge || media.coverImage?.large,
-        bannerImage: media.bannerImage
+        bannerImage: media.bannerImage,
+        totalEpisodes: media.episodes
       })
       onLinked(updated)
       onClose()
@@ -124,7 +127,11 @@ export const AniListSearchModal: React.FC<AniListSearchModalProps> = ({
           {results.length === 0 && !searching && (
             <div className="p-8 text-center text-zinc-500 space-y-1">
               <Film className="w-8 h-8 mx-auto stroke-1 text-zinc-600 mb-2" />
-              <p className="text-xs">Type a title and click &quot;Search&quot; to search AniList.</p>
+              <p className="text-xs">
+                {hasSearched
+                  ? 'No matching anime found on AniList. Check spelling or verify your internet connection.'
+                  : 'Type a title and click "Search" to search AniList.'}
+              </p>
             </div>
           )}
 

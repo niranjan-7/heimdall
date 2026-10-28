@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Episode } from '../../../shared/types'
 import { formatTime, formatRelativeTime, calculateProgress } from '../utils/formatters'
-import { Play, Check, RotateCcw, Radio, Film } from 'lucide-react'
+import { Play, Check, RotateCcw, Radio, Film, Archive } from 'lucide-react'
 
 interface EpisodeCardProps {
   episode: Episode
@@ -115,6 +115,17 @@ export const EpisodeCard: React.FC<EpisodeCardProps> = ({
             >
               EP {episode.episodeNumber ?? '?'}
             </span>
+
+            {/* Archived / Deleted from disk badge */}
+            {episode.fileMissing && (
+              <span
+                title="Video file removed to save disk space. Watch history and checkmarks are preserved."
+                className="px-2 py-0.5 rounded-lg text-[10px] font-bold tracking-tight shadow-md backdrop-blur-md flex items-center gap-1 bg-zinc-800/90 text-zinc-300 border border-zinc-700/80"
+              >
+                <Archive className="w-3 h-3 text-amber-400" />
+                Archived
+              </span>
+            )}
 
             {/* Filler / Canon Badge */}
             {episode.fillerType && (

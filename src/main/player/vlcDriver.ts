@@ -172,7 +172,7 @@ export class VlcDriver implements IMediaPlayerDriver {
 
     await this.stop()
 
-    const remainingEpisodes = series.episodes.slice(startIndex)
+    const remainingEpisodes = series.episodes.slice(startIndex).filter((e) => !e.fileMissing && fs.existsSync(e.filePath))
     const playlistPaths = remainingEpisodes.map((e) => e.filePath)
     this.currentSubDelay = subDelay
 

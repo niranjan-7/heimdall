@@ -26,6 +26,7 @@ export interface Episode {
   subDelaySec?: number
   fillerType?: FillerCategory
   fillerLabel?: string
+  fileMissing?: boolean
 }
 
 export interface AniListMediaInfo {
@@ -63,6 +64,9 @@ export interface Series {
   defaultSubDelaySec?: number
   fillerStats?: SeriesFillerStats
   lastFillerSyncAt?: number
+  aniListTotalEpisodes?: number | null
+  aniListProgress?: number | null
+  aniListStatus?: string | null
 }
 
 export interface Movie {
@@ -204,4 +208,20 @@ export interface UpdateDownloadProgress {
   percent: number
   transferred: number
   total: number
+}
+
+export interface FreeSpacePreview {
+  type: 'fillers' | 'watched'
+  count: number
+  totalBytes: number
+  totalFormatted: string
+  episodeIds: string[]
+}
+
+export interface DeleteEpisodesResult {
+  success: boolean
+  deletedCount: number
+  freedBytes: number
+  freedFormatted: string
+  message?: string
 }

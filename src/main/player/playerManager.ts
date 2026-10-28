@@ -160,6 +160,14 @@ export class PlayerManager implements IMediaPlayerController {
     }
 
     let targetEpisode = series.episodes[startIndex]
+
+    if (targetEpisode.fileMissing || !fs.existsSync(targetEpisode.filePath)) {
+      return {
+        success: false,
+        message: `Video file for Episode ${targetEpisode.episodeNumber ?? ''} is not on disk (deleted to free space). Watch progress is preserved.`
+      }
+    }
+
     let startTime = options.startTime ?? targetEpisode.timeSec
 
     if (options.advanceIfCompleted && targetEpisode.completed) {

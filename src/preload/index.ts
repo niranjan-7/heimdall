@@ -12,7 +12,9 @@ import {
   SubtitleDownloadResult,
   RemoteServerInfo,
   UpdateInfo,
-  UpdateDownloadProgress
+  UpdateDownloadProgress,
+  FreeSpacePreview,
+  DeleteEpisodesResult
 } from '../shared/types'
 
 export interface IElectronAPI {
@@ -106,7 +108,7 @@ export interface IElectronAPI {
   ) => Promise<{ success: boolean; username?: string; avatar?: string; error?: string }>
   linkAniListMedia: (
     seriesId: string,
-    media: { id: number; title?: string; coverImage?: string; bannerImage?: string }
+    media: { id: number; title?: string; coverImage?: string; bannerImage?: string; totalEpisodes?: number }
   ) => Promise<Series>
   unlinkAniListMedia: (seriesId: string) => Promise<Series>
   syncSeriesToAniList: (
@@ -126,6 +128,13 @@ export interface IElectronAPI {
   ) => Promise<Series | null>
   batchNormalizeEpisodeTitles: (seriesId: string, episodeIds?: string[]) => Promise<Series | null>
   markEpisodesPriorTo: (seriesId: string, targetEpisodeId: string) => Promise<Series | null>
+
+  // Disk Space Management & Filler Cleaner
+  previewFreeSpace: (seriesId: string, type: 'fillers' | 'watched') => Promise<FreeSpacePreview>
+  deleteEpisodesFromDisk: (seriesId: string, episodeIds: string[]) => Promise<DeleteEpisodesResult>
+
+
+
 
   // In-App Updates & Safe Backups
   checkForUpdates: () => Promise<UpdateInfo>
@@ -230,6 +239,12 @@ const api: IElectronAPI = {
     ipcRenderer.invoke('episode:normalize-titles', seriesId, episodeIds),
   markEpisodesPriorTo: (seriesId, targetEpisodeId) =>
     ipcRenderer.invoke('episode:mark-prior-watched', seriesId, targetEpisodeId),
+
+  // Disk Space Management & Filler Cleaner
+  previewFreeSpace: (seriesId, type) =>
+    ipcRenderer.invoke('series:preview-free-space', seriesId, type),
+  deleteEpisodesFromDisk: (seriesId, episodeIds) =>
+    ipcRenderer.invoke('series:delete-episodes', seriesId, episodeIds),
 
   // In-App Updates & Safe Backups
   checkForUpdates: () => ipcRenderer.invoke('update:check'),

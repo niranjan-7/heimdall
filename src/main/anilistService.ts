@@ -153,4 +153,62 @@ export class AniListService {
       return { success: false, error: err?.message || 'Failed to scrobble' }
     }
   }
+
+  public async getAnimeDetails(
+    mediaId: number,
+    token?: string
+  ): Promise<{
+    episodes?: number
+    status?: string
+    userProgress?: number
+  } | null> {
+    const graphqlQuery = `
+      query ($id: Int) {
+        Media (id: $id, type: ANIME) {
+          id
+          episodes
+          status
+          mediaListEntry {
+            id
+            progress
+            status
+          }
+        }
+      }
+    `
+
+    try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      }
+      if (token && token.trim()) {
+        headers['Authorization'] = `Bearer ${token.trim()}`
+      }
+
+      const response = await fetch(ANILIST_GRAPHQL_ENDPOINT, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          query: graphqlQuery,
+          variables: { id: mediaId }
+        }),
+        signal: AbortSignal.timeout(8000)
+      })
+
+      if (!response.ok) return null
+      const json = await response.json()
+      const media = json?.data?.Media
+      if (!media) return null
+
+      return {
+        episodes: media.episodes || undefined,
+        status: media.status || undefined,
+        userProgress: media.mediaListEntry?.progress || undefined
+      }
+    } catch (err) {
+      console.warn('[AniListService] Failed to get anime details:', err)
+      return null
+    }
+  }
 }

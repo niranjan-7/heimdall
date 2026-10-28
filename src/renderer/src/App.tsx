@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { Series, Movie, LibraryData, VlcStateUpdate, AppNotification, AppSettings, UITheme } from '../../shared/types'
+import { Series, Movie, LibraryData, VlcStateUpdate, AppNotification, AppSettings, UITheme, FreeSpacePreview } from '../../shared/types'
 import { Sidebar } from './components/Sidebar'
 import { HeroBanner } from './components/HeroBanner'
 import { EpisodeGrid } from './components/EpisodeGrid'
 import { MovieHeroBanner } from './components/MovieHeroBanner'
 import { MovieGrid } from './components/MovieGrid'
 import { SettingsModal } from './components/SettingsModal'
+import { FreeSpaceModal } from './components/FreeSpaceModal'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { AniListSearchModal } from './components/AniListSearchModal'
 import { MovieMatchModal } from './components/MovieMatchModal'
@@ -23,6 +24,8 @@ export const App: React.FC = () => {
   const [mobileRemoteOpen, setMobileRemoteOpen] = useState(false)
   const [aniListModalOpen, setAniListModalOpen] = useState(false)
   const [matchingMovie, setMatchingMovie] = useState<Movie | null>(null)
+  const [freeSpaceOpen, setFreeSpaceOpen] = useState(false)
+  const [freeSpacePreview, setFreeSpacePreview] = useState<FreeSpacePreview | null>(null)
 
   const [activeVlcState, setActiveVlcState] = useState<VlcStateUpdate | null>(null)
   const [notification, setNotification] = useState<AppNotification | null>(null)
@@ -179,6 +182,26 @@ export const App: React.FC = () => {
   const showToast = (type: 'success' | 'info' | 'error', message: string) => {
     setNotification({ type, message })
     setTimeout(() => setNotification(null), 5000)
+  }
+
+  const handleOpenFreeSpace = async (type: 'fillers' | 'watched') => {
+    if (!currentSeries) return
+    try {
+      const preview = await window.api.previewFreeSpace(currentSeries.id, type)
+      if (preview.count === 0) {
+        showToast(
+          'info',
+          type === 'fillers'
+            ? 'No filler episodes found on disk to delete.'
+            : 'No watched episodes found on disk to delete.'
+        )
+        return
+      }
+      setFreeSpacePreview(preview)
+      setFreeSpaceOpen(true)
+    } catch (err: any) {
+      showToast('error', err?.message || 'Failed to inspect files')
+    }
   }
 
   // Series Handlers
@@ -472,6 +495,7 @@ export const App: React.FC = () => {
                 onNotification={showToast}
                 onDelayUpdated={loadLibrary}
                 onSeriesUpdated={loadLibrary}
+                onOpenFreeSpace={handleOpenFreeSpace}
               />
               <EpisodeGrid
                 series={currentSeries}
@@ -550,6 +574,18 @@ export const App: React.FC = () => {
           )
         )}
       </main>
+
+      {/* Free Space & Filler Cleaner Modal */}
+      {currentSeries && (
+        <FreeSpaceModal
+          isOpen={freeSpaceOpen}
+          onClose={() => setFreeSpaceOpen(false)}
+          seriesId={currentSeries.id}
+          seriesTitle={currentSeries.aniListTitle || currentSeries.title}
+          preview={freeSpacePreview}
+          onSuccess={loadLibrary}
+        />
+      )}
 
       {/* Settings Modal */}
       <ErrorBoundary>

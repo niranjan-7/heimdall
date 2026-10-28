@@ -181,6 +181,8 @@ export function scanSeriesFolders(
   const distinctSubfolders = new Set(discovered.map((d) => d.subfolderName))
   const isFlat = distinctSubfolders.size <= 1
 
+  const discoveredKeys = new Set(discovered.map((d) => path.normalize(d.filePath).toLowerCase()))
+
   const episodes: Episode[] = discovered.map((item, index) => {
     const normalizedKey = path.normalize(item.filePath).toLowerCase()
     const existing = existingMap.get(normalizedKey)
@@ -197,7 +199,8 @@ export function scanSeriesFolders(
         title: cleanTitle,
         seasonName,
         seasonFolder: item.subfolderName,
-        episodeNumber: epNum !== null ? epNum : index + 1
+        episodeNumber: epNum !== null ? epNum : index + 1,
+        fileMissing: false
       }
     }
 
@@ -212,8 +215,27 @@ export function scanSeriesFolders(
       timeSec: 0,
       durationSec: 0,
       completed: false,
-      lastWatchedAt: null
+      lastWatchedAt: null,
+      fileMissing: false
     }
+  })
+
+  // Data Preservation Rule: Retain completed episodes whose video files were deleted from disk to save space
+  for (const [key, existing] of existingMap.entries()) {
+    if (existing.completed && !discoveredKeys.has(key)) {
+      episodes.push({
+        ...existing,
+        fileMissing: true
+      })
+    }
+  }
+
+  // Sort all episodes numerically by episodeNumber
+  episodes.sort((a, b) => {
+    if (a.episodeNumber !== null && b.episodeNumber !== null && a.episodeNumber !== b.episodeNumber) {
+      return a.episodeNumber - b.episodeNumber
+    }
+    return collator.compare(a.title, b.title)
   })
 
   // Derive series title from root folder name
