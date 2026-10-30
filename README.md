@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="https://landing-six-indol-41.vercel.app"><img src="https://img.shields.io/badge/Live_Landing_Page-landing--six--indol--41.vercel.app-f59e0b?style=for-the-badge&logo=vercel" alt="Live Landing Page" /></a>
-  <a href="https://github.com/niranjan-7/heimdall/releases/tag/v1.2.0"><img src="https://img.shields.io/badge/Release-v1.2.0-06b6d4?style=for-the-badge&logo=github" alt="GitHub Release v1.2.0" /></a>
+  <a href="https://github.com/niranjan-7/heimdall/releases/tag/v1.4.0"><img src="https://img.shields.io/badge/Release-v1.4.0-06b6d4?style=for-the-badge&logo=github" alt="GitHub Release v1.4.0" /></a>
   <a href="https://github.com/niranjan-7/heimdall/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-10b981?style=for-the-badge" alt="MIT License" /></a>
 </p>
 
@@ -96,13 +96,17 @@ Most media players require you to manually keep track of where you paused, battl
 
 ## 📥 Downloads & Installation
 
-Pre-built binaries for the latest release (**v1.2.0**) are available on [GitHub Releases](https://github.com/niranjan-7/heimdall/releases/tag/v1.2.0):
+Pre-built binaries for the latest release (**[v1.4.0](https://github.com/niranjan-7/heimdall/releases/tag/v1.4.0)**) are available on [GitHub Releases](https://github.com/niranjan-7/heimdall/releases/tag/v1.4.0):
 
-| Platform | Download Link | Notes |
-| :--- | :--- | :--- |
-| **Windows 10/11** | [Heimdall Setup 1.2.0.exe](https://github.com/niranjan-7/heimdall/releases/download/v1.2.0/Heimdall.Setup.1.2.0.exe) | Recommended native installer |
-| **macOS** | [GitHub Releases](https://github.com/niranjan-7/heimdall/releases/latest) | Apple Silicon & Intel DMG |
-| **Linux** | [GitHub Releases](https://github.com/niranjan-7/heimdall/releases/latest) | Standalone AppImage |
+| OS / Platform | Asset Name | Format | Size | SHA-256 Digest |
+| :--- | :--- | :--- | :--- | :--- |
+| **Windows 10/11** | [Heimdall.Setup.1.4.0.exe](https://github.com/niranjan-7/heimdall/releases/download/v1.4.0/Heimdall.Setup.1.4.0.exe) | NSIS Installer | `99.87 MiB` | `bd402afde269a151a37efc24db441ba26f885470159aa8c3b7f746e38f43373a` |
+| **macOS (Apple Silicon)** | [Heimdall-1.4.0-arm64.dmg](https://github.com/niranjan-7/heimdall/releases/download/v1.4.0/Heimdall-1.4.0-arm64.dmg) | Native DMG | `119.51 MiB` | `1df69bceeba14970ac785c323dc808157ff7e13908d5802c4f77ad2281f5b4ea` |
+| **macOS (Apple Silicon)** | [Heimdall-1.4.0-arm64-mac.zip](https://github.com/niranjan-7/heimdall/releases/download/v1.4.0/Heimdall-1.4.0-arm64-mac.zip) | Portable Zip | `115.29 MiB` | `2e570a5c9392a0e7dde9baf4ce76c5e351fda46d0c759b27e843965a4cf89196` |
+| **macOS (Intel)** | [Heimdall-1.4.0.dmg](https://github.com/niranjan-7/heimdall/releases/download/v1.4.0/Heimdall-1.4.0.dmg) | Native DMG | `123.73 MiB` | `111006f5b568145e005024435d62f210025eb9ce9d7c52eb57bfbf4cd675be7f` |
+| **macOS (Intel)** | [Heimdall-1.4.0-mac.zip](https://github.com/niranjan-7/heimdall/releases/download/v1.4.0/Heimdall-1.4.0-mac.zip) | Portable Zip | `119.49 MiB` | `6c36fd3371fc30c9dc9a874f3fde29a5ccfcdba7ae34232fdc4310f43e555bec` |
+| **Linux (Universal)** | [Heimdall-1.4.0.AppImage](https://github.com/niranjan-7/heimdall/releases/download/v1.4.0/Heimdall-1.4.0.AppImage) | Standalone AppImage | `126.64 MiB` | `5e84eb4a0a00d44a563517308f2a183d081385d0063d4a25e7acdc3a38475a2b` |
+| **Linux (Portable)** | [heimdall-1.4.0.tar.gz](https://github.com/niranjan-7/heimdall/releases/download/v1.4.0/heimdall-1.4.0.tar.gz) | Tarball Archive | `119.76 MiB` | `79cac256788c0c7247c5fa364a64ea56d57fab089e3c7b4b56fc9771773ed647` |
 
 ---
 
