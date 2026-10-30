@@ -3,7 +3,10 @@
   "version": "1.4.0",
   "description": "Heimdall — Standalone Windows VLC Series & Watch-History Companion App",
   "main": "./out/main/index.js",
-  "author": "Heimdall",
+  "author": {
+    "name": "Heimdall",
+    "email": "neeru.gojou@gmail.com"
+  },
   "license": "MIT",
   "scripts": {
     "format": "prettier --write .",
