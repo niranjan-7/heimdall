@@ -61,8 +61,14 @@ export const HeroSection: React.FC = () => {
       name: 'Windows (.exe)',
       link: 'https://github.com/niranjan-7/heimdall/releases/download/v1.4.0/Heimdall.Setup.1.4.0.exe'
     },
-    mac: { name: 'macOS (.dmg)', link: 'https://github.com/niranjan-7/heimdall/releases/latest' },
-    linux: { name: 'Linux (.AppImage)', link: 'https://github.com/niranjan-7/heimdall/releases/latest' }
+    mac: {
+      name: 'macOS (.dmg)',
+      link: 'https://github.com/niranjan-7/heimdall/releases/download/v1.4.0/Heimdall-1.4.0-arm64.dmg'
+    },
+    linux: {
+      name: 'Linux (.AppImage)',
+      link: 'https://github.com/niranjan-7/heimdall/releases/download/v1.4.0/Heimdall-1.4.0.AppImage'
+    }
   }
 
   // Staggered text entrance kinematics with spring and motion blur
@@ -126,7 +132,7 @@ export const HeroSection: React.FC = () => {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
           </span>
-          <span className="tracking-wide">Heimdall v1.4.0 • Filler Detection, Space Cleaners & Multi-Theme</span>
+          <span className="tracking-wide">Heimdall v1.4.0 • Smart Companion for Local Media Downloads</span>
           <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-200 font-mono">
             New
           </span>
@@ -138,9 +144,9 @@ export const HeroSection: React.FC = () => {
           variants={textItemVariants}
           className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight text-white leading-[1.08]"
         >
-          The All-Seeing Watchman for <br />
+          Handle Your Local Media <br />
           <span className="bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 bg-clip-text text-transparent drop-shadow-[0_2px_15px_rgba(245,158,11,0.25)]">
-            VLC & mpv Media Players.
+            Smartly with VLC & mpv.
           </span>
         </motion.h1>
 
@@ -149,11 +155,11 @@ export const HeroSection: React.FC = () => {
           variants={textItemVariants}
           className="max-w-3xl mx-auto text-base sm:text-lg text-zinc-300 font-normal leading-relaxed"
         >
-          Elevate your local anime & cinema. Connects directly to local VLC & mpv with{' '}
-          <span className="text-white font-semibold underline decoration-amber-400/50 underline-offset-4">AnimeFillerList smart badges</span>,{' '}
-          <span className="text-white font-semibold underline decoration-rose-400/50 underline-offset-4">1-click filler & watched space cleaners</span>,{' '}
-          <span className="text-white font-semibold underline decoration-sky-400/50 underline-offset-4">Liquid Glass & OLED themes</span>,{' '}
-          and two-way AniList scrobbling with zero watch history loss.
+          Stop fighting your hard drive. Engineered for anime binge-watchers & cinema hoarders: connects directly to local VLC & mpv with{' '}
+          <span className="text-white font-semibold underline decoration-rose-400/50 underline-offset-4">1-click filler purges (reclaim 40GB+)</span>,{' '}
+          <span className="text-white font-semibold underline decoration-amber-400/50 underline-offset-4">speech waveform auto-sync</span>,{' '}
+          <span className="text-white font-semibold underline decoration-emerald-400/50 underline-offset-4">archived watched space (zero history loss)</span>,{' '}
+          and 2-way AniList scrobbling across your local downloads.
         </motion.p>
 
         {/* CTA Buttons */}
