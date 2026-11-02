@@ -15,6 +15,7 @@ import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import {
   chmodSync,
+  copyFileSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -107,8 +108,12 @@ async function fetchOne(name, target, entry, force) {
     } else {
       throw new Error(`Unsupported archive type: ${entry.archive}`)
     }
-    chmodSync(extracted, 0o755)
-    renameSync(extracted, outFile)
+    // Copy instead of renaming straight from the temp folder: it can be on another drive
+    // (Windows reports EXDEV). Renaming within the target folder keeps the final step atomic.
+    const partial = `${outFile}.partial`
+    copyFileSync(extracted, partial)
+    chmodSync(partial, 0o755)
+    renameSync(partial, outFile)
   } finally {
     rmSync(tmp, { recursive: true, force: true })
   }
