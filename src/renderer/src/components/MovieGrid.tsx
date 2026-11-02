@@ -28,7 +28,7 @@ export const MovieGrid: React.FC<MovieGridProps> = ({
   const [sortAsc, setSortAsc] = useState(true)
 
   const filteredMovies = useMemo(() => {
-    let list = movies.filter((m) => {
+    const list = movies.filter((m) => {
       // Status filter
       if (filterStatus === 'completed' && !m.completed) return false
       if (filterStatus === 'unwatched' && (m.completed || m.timeSec > 0)) return false

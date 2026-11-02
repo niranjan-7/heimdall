@@ -34,7 +34,7 @@ export function parseMovieFileName(fileName: string): ParsedMovieInfo {
 
   // 2. Detect release year (e.g. 1999, 2023)
   let year: number | null = null
-  const yearMatch = /(?:[.\s_(\[])(19\d\d|20\d\d)(?:[.\s_)\]]|$)/.exec(rawName)
+  const yearMatch = /(?:[.\s_([])(19\d\d|20\d\d)(?:[.\s_)\]]|$)/.exec(rawName)
   let titleSegment = rawName
   if (yearMatch) {
     year = parseInt(yearMatch[1], 10)
@@ -51,7 +51,7 @@ export function parseMovieFileName(fileName: string): ParsedMovieInfo {
     )
     .replace(/[._]/g, ' ')
     .replace(/[\s\-_]+$/, '') // strip trailing dashes, underscores, spaces
-    .replace(/^\s*[\-_]+/, '') // strip leading dashes
+    .replace(/^\s*[-_]+/, '') // strip leading dashes
     .replace(/\s+/g, ' ')
     .trim()
 
