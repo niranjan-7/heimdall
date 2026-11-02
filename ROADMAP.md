@@ -189,6 +189,7 @@ These change public pages, so each one is run only with your OK.
 6. Delete `deploy/release.yml`.
 
 ### 1.1.i Code signing (needs money; can come later)
+> **Decided (owner, 2026-11-03): not doing it.** Heimdall is a hobby project with no budget, so builds stay unsigned. Users see the SmartScreen / Gatekeeper warnings documented in `docs/RELEASING.md`, and macOS keeps the "Open Download Page" update path. Revisit only if the project is shared widely; free option to try first: SignPath Foundation (Windows, open source).
 - **Windows:** Azure Trusted Signing or an OV certificate; without it SmartScreen warns on every download.
 - **macOS:** Apple Developer Program → set `identity`, `hardenedRuntime: true`, `notarize: true`. Without it, Apple Silicon users downloading the DMG see "app is damaged". Until then, document the `xattr -dr com.apple.quarantine /Applications/Heimdall.app` workaround in the README and on the landing FAQ.
 - Store certificates and Apple credentials as **GitHub repository secrets** (`CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`); never commit them.
@@ -632,9 +633,9 @@ Split the 1,141-line modal into a routed page with sections: **General · Playba
 3. Heimdall has **no outside users yet**: no bridge release, no public migration notices.
 4. App name is shown **without a version**; version lives in small text under Settings → About (Phase 2.5.d).
 5. Auto-updates via `electron-updater` (Phase 1.1.f).
+6. **No code signing and no paid services** — hobby project (Phase 1.1.i). Prefer free options in every future decision.
 
 **Still open**
-1. Budget for code signing (Apple Developer Program, Windows signing) — Phase 1.1.i.
 2. Ship a built-in TMDB key or require users to supply one.
 3. Whether v1.5.x should already start logging `watch_events` (recommended: yes).
 4. Whether to turn on branch protection for `main` (require CI before merging) — Phase 1.1.e.
