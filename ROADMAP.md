@@ -135,6 +135,12 @@ Replace the current workflow and delete `deploy/release.yml`.
 
 Each build job uploads installers **plus** `latest*.yml` and `*.blockmap`. Other details: `contents: write` permission only on the `release` job; npm cache; a `concurrency` group per tag so a re-pushed tag doesn't race itself; `if-no-files-found: error` everywhere.
 
+> **Status (1.1.d and 1.1.e): implemented in branch `phase-1.1b-release-workflow`** (not yet run on GitHub — the first real run is the pull-request packaging build, then a `v1.5.0-rc.1` release candidate).
+> - `release.yml`: `prepare` (tag = `package.json` = `CHANGELOG.md`) → `test` (reuses `ci.yml`) → `draft` (creates the draft release once) → `build` ×3 (`electron-builder --publish always` into that draft, so `latest*.yml` is produced) → `finalize` (adds `SHA256SUMS.txt`, fails if any expected file is missing). Tag pushes publish; manual runs and pull requests that touch packaging only build and keep the installers as 3-day artifacts.
+> - `scripts/release-info.mjs` holds the logic (unit-tested); `CHANGELOG.md` and `docs/RELEASING.md` added; `deploy/release.yml` deleted.
+> - Changed from the draft below: because the repo merges by squash, the release flow is "release PR → merge → tag the merged commit", not `npm version` + `git push --follow-tags`.
+> - **Unproven until the release candidate:** `gh` finding a *draft* release by tag (`release view` / `release upload`), electron-builder uploading into the pre-created draft, the Windows installer and the `.deb` building in CI.
+
 ### 1.1.e Versioning, changelog and how you cut a release
 1. **Semantic versioning** (you already do this well): patch = fixes (`1.5.1`), minor = features (`1.6.0`), major = breaking (`2.0.0`). Test builds: `1.5.0-rc.1`, `2.0.0-beta.1`.
 2. **`CHANGELOG.md`** in [Keep a Changelog](https://keepachangelog.com) format, with an `## [Unreleased]` section at the top. Every PR adds a line there. Plain, honest wording — this text becomes the release notes.

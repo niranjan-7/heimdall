@@ -1,106 +1,207 @@
-name: Multi-Platform Release
+name: Release
 
+# Pushing a tag like v1.5.0 builds every installer and creates a DRAFT GitHub release.
+# Nothing is public until you open the draft and click "Publish release".
+# See docs/RELEASING.md.
 on:
   push:
-    tags:
-      - 'v*.*.*'
+    tags: ['v*']
+  # Manual run from the Actions tab: builds everything, creates no release.
   workflow_dispatch:
-    inputs:
-      tag_name:
-        description: 'Release Tag Name (e.g. v1.4.0)'
-        required: false
-        default: 'v1.4.0'
+  # Pull requests that change how the app is packaged also build every installer (nothing is
+  # published), so packaging problems show up before a release does.
+  pull_request:
+    paths:
+      - .github/workflows/release.yml
+      - electron-builder.yml
+      - scripts/fetch-binaries.mjs
+      - scripts/binaries.lock.json
+      - scripts/release-info.mjs
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  IS_RELEASE: ${{ github.ref_type == 'tag' }}
 
 jobs:
+  # Checks the tag matches package.json and CHANGELOG.md before spending time on builds.
+  prepare:
+    name: Check version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.info.outputs.version }}
+      prerelease: ${{ steps.info.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check tag, version and changelog
+        id: info
+        run: |
+          if [ "$IS_RELEASE" = "true" ]; then
+            node scripts/release-info.mjs "$GITHUB_REF_NAME"
+          else
+            node scripts/release-info.mjs --package
+          fi
+
+  # The same checks that run on every pull request.
+  test:
+    name: Tests
+    if: github.ref_type == 'tag'
+    needs: prepare
+    uses: ./.github/workflows/ci.yml
+
+  # Creates the empty draft release that the build jobs upload into. Done once, here, so the
+  # three build jobs do not race to create it.
+  draft:
+    name: Create draft release
+    if: github.ref_type == 'tag'
+    needs: [prepare, test]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create draft release
+        run: |
+          node scripts/release-info.mjs "$GITHUB_REF_NAME" --notes-out notes.md
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "A release for $GITHUB_REF_NAME already exists; uploading into it."
+          else
+            flags=""
+            if [ "${{ needs.prepare.outputs.prerelease }}" = "true" ]; then flags="--prerelease"; fi
+            gh release create "$GITHUB_REF_NAME" --draft --verify-tag $flags \
+              --title "Heimdall ${{ needs.prepare.outputs.version }}" \
+              --notes-file notes.md
+          fi
+
   build:
-    name: Build (${{ matrix.os }})
+    name: Build (${{ matrix.name }})
+    needs: [prepare, test, draft]
+    # Run when the checks and the draft succeeded, or were skipped (branch builds skip them).
+    if: >-
+      !cancelled() && needs.prepare.result == 'success' &&
+      (needs.test.result == 'success' || needs.test.result == 'skipped') &&
+      (needs.draft.result == 'success' || needs.draft.result == 'skipped')
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
-
+        include:
+          - name: Windows
+            os: windows-latest
+            fetch: --target win-x64
+            build: --win --x64
+          - name: macOS
+            os: macos-latest
+            fetch: --target mac-x64 --target mac-arm64
+            # The config builds one universal app; do not pass an architecture here.
+            build: --mac
+          - name: Linux
+            os: ubuntu-22.04 # older glibc, so the AppImage runs on more distributions
+            fetch: --target linux-x64
+            build: --linux --x64
+    env:
+      # Tag builds upload to the draft release; everything else only builds.
+      PUBLISH: ${{ github.ref_type == 'tag' && 'always' || 'never' }}
+      GH_TOKEN: ${{ github.token }}
+      # No signing certificate yet (see docs/RELEASING.md).
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
     steps:
-      - name: Checkout Source Code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: 'npm'
+          node-version-file: .nvmrc
+          cache: npm
 
-      - name: Install System Dependencies (Linux)
-        if: runner.os == 'Linux'
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Fetch bundled ffmpeg
+        run: node scripts/fetch-binaries.mjs ${{ matrix.fetch }}
+
+      - name: Build the app
+        run: npx electron-vite build
+
+      - name: Package installers
+        run: npx electron-builder ${{ matrix.build }} --publish ${{ env.PUBLISH }}
+
+      # Checksums of this platform's installers, merged into SHA256SUMS.txt by the last job.
+      - name: Compute checksums
+        if: github.ref_type == 'tag'
+        shell: bash
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libarchive-tools fakeroot libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libgtk-3-0 libasound2
+          cd dist
+          : > ../checksums.txt
+          for f in Heimdall-*; do
+            case "$f" in
+              *.blockmap|*-unpacked|*.yml) continue ;;
+            esac
+            [ -f "$f" ] && (sha256sum "$f" 2>/dev/null || shasum -a 256 "$f") >> ../checksums.txt
+          done
+          cat ../checksums.txt
 
-      - name: Install Node Dependencies
-        run: npm ci
-
-      - name: Build Application for Windows
-        if: runner.os == 'Windows'
-        run: npm run build:win
-
-      - name: Build Application for Linux
-        if: runner.os == 'Linux'
-        run: npm run build:linux
-
-      - name: Build Application for macOS
-        if: runner.os == 'macOS'
-        run: npm run build:mac
-
-      - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
+        if: github.ref_type == 'tag'
         with:
-          name: heimdall-${{ matrix.os }}
+          name: checksums-${{ matrix.name }}
+          path: checksums.txt
+          retention-days: 3
+
+      # Branch and pull-request builds keep their installers for a few days so you can try them.
+      - uses: actions/upload-artifact@v4
+        if: github.ref_type != 'tag'
+        with:
+          name: installers-${{ matrix.name }}
           path: |
-            dist/*.exe
-            dist/*.AppImage
-            dist/*.deb
-            dist/*.tar.gz
-            dist/*.dmg
-            dist/*.zip
+            dist/Heimdall-*.exe
+            dist/Heimdall-*.dmg
+            dist/Heimdall-*.zip
+            dist/Heimdall-*.AppImage
+            dist/Heimdall-*.deb
+            dist/Heimdall-*.tar.gz
           if-no-files-found: error
           retention-days: 3
 
-  release:
-    name: Publish GitHub Release
-    needs: build
+  # Adds SHA256SUMS.txt and checks that no expected file is missing. The release stays a draft.
+  finalize:
+    name: Add checksums and verify
+    if: github.ref_type == 'tag'
+    needs: [prepare, build]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Download All Platform Artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
-          path: release-artifacts
-          merge-multiple: true
+          pattern: checksums-*
+          merge-multiple: false
+          path: parts
 
-      - name: Display Downloaded Artifacts
+      - name: Merge checksums and upload
         run: |
-          echo "Release Assets Ready for Publishing:"
-          ls -lh release-artifacts
+          cat parts/*/checksums.txt | sort -k2 > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+          gh release upload "$GITHUB_REF_NAME" SHA256SUMS.txt --clobber
 
-      - name: Publish to GitHub Releases
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name != 'main' && github.ref_name || inputs.tag_name || 'v1.4.0' }}
-          name: Heimdall ${{ github.ref_name != 'main' && github.ref_name || inputs.tag_name || 'v1.4.0' }}
-          draft: false
-          prerelease: false
-          generate_release_notes: true
-          files: |
-            release-artifacts/*.exe
-            release-artifacts/*.AppImage
-            release-artifacts/*.deb
-            release-artifacts/*.tar.gz
-            release-artifacts/*.dmg
-            release-artifacts/*.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Verify the release has every expected file
+        run: |
+          gh release view "$GITHUB_REF_NAME" --json assets --jq '.assets[].name' > names.txt
+          cat names.txt
+          node scripts/release-info.mjs --check-assets "${{ needs.prepare.outputs.version }}" names.txt
+          echo
+          echo "Draft release for $GITHUB_REF_NAME is ready. Review it, then click Publish."

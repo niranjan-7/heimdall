@@ -156,6 +156,13 @@ npm run build:linux
 
 ---
 
+## 🚢 Releasing
+
+Releases are built by GitHub Actions from a tag. See [docs/RELEASING.md](docs/RELEASING.md) and the
+[CHANGELOG](CHANGELOG.md).
+
+---
+
 ## 🔒 Privacy & Architecture
 
 - **100% Local & Offline:** Watch history is stored in local SQLite (`heimdall.db`) and Electron `userData/`.
