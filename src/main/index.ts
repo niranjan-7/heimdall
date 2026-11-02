@@ -74,8 +74,9 @@ function createWindow(): void {
     vibrancy: 'under-window',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false,
-      contextIsolation: true
+      sandbox: true,
+      contextIsolation: true,
+      nodeIntegration: false
     }
   })
 
@@ -91,9 +92,25 @@ function createWindow(): void {
     }
   })
 
-  mainWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
+  // Links open in the system browser, and only web links (never file:, smb: and the like).
+  const openWebLink = (url: string): void => {
+    try {
+      const { protocol } = new URL(url)
+      if (protocol === 'https:' || protocol === 'http:') shell.openExternal(url)
+    } catch {
+      // not a URL
+    }
+  }
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    openWebLink(url)
     return { action: 'deny' }
+  })
+  // The window itself never navigates away from the app.
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (url !== mainWindow?.webContents.getURL()) {
+      event.preventDefault()
+      openWebLink(url)
+    }
   })
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
@@ -492,7 +509,7 @@ function registerIpcHandlers(): void {
         mainWindow.webContents.send('series:updated', series)
         mainWindow.webContents.send('app:notification', {
           type: 'success',
-          message: `🗑️ Removed ${deletedCount} files and freed ${formatBytes(freedBytes)} into Recycle Bin!`
+          message: `🗑️ Moved ${deletedCount} files to the trash and freed ${formatBytes(freedBytes)}`
         })
       }
 
@@ -706,6 +723,16 @@ function registerIpcHandlers(): void {
     return await remoteServer.getServerInfo()
   })
 
+  ipcMain.handle('remote:set-enabled', async (_event, enabled: boolean) => {
+    await remoteServer.setEnabled(enabled === true)
+    return await remoteServer.getServerInfo()
+  })
+
+  ipcMain.handle('remote:reset-pairing', async () => {
+    remoteServer.resetPairing()
+    return await remoteServer.getServerInfo()
+  })
+
   ipcMain.handle(
     'anilist:link-series',
     async (
@@ -895,7 +922,7 @@ app.whenReady().then(() => {
   tmdbService = new TmdbService()
   updateService = new UpdateService(() => mainWindow, storageService)
   remoteServer = new RemoteServer(storageService, vlcController, thumbnailService)
-  remoteServer.start()
+  remoteServer.startIfEnabled()
 
   syncWorker.setOnStateChange((state) => {
     remoteServer.broadcastState(state)

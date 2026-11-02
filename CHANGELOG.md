@@ -20,7 +20,19 @@ GitHub release, so write it for the people who use the app.
 - Installers have stable names without spaces, for example `Heimdall-Setup-1.5.0.exe`.
 - The app package now contains only the app itself.
 
+### Security
+- The phone remote now needs pairing. The QR code carries a pairing code, and requests without it
+  are refused. Settings → phone remote can reset the code, which disconnects every phone.
+- The phone remote is off until you turn it on, and is no longer started when it is switched off.
+- Other websites can no longer read your library or control playback through the phone remote.
+- Titles from file names can no longer inject code into the phone remote page.
+- Each install gets its own random VLC password instead of a shared default.
+- The app window runs sandboxed, with a content security policy, and cannot be navigated away from
+  the app. Only web links open in the browser.
+
 ### Fixed
+- The phone remote no longer falls back to a hard-coded IP address that belonged to the developer's
+  network, and shows how many phones are connected.
 - Each platform now bundles its own ffmpeg. In 1.4.0 the Linux and Intel Mac builds contained an Apple
   Silicon ffmpeg, so thumbnails, subtitle sync and movie details could not work there.
 - The macOS ffmpeg is now a redistributable build.

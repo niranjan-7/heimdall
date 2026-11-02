@@ -1,12 +1,40 @@
+import * as crypto from 'crypto'
 import * as http from 'http'
 import * as os from 'os'
 import * as fs from 'fs'
 import * as path from 'path'
 import * as QRCode from 'qrcode'
 import { StorageService } from './storageService'
+import { generateSecret } from './secrets'
 import { PlayerManager } from './player/playerManager'
 import { ThumbnailService } from './thumbnailService'
 import { VlcStateUpdate, RemoteServerInfo } from '../shared/types'
+
+const MAX_BODY_BYTES = 16 * 1024
+const MAX_SUBTITLE_NUDGE_SEC = 10
+
+function sendJson(res: http.ServerResponse, status: number, body: unknown): void {
+  res.writeHead(status, {
+    'Content-Type': 'application/json',
+    'Cache-Control': 'no-store',
+    'X-Content-Type-Options': 'nosniff'
+  })
+  res.end(JSON.stringify(body))
+}
+
+/** Reads a request body, or resolves null if it is larger than `limit` bytes. */
+function readBody(req: http.IncomingMessage, limit: number): Promise<string | null> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = []
+    let size = 0
+    req.on('data', (chunk: Buffer) => {
+      size += chunk.length
+      if (size <= limit) chunks.push(chunk)
+    })
+    req.on('end', () => resolve(size > limit ? null : Buffer.concat(chunks).toString('utf8')))
+    req.on('error', reject)
+  })
+}
 
 export class RemoteServer {
   private server: http.Server | null = null
@@ -46,12 +74,20 @@ export class RemoteServer {
     return candidates[0] || '127.0.0.1'
   }
 
+  /** The port actually in use (differs from the setting when that is 0, as in tests). */
+  public getPort(): number {
+    const addr = this.server?.address()
+    if (addr && typeof addr === 'object') return addr.port
+    return this.storageService.getSettings().remotePort ?? this.port
+  }
+
   public async getServerInfo(): Promise<RemoteServerInfo> {
     const settings = this.storageService.getSettings()
-    const port = settings.remotePort || this.port
+    const port = this.getPort()
     const localIp = this.getLocalIpAddress()
-    const url = `http://${localIp}:${port}`
-    const enabled = settings.enableRemoteServer ?? true
+    const token = settings.remoteToken || ''
+    // The pairing code goes after "#", which browsers never send to a server or in a Referer.
+    const url = `http://${localIp}:${port}/#t=${token}`
 
     let qrCodeDataUrl = ''
     try {
@@ -68,10 +104,11 @@ export class RemoteServer {
     }
 
     return {
-      enabled,
+      enabled: !!settings.enableRemoteServer,
       port,
       localIp,
       url,
+      token,
       qrCodeDataUrl,
       connectedClients: this.sseClients.size
     }
@@ -92,241 +129,335 @@ export class RemoteServer {
     }
   }
 
-  public start(): void {
-    if (this.server) return
+  /** Starts the server only if the phone remote is switched on in settings. */
+  public async startIfEnabled(): Promise<void> {
+    if (this.storageService.getSettings().enableRemoteServer) await this.start()
+  }
 
-    const settings = this.storageService.getSettings()
-    this.port = settings.remotePort || 42125
+  public async setEnabled(enabled: boolean): Promise<void> {
+    this.storageService.saveSettings({ enableRemoteServer: enabled })
+    if (enabled) await this.start()
+    else this.stop()
+  }
 
-    this.server = http.createServer((req, res) => {
-      // CORS headers
-      res.setHeader('Access-Control-Allow-Origin', '*')
-      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  /** Issues a new pairing code. Every paired phone has to scan the new QR code. */
+  public resetPairing(): void {
+    this.storageService.setRemoteToken(generateSecret())
+    this.disconnectClients()
+  }
 
-      if (req.method === 'OPTIONS') {
-        res.writeHead(204)
-        res.end()
-        return
-      }
+  public start(): Promise<void> {
+    if (this.server) return Promise.resolve()
 
-      const parsedUrl = new URL(req.url || '/', `http://127.0.0.1:${this.port}`)
-      const pathname = parsedUrl.pathname
-
-      // 1. Web App Manifest
-      if (pathname === '/manifest.json') {
-        res.writeHead(200, { 'Content-Type': 'application/manifest+json' })
-        res.end(
-          JSON.stringify({
-            name: 'Heimdall Remote',
-            short_name: 'Heimdall',
-            start_url: '/',
-            display: 'standalone',
-            background_color: '#09090b',
-            theme_color: '#f59e0b',
-            icons: []
-          })
-        )
-        return
-      }
-
-      // 2. Real-Time Server-Sent Events (SSE) Stream
-      if (pathname === '/api/events') {
-        res.writeHead(200, {
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache, no-transform',
-          Connection: 'keep-alive'
-        })
-        res.write('\n')
-
-        this.sseClients.add(res)
-
-        // Send immediate initial state
-        res.write(
-          `data: ${JSON.stringify({
-            type: 'init',
-            data: this.lastState
-          })}\n\n`
-        )
-
-        req.on('close', () => {
-          this.sseClients.delete(res)
-        })
-        return
-      }
-
-      // 3. Status API
-      if (pathname === '/api/status') {
-        res.writeHead(200, { 'Content-Type': 'application/json' })
-        res.end(
-          JSON.stringify({
-            activeState: this.lastState,
-            localIp: this.getLocalIpAddress(),
-            preferredPlayer: this.storageService.getSettings().preferredPlayer || 'vlc'
-          })
-        )
-        return
-      }
-
-      // 4. Library API
-      if (pathname === '/api/library') {
-        const lib = this.storageService.getLibrary()
-        const cleanSeries = lib.series.map((s) => ({
-          id: s.id,
-          title: s.aniListTitle || s.title,
-          aniListTitle: s.aniListTitle,
-          coverImage: s.coverImage,
-          bannerImage: s.bannerImage,
-          episodesCount: s.episodes.length,
-          completedCount: s.episodes.filter((e) => e.completed).length,
-          lastActiveEpisodeId: s.lastActiveEpisodeId,
-          episodes: s.episodes.map((e) => ({
-            id: e.id,
-            title: e.title,
-            seasonName: e.seasonName,
-            episodeNumber: e.episodeNumber,
-            completed: e.completed,
-            timeSec: e.timeSec,
-            durationSec: e.durationSec,
-            hasThumbnail: e.hasThumbnail
-          }))
-        }))
-
-        const cleanMovies = lib.movies.map((m) => ({
-          id: m.id,
-          title: m.title,
-          cleanTitle: m.cleanTitle,
-          year: m.year,
-          completed: m.completed,
-          timeSec: m.timeSec,
-          durationSec: m.durationSec,
-          posterUrl: m.posterUrl,
-          backdropUrl: m.backdropUrl,
-          resolution: m.resolution,
-          rating: m.rating,
-          overview: m.overview
-        }))
-
-        res.writeHead(200, { 'Content-Type': 'application/json' })
-        res.end(JSON.stringify({ series: cleanSeries, movies: cleanMovies }))
-        return
-      }
-
-      // 5. Thumbnails endpoint
-      if (pathname.startsWith('/api/thumb/')) {
-        const id = pathname.replace('/api/thumb/', '').trim()
-        const thumbPath = this.thumbnailService.getThumbnailPath(id)
-        if (fs.existsSync(thumbPath)) {
-          res.writeHead(200, { 'Content-Type': 'image/jpeg' })
-          fs.createReadStream(thumbPath).pipe(res)
-          return
-        }
-        res.writeHead(404)
-        res.end('Thumbnail not found')
-        return
-      }
-
-      // 6. Action Endpoints (POST)
-      if (req.method === 'POST') {
-        let body = ''
-        req.on('data', (chunk) => {
-          body += chunk.toString()
-        })
-        req.on('end', async () => {
-          try {
-            const data = body ? JSON.parse(body) : {}
-
-            if (pathname === '/api/play-series') {
-              const resLaunch = await this.playerManager.launchSeries(
-                data.seriesId,
-                data.episodeId,
-                { advanceIfCompleted: true }
-              )
-              res.writeHead(200, { 'Content-Type': 'application/json' })
-              res.end(JSON.stringify(resLaunch))
-              return
-            }
-
-            if (pathname === '/api/play-movie') {
-              const resLaunch = await this.playerManager.launchMovie(data.movieId)
-              res.writeHead(200, { 'Content-Type': 'application/json' })
-              res.end(JSON.stringify(resLaunch))
-              return
-            }
-
-            if (pathname === '/api/command') {
-              if (data.action === 'toggle-pause') {
-                const ok = await this.playerManager.togglePause()
-                res.writeHead(200, { 'Content-Type': 'application/json' })
-                res.end(JSON.stringify({ success: ok }))
-                return
-              }
-
-              if (data.action === 'stop') {
-                await this.playerManager.stopCurrentProcess()
-                res.writeHead(200, { 'Content-Type': 'application/json' })
-                res.end(JSON.stringify({ success: true }))
-                return
-              }
-
-              if (data.action === 'seek' && typeof data.time === 'number') {
-                const ok = await this.playerManager.seek(data.time)
-                res.writeHead(200, { 'Content-Type': 'application/json' })
-                res.end(JSON.stringify({ success: ok }))
-                return
-              }
-
-              if (data.action === 'nudge-sub' && typeof data.delta === 'number') {
-                const current = this.playerManager.getSubtitleDelay()
-                const next = Math.round((current + data.delta) * 100) / 100
-                const ok = await this.playerManager.setSubtitleDelay(next)
-                res.writeHead(200, { 'Content-Type': 'application/json' })
-                res.end(JSON.stringify({ success: ok, currentDelay: next }))
-                return
-              }
-            }
-
-            res.writeHead(400, { 'Content-Type': 'application/json' })
-            res.end(JSON.stringify({ error: 'Unknown action' }))
-          } catch (err: any) {
-            res.writeHead(500, { 'Content-Type': 'application/json' })
-            res.end(JSON.stringify({ error: err?.message || 'Server error' }))
-          }
-        })
-        return
-      }
-
-      // 7. Root Web PWA
-      if (pathname === '/' || pathname === '/index.html') {
-        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
-        res.end(this.getMobilePwaHtml())
-        return
-      }
-
-      res.writeHead(404)
-      res.end('Not Found')
+    this.port = this.storageService.getSettings().remotePort ?? 42125
+    const server = http.createServer((req, res) => {
+      this.handleRequest(req, res).catch((err) => {
+        console.error('[Heimdall Remote] Request failed:', err)
+        if (!res.headersSent) sendJson(res, 500, { error: 'Server error' })
+        else res.end()
+      })
     })
+    this.server = server
 
-    this.server.listen(this.port, '0.0.0.0', () => {
-      console.log(`[Heimdall Remote] Running on http://${this.getLocalIpAddress()}:${this.port}`)
-    })
-
-    this.server.on('error', (err) => {
-      console.error('[Heimdall Remote] Server error:', err)
+    return new Promise((resolve) => {
+      server.once('error', (err) => {
+        console.error('[Heimdall Remote] Server error:', err)
+        if (this.server === server) this.server = null
+        resolve()
+      })
+      server.listen(this.port, '0.0.0.0', () => {
+        console.log(
+          `[Heimdall Remote] Running on http://${this.getLocalIpAddress()}:${this.getPort()}`
+        )
+        resolve()
+      })
     })
   }
 
   public stop(): void {
+    this.disconnectClients()
+    if (this.server) {
+      this.server.close()
+      this.server = null
+    }
+  }
+
+  private disconnectClients(): void {
     for (const client of this.sseClients) {
       try {
         client.end()
       } catch {}
     }
     this.sseClients.clear()
-    if (this.server) {
-      this.server.close()
-      this.server = null
+  }
+
+  /**
+   * Checks the pairing code in constant time. POST requests must send it in the Authorization
+   * header; GET requests may also use ?t= because EventSource cannot set headers.
+   */
+  private isAuthorized(req: http.IncomingMessage, url: URL): boolean {
+    const expected = this.storageService.getSettings().remoteToken
+    if (!expected) return false
+
+    const header = req.headers.authorization || ''
+    let supplied = header.startsWith('Bearer ') ? header.slice('Bearer '.length) : ''
+    if (!supplied && req.method === 'GET') supplied = url.searchParams.get('t') || ''
+
+    const a = Buffer.from(supplied)
+    const b = Buffer.from(expected)
+    return a.length === b.length && crypto.timingSafeEqual(a, b)
+  }
+
+  private async handleRequest(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+    // No CORS headers on purpose: only this server's own page may call its API.
+    const url = new URL(req.url || '/', 'http://localhost')
+    const pathname = url.pathname
+
+    // The page and its manifest are public. They contain no library data.
+    if (req.method === 'GET' && (pathname === '/' || pathname === '/index.html')) {
+      res.writeHead(200, {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-store',
+        'Referrer-Policy': 'no-referrer',
+        'X-Content-Type-Options': 'nosniff',
+        'Content-Security-Policy':
+          "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'; base-uri 'none'; form-action 'none'"
+      })
+      res.end(this.getMobilePwaHtml())
+      return
     }
+
+    if (req.method === 'GET' && pathname === '/manifest.json') {
+      res.writeHead(200, { 'Content-Type': 'application/manifest+json' })
+      res.end(
+        JSON.stringify({
+          name: 'Heimdall Remote',
+          short_name: 'Heimdall',
+          start_url: '/',
+          display: 'standalone',
+          background_color: '#09090b',
+          theme_color: '#f59e0b',
+          icons: []
+        })
+      )
+      return
+    }
+
+    if (!pathname.startsWith('/api/')) {
+      sendJson(res, 404, { error: 'Not found' })
+      return
+    }
+
+    if (!this.isAuthorized(req, url)) {
+      sendJson(res, 401, { error: 'Not paired. Scan the QR code in Heimdall again.' })
+      return
+    }
+
+    if (req.method === 'GET') {
+      this.handleGet(pathname, req, res)
+      return
+    }
+
+    if (req.method !== 'POST') {
+      sendJson(res, 405, { error: 'Method not allowed' })
+      return
+    }
+
+    // Requiring JSON means a web page on another site cannot send these requests: a browser
+    // only sends a cross-site JSON POST after a preflight check, which this server never approves.
+    const contentType = (req.headers['content-type'] || '').toLowerCase()
+    if (!contentType.startsWith('application/json')) {
+      sendJson(res, 415, { error: 'Send JSON' })
+      return
+    }
+
+    const body = await readBody(req, MAX_BODY_BYTES)
+    if (body === null) {
+      sendJson(res, 413, { error: 'Request too large' })
+      return
+    }
+
+    let data: Record<string, unknown>
+    try {
+      const parsed = body ? JSON.parse(body) : {}
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error()
+      data = parsed
+    } catch {
+      sendJson(res, 400, { error: 'Invalid JSON' })
+      return
+    }
+
+    await this.handleAction(pathname, data, res)
+  }
+
+  private handleGet(pathname: string, req: http.IncomingMessage, res: http.ServerResponse): void {
+    // Real-time playback state (Server-Sent Events)
+    if (pathname === '/api/events') {
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache, no-transform',
+        Connection: 'keep-alive'
+      })
+      res.write('\n')
+      this.sseClients.add(res)
+      res.write(`data: ${JSON.stringify({ type: 'init', data: this.lastState })}\n\n`)
+      req.on('close', () => {
+        this.sseClients.delete(res)
+      })
+      return
+    }
+
+    if (pathname === '/api/status') {
+      sendJson(res, 200, {
+        activeState: this.lastState,
+        preferredPlayer: this.storageService.getSettings().preferredPlayer || 'vlc'
+      })
+      return
+    }
+
+    if (pathname === '/api/library') {
+      const lib = this.storageService.getLibrary()
+      const cleanSeries = lib.series.map((s) => ({
+        id: s.id,
+        title: s.aniListTitle || s.title,
+        aniListTitle: s.aniListTitle,
+        coverImage: s.coverImage,
+        bannerImage: s.bannerImage,
+        episodesCount: s.episodes.length,
+        completedCount: s.episodes.filter((e) => e.completed).length,
+        lastActiveEpisodeId: s.lastActiveEpisodeId,
+        episodes: s.episodes.map((e) => ({
+          id: e.id,
+          title: e.title,
+          seasonName: e.seasonName,
+          episodeNumber: e.episodeNumber,
+          completed: e.completed,
+          timeSec: e.timeSec,
+          durationSec: e.durationSec,
+          hasThumbnail: e.hasThumbnail
+        }))
+      }))
+
+      const cleanMovies = lib.movies.map((m) => ({
+        id: m.id,
+        title: m.title,
+        cleanTitle: m.cleanTitle,
+        year: m.year,
+        completed: m.completed,
+        timeSec: m.timeSec,
+        durationSec: m.durationSec,
+        posterUrl: m.posterUrl,
+        backdropUrl: m.backdropUrl,
+        resolution: m.resolution,
+        rating: m.rating,
+        overview: m.overview
+      }))
+
+      sendJson(res, 200, { series: cleanSeries, movies: cleanMovies })
+      return
+    }
+
+    if (pathname.startsWith('/api/thumb/')) {
+      const id = pathname.replace('/api/thumb/', '').trim()
+      const thumbPath = this.thumbnailService.getThumbnailPath(id)
+      if (fs.existsSync(thumbPath)) {
+        res.writeHead(200, { 'Content-Type': 'image/jpeg', 'Cache-Control': 'no-store' })
+        fs.createReadStream(thumbPath).pipe(res)
+        return
+      }
+      sendJson(res, 404, { error: 'Thumbnail not found' })
+      return
+    }
+
+    sendJson(res, 404, { error: 'Not found' })
+  }
+
+  private async handleAction(
+    pathname: string,
+    data: Record<string, unknown>,
+    res: http.ServerResponse
+  ): Promise<void> {
+    if (pathname === '/api/play-series') {
+      const { seriesId, episodeId } = data
+      if (
+        typeof seriesId !== 'string' ||
+        (episodeId !== undefined && typeof episodeId !== 'string')
+      ) {
+        sendJson(res, 400, { error: 'seriesId must be a string' })
+        return
+      }
+      if (!this.storageService.getSeries(seriesId)) {
+        sendJson(res, 404, { error: 'Series not found' })
+        return
+      }
+      const result = await this.playerManager.launchSeries(
+        seriesId,
+        episodeId as string | undefined,
+        {
+          advanceIfCompleted: true
+        }
+      )
+      sendJson(res, 200, result)
+      return
+    }
+
+    if (pathname === '/api/play-movie') {
+      const { movieId } = data
+      if (typeof movieId !== 'string') {
+        sendJson(res, 400, { error: 'movieId must be a string' })
+        return
+      }
+      if (!this.storageService.getMovie(movieId)) {
+        sendJson(res, 404, { error: 'Movie not found' })
+        return
+      }
+      sendJson(res, 200, await this.playerManager.launchMovie(movieId))
+      return
+    }
+
+    if (pathname === '/api/command') {
+      const { action, time, delta } = data
+
+      if (action === 'toggle-pause') {
+        sendJson(res, 200, { success: await this.playerManager.togglePause() })
+        return
+      }
+
+      if (action === 'stop') {
+        await this.playerManager.stopCurrentProcess()
+        sendJson(res, 200, { success: true })
+        return
+      }
+
+      if (action === 'seek') {
+        if (typeof time !== 'number' || !Number.isFinite(time) || time < 0) {
+          sendJson(res, 400, { error: 'time must be a number of seconds, 0 or more' })
+          return
+        }
+        sendJson(res, 200, { success: await this.playerManager.seek(time) })
+        return
+      }
+
+      if (action === 'nudge-sub') {
+        if (
+          typeof delta !== 'number' ||
+          !Number.isFinite(delta) ||
+          Math.abs(delta) > MAX_SUBTITLE_NUDGE_SEC
+        ) {
+          sendJson(res, 400, {
+            error: `delta must be between -${MAX_SUBTITLE_NUDGE_SEC} and ${MAX_SUBTITLE_NUDGE_SEC}`
+          })
+          return
+        }
+        const current = this.playerManager.getSubtitleDelay()
+        const next = Math.round((current + delta) * 100) / 100
+        const ok = await this.playerManager.setSubtitleDelay(next)
+        sendJson(res, 200, { success: ok, currentDelay: next })
+        return
+      }
+    }
+
+    sendJson(res, 400, { error: 'Unknown action' })
   }
 
   /**
@@ -535,6 +666,11 @@ export class RemoteServer {
     <div id="connStatus" style="font-size: 11px; color: #10b981;">● Live Sync</div>
   </header>
 
+  <div id="pairNotice" style="display: none; margin: 16px; padding: 14px; border-radius: 12px; background: #18181b; border: 1px solid #3f3f46; font-size: 13px; line-height: 1.5; color: #e4e4e7;">
+    <strong>This phone is not paired.</strong> Open Heimdall on your computer, open the phone remote,
+    and scan its QR code again.
+  </div>
+
   <div class="tabs">
     <button class="tab-btn active" onclick="switchTab('series')">Series</button>
     <button class="tab-btn" onclick="switchTab('movies')">Movies</button>
@@ -567,8 +703,60 @@ export class RemoteServer {
   </div>
 
   <script>
+    const TOKEN_KEY = 'heimdallRemoteToken';
+    const SERIES_PLACEHOLDER = 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22150%22><rect width=%22100%%22 height=%22100%%22 fill=%22%2318181b%22/><text x=%2250%%22 y=%2250%%22 fill=%22%2371717a%22 font-size=%2212%22 text-anchor=%22middle%22>Series</text></svg>';
+    const MOVIE_PLACEHOLDER = 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22150%22><rect width=%22100%%22 height=%22100%%22 fill=%22%2318181b%22/><text x=%2250%%22 y=%2250%%22 fill=%22%2371717a%22 font-size=%2212%22 text-anchor=%22middle%22>Movie</text></svg>';
+
+    let token = null;
     let libraryData = { series: [], movies: [] };
     let currentState = null;
+    let events = null;
+
+    // The QR code link ends with "#t=<pairing code>". Remember it on this phone and remove it from
+    // the address bar.
+    (function readToken() {
+      const match = /[#&]t=([A-Za-z0-9_-]+)/.exec(location.hash);
+      if (match) {
+        token = match[1];
+        try { localStorage.setItem(TOKEN_KEY, token); } catch (e) {}
+        history.replaceState(null, '', location.pathname);
+      } else {
+        try { token = localStorage.getItem(TOKEN_KEY); } catch (e) {}
+      }
+    })();
+
+    // Titles come from file names, so they are escaped before going into the page.
+    function esc(value) {
+      return String(value == null ? '' : value).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+
+    function showUnpaired() {
+      token = null;
+      try { localStorage.removeItem(TOKEN_KEY); } catch (e) {}
+      if (events) { events.close(); events = null; }
+      document.getElementById('pairNotice').style.display = 'block';
+      document.getElementById('connStatus').innerText = '○ Not paired';
+      document.getElementById('connStatus').style.color = '#ef4444';
+      document.getElementById('seriesGrid').innerHTML = '';
+      document.getElementById('moviesGrid').innerHTML = '';
+      document.getElementById('playerBar').style.display = 'none';
+    }
+
+    async function api(path, body) {
+      if (!token) { showUnpaired(); throw new Error('Not paired'); }
+      const options = body === undefined
+        ? { headers: { Authorization: 'Bearer ' + token } }
+        : {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+            body: JSON.stringify(body)
+          };
+      const res = await fetch(path, options);
+      if (res.status === 401) { showUnpaired(); throw new Error('Not paired'); }
+      return res.json();
+    }
 
     function formatTime(s) {
       s = Math.floor(s || 0);
@@ -591,13 +779,23 @@ export class RemoteServer {
 
     async function loadLibrary() {
       try {
-        const res = await fetch('/api/library');
-        libraryData = await res.json();
+        libraryData = await api('/api/library');
         renderSeries();
         renderMovies();
       } catch (e) {
         console.error(e);
       }
+    }
+
+    function card(image, title, sub, kind, id, label) {
+      return '<div class="card">' +
+        '<img class="card-thumb" src="' + esc(image) + '" />' +
+        '<div class="card-body"><div>' +
+        '<h4 class="card-title">' + esc(title) + '</h4>' +
+        '<div class="card-sub">' + esc(sub) + '</div>' +
+        '</div>' +
+        '<button class="play-btn" data-kind="' + kind + '" data-id="' + esc(id) + '">' + label + '</button>' +
+        '</div></div>';
     }
 
     function renderSeries() {
@@ -606,18 +804,12 @@ export class RemoteServer {
         grid.innerHTML = '<div style="color: #71717a; grid-column: span 2;">No series found in Heimdall library.</div>';
         return;
       }
-      grid.innerHTML = libraryData.series.map(s => \`
-        <div class="card">
-          <img class="card-thumb" src="\${s.coverImage || 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22150%22><rect width=%22100%%22 height=%22100%%22 fill=%22%2318181b%22/><text x=%2250%%22 y=%2250%%22 fill=%22%2371717a%22 font-size=%2212%22 text-anchor=%22middle%22>Series</text></svg>'}" />
-          <div class="card-body">
-            <div>
-              <h4 class="card-title">\${s.aniListTitle || s.title}</h4>
-              <div class="card-sub">\${s.completedCount}/\${s.episodesCount} watched</div>
-            </div>
-            <button class="play-btn" onclick="playSeries('\${s.id}')">Play on PC</button>
-          </div>
-        </div>
-      \`).join('');
+      grid.innerHTML = libraryData.series.map(s => card(
+        s.coverImage || SERIES_PLACEHOLDER,
+        s.aniListTitle || s.title,
+        s.completedCount + '/' + s.episodesCount + ' watched',
+        'series', s.id, 'Play on PC'
+      )).join('');
     }
 
     function renderMovies() {
@@ -626,68 +818,39 @@ export class RemoteServer {
         grid.innerHTML = '<div style="color: #71717a; grid-column: span 2;">No movies found. Add movies in Heimdall on PC.</div>';
         return;
       }
-      grid.innerHTML = libraryData.movies.map(m => \`
-        <div class="card">
-          <img class="card-thumb" src="\${m.posterUrl || 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22150%22><rect width=%22100%%22 height=%22100%%22 fill=%22%2318181b%22/><text x=%2250%%22 y=%2250%%22 fill=%22%2371717a%22 font-size=%2212%22 text-anchor=%22middle%22>Movie</text></svg>'}" />
-          <div class="card-body">
-            <div>
-              <h4 class="card-title">\${m.title}</h4>
-              <div class="card-sub">\${m.year || ''} \${m.resolution ? '• ' + m.resolution : ''}</div>
-            </div>
-            <button class="play-btn" onclick="playMovie('\${m.id}')">Play Movie</button>
-          </div>
-        </div>
-      \`).join('');
+      grid.innerHTML = libraryData.movies.map(m => card(
+        m.posterUrl || MOVIE_PLACEHOLDER,
+        m.title,
+        (m.year || '') + (m.resolution ? ' • ' + m.resolution : ''),
+        'movie', m.id, 'Play Movie'
+      )).join('');
     }
 
-    async function playSeries(id) {
-      await fetch('/api/play-series', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ seriesId: id })
-      });
+    document.addEventListener('click', (e) => {
+      const button = e.target.closest('.play-btn');
+      if (!button) return;
+      const request = button.dataset.kind === 'series'
+        ? api('/api/play-series', { seriesId: button.dataset.id })
+        : api('/api/play-movie', { movieId: button.dataset.id });
+      request.catch(() => {});
+    });
+
+    function togglePause() {
+      api('/api/command', { action: 'toggle-pause' }).catch(() => {});
     }
 
-    async function playMovie(id) {
-      await fetch('/api/play-movie', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ movieId: id })
-      });
+    function stopPlayback() {
+      api('/api/command', { action: 'stop' }).catch(() => {});
     }
 
-    async function togglePause() {
-      await fetch('/api/command', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'toggle-pause' })
-      });
-    }
-
-    async function stopPlayback() {
-      await fetch('/api/command', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'stop' })
-      });
-    }
-
-    async function seekPlayback(val) {
+    function seekPlayback(val) {
       if (!currentState || !currentState.duration) return;
       const targetSec = (val / 100) * currentState.duration;
-      await fetch('/api/command', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'seek', time: targetSec })
-      });
+      api('/api/command', { action: 'seek', time: targetSec }).catch(() => {});
     }
 
-    async function sendNudge(delta) {
-      await fetch('/api/command', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'nudge-sub', delta })
-      });
+    function sendNudge(delta) {
+      api('/api/command', { action: 'nudge-sub', delta }).catch(() => {});
     }
 
     function updateController(state) {
@@ -708,14 +871,14 @@ export class RemoteServer {
       }
     }
 
-    // Connect SSE
+    // Live playback state. EventSource cannot send headers, so the code goes in the URL.
     function connectEvents() {
-      const evt = new EventSource('/api/events');
-      evt.onopen = () => {
+      events = new EventSource('/api/events?t=' + encodeURIComponent(token));
+      events.onopen = () => {
         document.getElementById('connStatus').innerText = '● Live Sync';
         document.getElementById('connStatus').style.color = '#10b981';
       };
-      evt.onmessage = (e) => {
+      events.onmessage = (e) => {
         try {
           const msg = JSON.parse(e.data);
           if (msg.type === 'playback_state' || msg.type === 'init') {
@@ -723,14 +886,20 @@ export class RemoteServer {
           }
         } catch (err) {}
       };
-      evt.onerror = () => {
+      events.onerror = () => {
         document.getElementById('connStatus').innerText = '○ Reconnecting';
         document.getElementById('connStatus').style.color = '#f59e0b';
+        // If the pairing code was reset, stop retrying and say so.
+        api('/api/status').catch(() => {});
       };
     }
 
-    loadLibrary();
-    connectEvents();
+    if (token) {
+      loadLibrary();
+      connectEvents();
+    } else {
+      showUnpaired();
+    }
   </script>
 </body>
 </html>`

@@ -3,6 +3,10 @@ import * as path from 'path'
 import * as fs from 'fs'
 import { LibraryData, AppSettings, Series, Episode, Movie } from '../shared/types'
 import { cleanEpisodeTitle, extractEpisodeNumber } from './folderScanner'
+import { generateSecret } from './secrets'
+
+// The password every install shipped with before 1.5.0. Replaced on load.
+const OLD_DEFAULT_VLC_PASSWORD = 'heimdall_secret'
 
 const DEFAULT_SETTINGS: AppSettings = {
   vlcPath: '',
@@ -16,7 +20,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   autoDownloadSubtitles: false,
   completionThreshold: 0.9,
   httpPort: 42120,
-  httpPassword: 'heimdall_secret',
+  // Generated per install on first load (see loadSettings).
+  httpPassword: '',
   enableDiscordRPC: true,
   discordClientId: '737663962677510245',
   enableAniListScrobble: true,
@@ -24,7 +29,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   enableLiquidGlass: true,
   dimFillerEpisodes: true,
   uiTheme: 'liquid_glass',
-  enableRemoteServer: true,
+  enableRemoteServer: false,
   remotePort: 42125,
   updateChannel: 'stable'
 }
@@ -151,8 +156,21 @@ export class StorageService {
       }
     }
 
+    if (
+      !this.settingsData.httpPassword ||
+      this.settingsData.httpPassword === OLD_DEFAULT_VLC_PASSWORD
+    ) {
+      this.settingsData.httpPassword = generateSecret(18)
+      updated = true
+    }
+
+    if (!this.settingsData.remoteToken) {
+      this.settingsData.remoteToken = generateSecret()
+      updated = true
+    }
+
     if (updated) {
-      this.saveSettings(this.settingsData)
+      this.writeSettings()
     }
   }
 
@@ -161,9 +179,21 @@ export class StorageService {
   }
 
   public saveSettings(newSettings: Partial<AppSettings>): AppSettings {
-    this.settingsData = { ...this.settingsData, ...newSettings }
-    this.atomicWriteFileSync(this.settingsPath, JSON.stringify(this.settingsData, null, 2))
+    // The pairing code is only changed through setRemoteToken, so a Settings screen that was opened
+    // before a reset cannot put the old code back.
+    const { remoteToken: _ignored, ...rest } = newSettings
+    this.settingsData = { ...this.settingsData, ...rest }
+    this.writeSettings()
     return this.getSettings()
+  }
+
+  public setRemoteToken(token: string): void {
+    this.settingsData.remoteToken = token
+    this.writeSettings()
+  }
+
+  private writeSettings(): void {
+    this.atomicWriteFileSync(this.settingsPath, JSON.stringify(this.settingsData, null, 2))
   }
 
   private loadLibrary(): void {
@@ -318,7 +348,11 @@ export class StorageService {
       if (a.seasonFolder !== b.seasonFolder) {
         return a.seasonFolder.localeCompare(b.seasonFolder, undefined, { numeric: true })
       }
-      if (a.episodeNumber !== null && b.episodeNumber !== null && a.episodeNumber !== b.episodeNumber) {
+      if (
+        a.episodeNumber !== null &&
+        b.episodeNumber !== null &&
+        a.episodeNumber !== b.episodeNumber
+      ) {
         return a.episodeNumber - b.episodeNumber
       }
       return a.fileName.localeCompare(b.fileName, undefined, { numeric: true })
