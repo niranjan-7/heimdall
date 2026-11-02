@@ -179,6 +179,7 @@ Each build job uploads installers **plus** `latest*.yml` and `*.blockmap`. Other
 4. Delete the RC drafts afterwards.
 
 ### 1.1.h Clean up existing releases and repo metadata
+> **Status: done (2026-11-03, approved by the owner).** v1.1.0's wrong installer removed (note added); v1.4.0's six macOS/Linux files removed (note explains why; Windows installer kept); all seven releases' notes replaced with their `CHANGELOG.md` sections (no overclaims left); repo description and topics updated. The old text was backed up before editing. Not done: deleting the merged `phase-*` branches (use **Delete branch** on each merged PR).
 These change public pages, so each one is run only with your OK.
 1. **v1.1.0:** remove the wrong `Heimdall.Setup.1.0.0.exe` and add a note: "The installer for this version is no longer available — please use the latest release." (Rebuilding from the old tag isn't worth it.)
 2. **v1.4.0:** the macOS/Linux files were built from commit `5240557`, which adds packaging config after the tag, and they bundle the wrong-platform and (macOS arm64) non-redistributable ffmpeg described above. Add a note, and with the owner's OK **delete the macOS and Linux assets of v1.4.0** (nobody else uses them yet) so a non-redistributable binary is no longer on the public releases page. v1.5.0 supersedes them.
@@ -638,4 +639,3 @@ Split the 1,141-line modal into a routed page with sections: **General · Playba
 3. Whether v1.5.x should already start logging `watch_events` (recommended: yes).
 4. Whether to turn on branch protection for `main` (require CI before merging) — Phase 1.1.e.
 5. Mirror the pinned ffmpeg binaries as assets of a release in this repo, so builds never depend on third-party sites — Phase 1.1.c.
-6. Delete the macOS and Linux assets of the v1.4.0 release (wrong-platform / non-redistributable ffmpeg) — Phase 1.1.h.
