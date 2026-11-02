@@ -28,3 +28,6 @@ Thumbs.db
 
 # Test coverage
 coverage
+
+# Bundled third-party binaries (downloaded by scripts/fetch-binaries.mjs)
+resources/bin

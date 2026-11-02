@@ -52,7 +52,9 @@ Nothing else in this plan can be verified without this. Do it first.
 - **v1.1.0 ships the wrong file** (`Heimdall.Setup.1.0.0.exe`).
 - No release has `latest*.yml` / `.blockmap` files (needed by `electron-updater`) or a checksum file; the README checksum table was written by hand.
 - The v1.4.0 in-app updater picks the **first `.dmg`** (Intel Macs get offered the arm64 build) and on Linux runs the new AppImage **from a temp folder** without replacing the old one.
-- `@ffmpeg-installer/ffmpeg` only installs ffmpeg for the machine running `npm ci`, so an Apple Silicon build machine packs an **arm64 ffmpeg into the Intel DMG**.
+- `@ffmpeg-installer/ffmpeg` only installs ffmpeg for the machine running `npm ci`. **Confirmed** by inspecting the hand-built `dist/` on the owner's Apple Silicon Mac: the Linux package and the Intel Mac app both contain a **macOS arm64 ffmpeg** (`Mach-O arm64`). So in the v1.4.0 Linux AppImage and Intel DMG, thumbnails, subtitle sync and movie specs very likely do not work.
+- **The macOS arm64 ffmpeg from `@ffmpeg-installer` (and from `ffmpeg-static`) is built with `--enable-nonfree`** (its own `-L` text says "nonfree and unredistributable"), so the macOS v1.4.0 builds ship a binary that must not be redistributed. The Intel Mac, Linux and Windows builds from those packages are clean GPL.
+- `electron-builder.yml` had no `files` allowlist, so `app.asar` also contained `landing/`, `deploy/`, `FEATURES_PLAN.md` and config files.
 - Release notes and the repo description repeat the overclaims ("preserves 100%…", "0ms telemetry", "Windows Recycle Bin" in a cross-platform release).
 - Two copies of the workflow exist (`.github/workflows/release.yml` and `deploy/release.yml`) and they differ. The current workflow also hardcodes `v1.4.0` as a default tag and publishes immediately (`draft: false`).
 
@@ -97,6 +99,15 @@ Key ideas:
 5. Keep `appId: com.heimdall.vlc` for now. Changing it changes the install identity and the data folder — that only happens with a rename (Phase 2.1).
 
 ### 1.1.c Bundled binaries per platform and architecture
+> **Status: implemented in branch `phase-1.1a-build-config`** (with 1.1.b). What was actually built, which differs from the first draft below in the sources chosen:
+> - `scripts/binaries.lock.json` pins one download per platform with its SHA-256. Sources (all checked statically for `--enable-gpl` and **no** nonfree markers; versions read from the binaries): Windows = gyan.dev FFmpeg 6.1.1, Linux = John Van Sickle FFmpeg 7.0.2 (both via the `eugeneware/ffmpeg-static` `b6.1.1` release), macOS arm64 + x64 = Martin Riedl FFmpeg 9.0.2.
+> - `scripts/fetch-binaries.mjs` (`--host`, `--all`, `--target`, `--force`, `--soft`): verifies SHA-256, refuses mismatches, skips what is already there. `npm install` fetches the host's build; CI has a canary step.
+> - `src/main/binaries.ts` `getBinaryPath('ffmpeg')` replaces `@ffmpeg-installer` (removed). Falls back to `ffmpeg` on PATH.
+> - Verified by packaging each OS: Linux = ELF, Windows = PE, macOS universal = one fat `x86_64 + arm64` ffmpeg that is still validly signed by its author.
+> - **Risk:** the macOS builds come from a single maintainer's site that may not keep old versions forever. Mitigation (needs your OK, it publishes files): mirror the four pinned binaries as assets of a `binaries-1` release in this repo and point the lock file there.
+> - ffprobe is not bundled yet (the code does not use it); the lock format supports adding it when Phase 1.4 / 2.2 need it.
+
+Original draft:
 Fixes the wrong-arch ffmpeg, and sets up the same mechanism for `alass` (Phase 1.4) and `fpcalc` (Phase 2.2).
 1. **`scripts/fetch-binaries.mjs --platform <win|mac|linux> --arch <x64|arm64>`**: downloads ffmpeg + ffprobe (later alass, fpcalc) into `resources/bin/<platform>-<arch>/` and checks each file against a SHA-256 pinned in `scripts/binaries.lock.json`. A mismatch fails the build. `resources/bin/` is git-ignored.
 2. **electron-builder `extraResources`** copies only the matching folder into the app: `from: resources/bin/${os}-${arch}` → `to: bin`.
@@ -107,6 +118,9 @@ Fixes the wrong-arch ffmpeg, and sets up the same mechanism for `alass` (Phase 1
 
 ### 1.1.d New `release.yml`
 Replace the current workflow and delete `deploy/release.yml`.
+
+> **Design change found while testing 1.1.b:** `electron-builder --publish never` does **not** write `latest*.yml` (checked: none are produced). The update files are only generated when electron-builder publishes. So the build jobs must run `electron-builder --publish always` with `GH_TOKEN`, uploading into a **draft** release (`publish.releaseType: draft`). To avoid three jobs racing to create the draft, a first `draft` job creates it with `gh release create --draft`, then each build job uploads into it. The last job then downloads the assets, adds `SHA256SUMS.txt`, sets the notes from `CHANGELOG.md`, and fails if an expected file is missing. Mac builds run `electron-builder --mac` (the config already says `universal`); do **not** pass `--x64`/`--arm64` flags for mac.
+> Not producible on an Apple Silicon Mac, so first proven in CI: the Windows NSIS installer and the Linux `.deb` (both failed locally for tooling reasons unrelated to the config).
 
 **Triggers:** `push: tags: ['v*']` (real releases), plus `workflow_dispatch` that builds everything and keeps the files as workflow artifacts **without creating a release** (for testing the pipeline on a branch).
 
@@ -159,7 +173,7 @@ Each build job uploads installers **plus** `latest*.yml` and `*.blockmap`. Other
 ### 1.1.h Clean up existing releases and repo metadata
 These change public pages, so each one is run only with your OK.
 1. **v1.1.0:** remove the wrong `Heimdall.Setup.1.0.0.exe` and add a note: "The installer for this version is no longer available — please use the latest release." (Rebuilding from the old tag isn't worth it.)
-2. **v1.4.0:** add a note that the macOS/Linux files were built from commit `5240557`, which adds packaging config after the tag. Don't replace the files; v1.5.0 supersedes them.
+2. **v1.4.0:** the macOS/Linux files were built from commit `5240557`, which adds packaging config after the tag, and they bundle the wrong-platform and (macOS arm64) non-redistributable ffmpeg described above. Add a note, and with the owner's OK **delete the macOS and Linux assets of v1.4.0** (nobody else uses them yet) so a non-redistributable binary is no longer on the public releases page. v1.5.0 supersedes them.
 3. **Release notes (all 7):** remove overclaims ("100%", "0ms", "Windows Recycle Bin" → "system trash / Recycle Bin"); keep them short and factual.
 4. **Repo description and topics** (`gh repo edit`): e.g. *"Tracks your local anime, shows and movies in VLC and mpv — resume where you stopped, subtitle sync, filler detection, AniList, phone remote."* Topics: `anime`, `mpv`, `vlc`, `electron`, `media-tracker`, `anilist`, `local-first`. Remove "0ms telemetry".
 5. **README downloads:** replace the hand-written size/checksum table with links to the latest release, its `SHA256SUMS.txt`, and stable permalinks (`…/releases/latest/download/Heimdall-Setup-<ver>.exe` style, which works because of the fixed names in 1.1.b).
@@ -615,3 +629,5 @@ Split the 1,141-line modal into a routed page with sections: **General · Playba
 2. Ship a built-in TMDB key or require users to supply one.
 3. Whether v1.5.x should already start logging `watch_events` (recommended: yes).
 4. Whether to turn on branch protection for `main` (require CI before merging) — Phase 1.1.e.
+5. Mirror the pinned ffmpeg binaries as assets of a release in this repo, so builds never depend on third-party sites — Phase 1.1.c.
+6. Delete the macOS and Linux assets of the v1.4.0 release (wrong-platform / non-redistributable ffmpeg) — Phase 1.1.h.

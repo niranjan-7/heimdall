@@ -4,9 +4,8 @@ import { spawn } from 'child_process'
 import { StorageService } from './storageService'
 import { SubtitleSyncService } from './subtitleSyncService'
 import { SubtitleDownloadResult } from '../shared/types'
+import { getBinaryPath } from './binaries'
 
-// @ts-ignore
-import ffmpegInstaller from '@ffmpeg-installer/ffmpeg'
 
 const LANGUAGE_ALIASES: Record<string, string[]> = {
   en: ['en', 'eng', 'english', 'en-us', 'en-gb', 'sub-eng', 'sub_eng', 'sub eng', 'english_sdh', 'sdh'],
@@ -30,7 +29,7 @@ export class SubtitleDownloadService {
   constructor(storageService: StorageService, subtitleSyncService: SubtitleSyncService) {
     this.storageService = storageService
     this.subtitleSyncService = subtitleSyncService
-    this.ffmpegPath = ffmpegInstaller.path || 'ffmpeg'
+    this.ffmpegPath = getBinaryPath('ffmpeg')
   }
 
   /**

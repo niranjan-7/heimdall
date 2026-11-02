@@ -11,7 +11,13 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ['src/main/**/*.ts', 'src/preload/**/*.ts', 'src/shared/**/*.ts', 'tests/**/*.ts'],
+    files: [
+      'src/main/**/*.ts',
+      'src/preload/**/*.ts',
+      'src/shared/**/*.ts',
+      'tests/**/*.ts',
+      'scripts/**/*.mjs'
+    ],
     languageOptions: { globals: globals.node }
   },
   {

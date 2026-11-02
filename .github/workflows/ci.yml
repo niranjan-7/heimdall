@@ -60,3 +60,7 @@ jobs:
 
       - name: Unit tests
         run: npm test
+
+      # Canary: fails if a pinned download disappears or its checksum changes.
+      - name: Fetch bundled ffmpeg for this OS
+        run: node scripts/fetch-binaries.mjs --host
