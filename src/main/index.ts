@@ -848,12 +848,9 @@ function registerIpcHandlers(): void {
     return await updateService.checkForUpdates()
   })
 
-  ipcMain.handle(
-    'update:download-install',
-    async (_event, downloadUrl: string, assetName?: string) => {
-      return await updateService.downloadAndInstallUpdate(downloadUrl, assetName)
-    }
-  )
+  ipcMain.handle('update:download-install', async () => {
+    return await updateService.downloadAndInstallUpdate()
+  })
 
   ipcMain.handle('storage:create-backup', () => {
     return updateService.createBackup()
@@ -896,7 +893,7 @@ app.whenReady().then(() => {
   subtitleSyncService = new SubtitleSyncService(storageService, vlcController)
   subtitleDownloadService = new SubtitleDownloadService(storageService, subtitleSyncService)
   tmdbService = new TmdbService()
-  updateService = new UpdateService(() => mainWindow)
+  updateService = new UpdateService(() => mainWindow, storageService)
   remoteServer = new RemoteServer(storageService, vlcController, thumbnailService)
   remoteServer.start()
 

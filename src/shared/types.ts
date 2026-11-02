@@ -123,6 +123,9 @@ export type Anime4KPreset = 'hq_lanczos' | 'anime4k' | 'fast'
 
 export type UITheme = 'liquid_glass' | 'classic_dark' | 'oled_black'
 
+/** Stable gets normal releases; Beta also gets pre-releases (e.g. 2.0.0-beta.1). */
+export type UpdateChannel = 'stable' | 'beta'
+
 export interface AppSettings {
   vlcPath: string
   mpvPath?: string
@@ -149,6 +152,7 @@ export interface AppSettings {
   tmdbApiKey?: string
   enableRemoteServer?: boolean
   remotePort?: number
+  updateChannel?: UpdateChannel
 }
 
 export interface RemoteServerInfo {
@@ -199,9 +203,11 @@ export interface UpdateInfo {
   latestVersion: string
   releaseDate?: string
   releaseNotes?: string
-  downloadUrl?: string | null
-  assetName?: string | null
-  assetSize?: number | null
+  /** GitHub page of the release (opened when the app cannot install by itself). */
+  releaseUrl?: string
+  /** True when this build can download, verify and install the update itself. */
+  canInstall: boolean
+  channel: UpdateChannel
 }
 
 export interface UpdateDownloadProgress {

@@ -147,7 +147,8 @@ jobs:
             case "$f" in
               *.blockmap|*-unpacked|*.yml) continue ;;
             esac
-            [ -f "$f" ] && (sha256sum "$f" 2>/dev/null || shasum -a 256 "$f") >> ../checksums.txt
+            # sed: Git Bash on Windows prints "hash *name"; keep the usual "hash  name".
+            [ -f "$f" ] && (sha256sum "$f" 2>/dev/null || shasum -a 256 "$f") | sed 's/ \*/  /' >> ../checksums.txt
           done
           cat ../checksums.txt
 

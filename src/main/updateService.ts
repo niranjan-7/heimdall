@@ -1,19 +1,47 @@
 import { app, BrowserWindow, shell } from 'electron'
+import { autoUpdater } from 'electron-updater'
 import * as path from 'path'
 import * as fs from 'fs'
-import { spawn } from 'child_process'
 import { UpdateInfo, UpdateDownloadProgress } from '../shared/types'
+import { StorageService } from './storageService'
+import {
+  GitHubRelease,
+  UpdateChannel,
+  canSelfInstall,
+  compareVersions,
+  pickLatestRelease
+} from './updateLogic'
+
+const RELEASES_API = 'https://api.github.com/repos/niranjan-7/heimdall/releases?per_page=30'
+const RELEASES_PAGE = 'https://github.com/niranjan-7/heimdall/releases'
 
 export class UpdateService {
   private getMainWindow: () => BrowserWindow | null
+  private storageService: StorageService
 
-  constructor(getMainWindow: () => BrowserWindow | null) {
+  constructor(getMainWindow: () => BrowserWindow | null, storageService: StorageService) {
     this.getMainWindow = getMainWindow
+    this.storageService = storageService
+
+    // Heimdall decides when to download and install; electron-updater does the downloading,
+    // checks the file against the sha512 in latest*.yml, and installs.
+    autoUpdater.autoDownload = false
+    autoUpdater.autoInstallOnAppQuit = false
+    autoUpdater.on('download-progress', (p) => {
+      const win = this.getMainWindow()
+      if (win && !win.isDestroyed()) {
+        win.webContents.send('update:download-progress', {
+          percent: Math.round(p.percent),
+          transferred: p.transferred,
+          total: p.total
+        } as UpdateDownloadProgress)
+      }
+    })
   }
 
   /**
-   * Creates a timestamped safety backup of library.json and settings.json
-   * in %APPDATA%/Heimdall/backups/ to guarantee 0 data loss.
+   * Creates a timestamped backup of library.json and settings.json in
+   * <userData>/backups/.
    */
   public createBackup(): { success: boolean; backupPath?: string; error?: string } {
     try {
@@ -54,150 +82,99 @@ export class UpdateService {
     }
   }
 
-  /**
-   * Checks GitHub Releases for new Heimdall versions.
-   */
+  private channel(): UpdateChannel {
+    return this.storageService.getSettings().updateChannel === 'beta' ? 'beta' : 'stable'
+  }
+
+  /** Looks for a newer release on the selected channel. Works on every platform. */
   public async checkForUpdates(): Promise<UpdateInfo> {
     const currentVersion = app.getVersion()
+    const channel = this.channel()
+    const canInstall = canSelfInstall({
+      platform: process.platform,
+      isPackaged: app.isPackaged,
+      appImage: process.env.APPIMAGE
+    })
+    const noUpdate = (releaseNotes?: string): UpdateInfo => ({
+      hasUpdate: false,
+      currentVersion,
+      latestVersion: currentVersion,
+      releaseNotes,
+      releaseUrl: RELEASES_PAGE,
+      canInstall,
+      channel
+    })
 
     try {
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 6000)
-
-      const res = await fetch('https://api.github.com/repos/niranjan-7/heimdall/releases/latest', {
+      const res = await fetch(RELEASES_API, {
         headers: {
           'User-Agent': `Heimdall-App/${currentVersion}`,
-          Accept: 'application/vnd.github.v3+json'
+          Accept: 'application/vnd.github+json'
         },
-        signal: controller.signal
+        signal: AbortSignal.timeout(6000)
       })
-      clearTimeout(timeoutId)
+      if (!res.ok) return noUpdate(`Could not check for updates (HTTP ${res.status}).`)
 
-      if (!res.ok) {
-        return {
-          hasUpdate: false,
-          currentVersion,
-          latestVersion: currentVersion,
-          releaseNotes: `Unable to query releases (HTTP ${res.status}).`
-        }
-      }
+      const releases = (await res.json()) as GitHubRelease[]
+      const latest = pickLatestRelease(releases, channel)
+      if (!latest) return noUpdate()
 
-      const data = await res.json()
-      const tagName: string = data.tag_name || ''
-      const latestVersion = tagName.replace(/^v/i, '')
-
-      const hasUpdate = this.compareVersions(latestVersion, currentVersion) > 0
-
-      // Match correct platform asset
-      let targetAsset: any = null
-      if (Array.isArray(data.assets)) {
-        if (process.platform === 'win32') {
-          targetAsset = data.assets.find(
-            (a: any) => a.name.endsWith('.exe') && !a.name.includes('blockmap')
-          )
-        } else if (process.platform === 'darwin') {
-          targetAsset = data.assets.find((a: any) => a.name.endsWith('.dmg'))
-        } else {
-          targetAsset = data.assets.find((a: any) => a.name.endsWith('.AppImage'))
-        }
-      }
-
+      const latestVersion = latest.tag_name.replace(/^v/i, '')
       return {
-        hasUpdate,
+        hasUpdate: compareVersions(latestVersion, currentVersion) > 0,
         currentVersion,
         latestVersion,
-        releaseDate: data.published_at ? new Date(data.published_at).toLocaleDateString() : undefined,
-        releaseNotes: data.body || 'No release notes provided.',
-        downloadUrl: targetAsset ? targetAsset.browser_download_url : data.html_url,
-        assetName: targetAsset?.name ?? null,
-        assetSize: targetAsset?.size ?? null
+        releaseDate: latest.published_at
+          ? new Date(latest.published_at).toLocaleDateString()
+          : undefined,
+        releaseNotes: latest.body || 'No release notes provided.',
+        releaseUrl: latest.html_url,
+        canInstall,
+        channel
       }
     } catch (err: any) {
-      return {
-        hasUpdate: false,
-        currentVersion,
-        latestVersion: currentVersion,
-        releaseNotes: `Failed to check for updates: ${err?.message || 'Network error'}`
-      }
+      return noUpdate(`Could not check for updates: ${err?.message || 'network error'}`)
     }
   }
 
   /**
-   * Downloads installer with progress stream and executes update.
+   * Installs the newest update. Where the app cannot install by itself (macOS until it is
+   * signed, .deb and .tar.gz installs) it opens the release page instead.
    */
-  public async downloadAndInstallUpdate(
-    downloadUrl: string,
-    assetName?: string
-  ): Promise<{ success: boolean; message?: string }> {
-    // 1. Mandatory Pre-Update Snapshot
-    this.createBackup()
+  public async downloadAndInstallUpdate(): Promise<{ success: boolean; message?: string }> {
+    const info = await this.checkForUpdates()
+    if (!info.hasUpdate) return { success: false, message: 'No newer version is available.' }
 
-    const win = this.getMainWindow()
-    const targetName = assetName || (process.platform === 'win32' ? 'Heimdall_Setup.exe' : 'Heimdall_Update')
-    const destPath = path.join(app.getPath('temp'), targetName)
+    if (!info.canInstall) {
+      const url = info.releaseUrl?.startsWith('https://github.com/')
+        ? info.releaseUrl
+        : RELEASES_PAGE
+      await shell.openExternal(url)
+      return { success: true, message: 'Opened the download page in your browser.' }
+    }
+
+    const backup = this.createBackup()
+    if (!backup.success) {
+      return {
+        success: false,
+        message: `Update cancelled: could not back up your library (${backup.error}).`
+      }
+    }
 
     try {
-      const response = await fetch(downloadUrl)
-      if (!response.ok || !response.body) {
-        return { success: false, message: `Download failed: HTTP ${response.status}` }
+      autoUpdater.allowPrerelease = this.channel() === 'beta'
+      const result = await autoUpdater.checkForUpdates()
+      const offered = result?.updateInfo?.version
+      if (!offered || compareVersions(offered, app.getVersion()) <= 0) {
+        return { success: false, message: 'The update could not be found. Try again later.' }
       }
 
-      const contentLength = Number(response.headers.get('content-length')) || 0
-      let receivedBytes = 0
-
-      const fileStream = fs.createWriteStream(destPath)
-      const reader = response.body.getReader()
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        if (value) {
-          receivedBytes += value.length
-          fileStream.write(Buffer.from(value))
-
-          const percent = contentLength > 0 ? Math.round((receivedBytes / contentLength) * 100) : 0
-          if (win && !win.isDestroyed()) {
-            win.webContents.send('update:download-progress', {
-              percent,
-              transferred: receivedBytes,
-              total: contentLength
-            } as UpdateDownloadProgress)
-          }
-        }
-      }
-
-      await new Promise((resolve) => fileStream.end(resolve))
-
-      // 2. Launch Installer
-      if (process.platform === 'win32') {
-        spawn(destPath, [], { detached: true, stdio: 'ignore' }).unref()
-        app.quit()
-        return { success: true }
-      } else if (process.platform === 'linux') {
-        fs.chmodSync(destPath, 0o755)
-        spawn(destPath, [], { detached: true, stdio: 'ignore' }).unref()
-        app.quit()
-        return { success: true }
-      } else {
-        await shell.openPath(destPath)
-        return { success: true }
-      }
+      // Downloads the installer and checks it against the sha512 in latest*.yml.
+      await autoUpdater.downloadUpdate()
+      setImmediate(() => autoUpdater.quitAndInstall(false, true))
+      return { success: true }
     } catch (err: any) {
-      return { success: false, message: err?.message || 'Failed to download installer.' }
+      return { success: false, message: err?.message || 'Failed to download the update.' }
     }
-  }
-
-  private compareVersions(v1: string, v2: string): number {
-    const parts1 = v1.split('.').map((p) => parseInt(p, 10) || 0)
-    const parts2 = v2.split('.').map((p) => parseInt(p, 10) || 0)
-
-    for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
-      const num1 = parts1[i] || 0
-      const num2 = parts2[i] || 0
-      if (num1 > num2) return 1
-      if (num1 < num2) return -1
-    }
-    return 0
   }
 }

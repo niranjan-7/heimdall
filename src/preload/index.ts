@@ -138,10 +138,7 @@ export interface IElectronAPI {
 
   // In-App Updates & Safe Backups
   checkForUpdates: () => Promise<UpdateInfo>
-  downloadAndInstallUpdate: (
-    downloadUrl: string,
-    assetName?: string
-  ) => Promise<{ success: boolean; message?: string }>
+  downloadAndInstallUpdate: () => Promise<{ success: boolean; message?: string }>
   createBackup: () => Promise<{ success: boolean; backupPath?: string; error?: string }>
 
   // Listeners
@@ -248,8 +245,7 @@ const api: IElectronAPI = {
 
   // In-App Updates & Safe Backups
   checkForUpdates: () => ipcRenderer.invoke('update:check'),
-  downloadAndInstallUpdate: (downloadUrl, assetName) =>
-    ipcRenderer.invoke('update:download-install', downloadUrl, assetName),
+  downloadAndInstallUpdate: () => ipcRenderer.invoke('update:download-install'),
   createBackup: () => ipcRenderer.invoke('storage:create-backup'),
 
   onUpdateDownloadProgress: (callback) => {

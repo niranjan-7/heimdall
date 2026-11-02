@@ -157,6 +157,8 @@ Each build job uploads installers **plus** `latest*.yml` and `*.blockmap`. Other
 6. **Protect `main`** in GitHub settings: require the CI check to pass before merging PRs. (Repo setting — you change it, or approve me doing it.)
 
 ### 1.1.f Updater: switch to `electron-updater`
+> **Status: implemented in branch `phase-1.1c-updater`.** Detection stays a small GitHub-API check (works on every platform and in development) with proper semver ordering (`1.5.0-rc.1` < `1.5.0`) and a Stable/Beta channel saved in settings. Installing uses `electron-updater` 6.3.9 (same runtime as electron-builder 25.1.8): it downloads, verifies the sha512 from `latest*.yml`, and installs on Windows and the AppImage; macOS (unsigned), `.deb` and `.tar.gz` open the release page. A backup is made first and the update is cancelled if the backup fails. Logic is in `src/main/updateLogic.ts` (unit-tested). The pipeline was proven end to end with a `v1.5.0-rc.1` test release (all 13 files, checksums match GitHub's digests, CI-built macOS ffmpeg is universal and signed, Linux ffmpeg is ELF), which was then deleted. **Not yet proven:** an actual in-app update from one release to the next — needs two published versions (see step 7).
+
 *(Moved here from the security phase — it depends on this pipeline.)*
 
 > **Context:** Heimdall has no outside users yet — only the owner. So there is **no bridge release**: v1.5.0 is installed by hand once over v1.4.0, and from then on updates are automatic. No need to keep file names compatible with the old v1.4.0 updater.

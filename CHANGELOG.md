@@ -11,7 +11,12 @@ GitHub release, so write it for the people who use the app.
 - macOS now ships as one universal app that runs natively on both Apple Silicon and Intel.
 - Automated tests, linting and a continuous-integration check on every pull request.
 
+- Settings → Updates has an update channel: Stable, or Beta to also get pre-releases.
+
 ### Changed
+- Updates on Windows and in the Linux AppImage are downloaded and installed by the app, and the
+  download is checked against its published checksum before it installs. On macOS (until the app is
+  signed) and for `.deb`/`.tar.gz` installs, the app opens the download page instead.
 - Installers have stable names without spaces, for example `Heimdall-Setup-1.5.0.exe`.
 - The app package now contains only the app itself.
 
