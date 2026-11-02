@@ -200,6 +200,7 @@ These change public pages, so each one is run only with your OK.
 ---
 
 ## Phase 1.2 — Security fixes (ship-blocking)
+> **Status: implemented in branch `phase-1.2-security`.** Remote: pairing code in the QR link fragment (`#t=`), constant-time check, `?t=` accepted for GET only, no CORS headers, JSON-only POSTs, 16 KB body limit, validated commands, escaped page content, CSP on the page, off by default and only started when enabled, reset-pairing and on/off in the desktop panel (the hard-coded `192.168.29.195` fallback is gone). VLC: random per-install password, old default replaced on load. Electron: `sandbox: true`, production CSP, navigation guard, web-only external links. The delete handler already used library IDs only, so no change was needed. Verified with 25 new tests, a live run of the phone page (injection attempts render as text; stale code shows "not paired"), and the built app inspected over the DevTools protocol with a throwaway profile. **Not covered:** thumbnails (`heimdall-thumb:`) under the CSP with a real library, and a real VLC launch with the new password.
 
 ### 1.2.a Mobile remote server (`src/main/remoteServer.ts`)
 Current state: listens on `0.0.0.0`, no auth, `Access-Control-Allow-Origin: *`, parses any body as JSON. Any website can read `/api/library` (with file paths) from `127.0.0.1:42125` and POST commands.

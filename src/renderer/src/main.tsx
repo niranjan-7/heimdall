@@ -20,7 +20,7 @@ if (typeof window !== 'undefined' && !window.api) {
       mpvCustomArgs: '',
       completionThreshold: 0.9,
       httpPort: 42120,
-      httpPassword: 'heimdall_secret',
+      httpPassword: '',
       enableDiscordRPC: true,
       discordClientId: '1343981881774346332',
       enableAniListScrobble: true,
@@ -80,31 +80,21 @@ if (typeof window !== 'undefined' && !window.api) {
       message: 'Desktop app required'
     }),
     scanLocalSubtitles: async () => ({ found: false }),
-    getRemoteServerInfo: async () => {
-      let host = '192.168.29.195'
-      try {
-        const res = await fetch('http://127.0.0.1:42125/api/status', { signal: AbortSignal.timeout(1000) })
-        if (res.ok) {
-          const data = await res.json()
-          if (data.localIp && !data.localIp.startsWith('127.')) {
-            host = data.localIp
-          }
-        }
-      } catch {}
-
-      const url = `http://${host}:42125`
-      let qr = ''
-      try {
-        qr = await QRCode.toDataURL(url, { margin: 2, scale: 6 })
-      } catch {}
-      return {
-        enabled: true,
-        port: 42125,
-        localIp: host,
-        url,
-        qrCodeDataUrl: qr,
-        connectedClients: 0
-      }
+    // The phone remote only exists in the desktop app.
+    getRemoteServerInfo: async () => ({
+      enabled: false,
+      port: 42125,
+      localIp: '127.0.0.1',
+      url: '',
+      token: '',
+      qrCodeDataUrl: '',
+      connectedClients: 0
+    }),
+    setRemoteEnabled: async () => {
+      throw new Error('Desktop app required')
+    },
+    resetRemotePairing: async () => {
+      throw new Error('Desktop app required')
     },
     searchAniList: async () => [],
     validateAniListToken: async () => ({ success: false }),

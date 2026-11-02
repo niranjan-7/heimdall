@@ -98,6 +98,8 @@ export interface IElectronAPI {
 
   // Module 5: Mobile Remote
   getRemoteServerInfo: () => Promise<RemoteServerInfo>
+  setRemoteEnabled: (enabled: boolean) => Promise<RemoteServerInfo>
+  resetRemotePairing: () => Promise<RemoteServerInfo>
 
   // Feature 6: AniList
   getDiscordStatus: () => Promise<{ isConnected: boolean; username: string; clientId: string }>
@@ -214,6 +216,8 @@ const api: IElectronAPI = {
 
   // Mobile Remote
   getRemoteServerInfo: () => ipcRenderer.invoke('remote:get-info'),
+  setRemoteEnabled: (enabled) => ipcRenderer.invoke('remote:set-enabled', enabled),
+  resetRemotePairing: () => ipcRenderer.invoke('remote:reset-pairing'),
 
   // Discord RPC
   getDiscordStatus: () => ipcRenderer.invoke('discord:get-status'),

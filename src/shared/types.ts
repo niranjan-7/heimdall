@@ -152,6 +152,8 @@ export interface AppSettings {
   tmdbApiKey?: string
   enableRemoteServer?: boolean
   remotePort?: number
+  /** Pairing code phones must send to use the remote. Managed by the app, never by the UI. */
+  remoteToken?: string
   updateChannel?: UpdateChannel
 }
 
@@ -159,7 +161,9 @@ export interface RemoteServerInfo {
   enabled: boolean
   port: number
   localIp: string
+  /** Pairing link for phones: http://<ip>:<port>/#t=<token>. */
   url: string
+  token: string
   qrCodeDataUrl: string
   connectedClients: number
 }
