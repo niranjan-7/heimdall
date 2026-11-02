@@ -1,3 +1,4 @@
+import { join } from 'path'
 import { describe, expect, it } from 'vitest'
 import { resolveBinaryPath } from '../src/main/binaries'
 
@@ -11,7 +12,7 @@ const base = {
 describe('resolveBinaryPath', () => {
   it('uses <resources>/bin in a packaged app', () => {
     expect(resolveBinaryPath('ffmpeg', { ...base, resourcesPath: '/opt/Heimdall/resources' })).toBe(
-      '/opt/Heimdall/resources/bin/ffmpeg'
+      join('/opt/Heimdall/resources', 'bin', 'ffmpeg')
     )
   })
 
@@ -28,7 +29,7 @@ describe('resolveBinaryPath', () => {
 
   it('uses resources/bin/<os>-<arch> when running unpackaged', () => {
     expect(resolveBinaryPath('ffmpeg', { ...base, platform: 'darwin', arch: 'arm64' })).toBe(
-      '/proj/resources/bin/mac-arm64/ffmpeg'
+      join('/proj', 'resources', 'bin', 'mac-arm64', 'ffmpeg')
     )
   })
 
@@ -39,7 +40,7 @@ describe('resolveBinaryPath', () => {
         resourcesPath: '/node_modules/electron/dist/resources',
         defaultApp: true
       })
-    ).toBe('/proj/resources/bin/linux-x64/ffmpeg')
+    ).toBe(join('/proj', 'resources', 'bin', 'linux-x64', 'ffmpeg'))
   })
 
   it('falls back to the system PATH when the bundled file is missing', () => {
