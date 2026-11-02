@@ -1,6 +1,6 @@
 {
   "name": "heimdall",
-  "version": "1.4.0",
+  "version": "1.5.0-rc.1",
   "description": "Heimdall — a desktop companion for VLC and mpv that tracks your local anime, shows and movies",
   "main": "./out/main/index.js",
   "author": {
