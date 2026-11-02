@@ -1,7 +1,7 @@
 {
   "name": "heimdall",
   "version": "1.4.0",
-  "description": "Heimdall — Standalone Windows VLC Series & Watch-History Companion App",
+  "description": "Heimdall — a desktop companion for VLC and mpv that tracks your local anime, shows and movies",
   "main": "./out/main/index.js",
   "author": {
     "name": "Heimdall",
@@ -19,7 +19,8 @@
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
     "build": "npm run typecheck && electron-vite build",
-    "postinstall": "electron-builder install-app-deps",
+    "postinstall": "electron-builder install-app-deps && node scripts/fetch-binaries.mjs --host --soft",
+    "binaries": "node scripts/fetch-binaries.mjs --host",
     "build:unpack": "npm run build && electron-builder --dir",
     "build:win": "npm run build && electron-builder --win",
     "build:linux": "npm run build && electron-builder --linux",
@@ -35,7 +36,6 @@
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.1",
     "@electron-toolkit/utils": "^3.0.0",
-    "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@xhayper/discord-rpc": "^1.5.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.16.0",

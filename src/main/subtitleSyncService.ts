@@ -3,9 +3,8 @@ import * as path from 'path'
 import { spawn } from 'child_process'
 import { StorageService } from './storageService'
 import { VlcController } from './vlcController'
+import { getBinaryPath } from './binaries'
 
-// @ts-ignore
-import ffmpegInstaller from '@ffmpeg-installer/ffmpeg'
 
 interface SubtitleInterval {
   start: number
@@ -25,7 +24,7 @@ export class SubtitleSyncService {
   constructor(storageService: StorageService, vlcController: VlcController) {
     this.storageService = storageService
     this.vlcController = vlcController
-    this.ffmpegPath = ffmpegInstaller.path || 'ffmpeg'
+    this.ffmpegPath = getBinaryPath('ffmpeg')
   }
 
   private parseSrtTime(timeStr: string): number {

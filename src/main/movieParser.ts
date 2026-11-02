@@ -1,8 +1,6 @@
 import * as path from 'path'
 import { spawn } from 'child_process'
-
-// @ts-ignore
-import ffmpegInstaller from '@ffmpeg-installer/ffmpeg'
+import { getBinaryPath } from './binaries'
 
 export interface ParsedMovieInfo {
   cleanTitle: string
@@ -17,8 +15,6 @@ export interface MovieTechnicalSpecs {
   audioCodec?: string
   durationSec: number
 }
-
-const ffmpegPath = ffmpegInstaller.path || 'ffmpeg'
 
 export function parseMovieFileName(fileName: string): ParsedMovieInfo {
   const parsed = path.parse(fileName)
@@ -72,7 +68,7 @@ export function parseMovieFileName(fileName: string): ParsedMovieInfo {
 export async function extractTechnicalSpecs(filePath: string): Promise<MovieTechnicalSpecs> {
   return new Promise((resolve) => {
     try {
-      const child = spawn(ffmpegPath, ['-i', filePath], {
+      const child = spawn(getBinaryPath('ffmpeg'), ['-i', filePath], {
         stdio: ['ignore', 'ignore', 'pipe'],
         windowsHide: true
       })

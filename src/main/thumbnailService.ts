@@ -4,9 +4,8 @@ import * as fs from 'fs'
 import { spawn } from 'child_process'
 import { Series, Episode, Movie } from '../shared/types'
 import { StorageService } from './storageService'
+import { getBinaryPath } from './binaries'
 
-// @ts-ignore
-import ffmpegInstaller from '@ffmpeg-installer/ffmpeg'
 
 export class ThumbnailService {
   private thumbnailsDir: string
@@ -23,7 +22,7 @@ export class ThumbnailService {
       fs.mkdirSync(this.thumbnailsDir, { recursive: true })
     }
 
-    this.ffmpegPath = ffmpegInstaller.path || 'ffmpeg'
+    this.ffmpegPath = getBinaryPath('ffmpeg')
   }
 
   public setCallback(callback: (id: string, isMovie?: boolean) => void): void {

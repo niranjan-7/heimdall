@@ -125,6 +125,9 @@ npm install
 cd landing && npm install && cd ..
 ```
 
+`npm install` also downloads the `ffmpeg` build for your OS into `resources/bin/` (checked against
+`scripts/binaries.lock.json`). Run `npm run binaries` to fetch it again.
+
 ### 2. Run Desktop App (Dev Mode)
 
 ```bash

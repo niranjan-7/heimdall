@@ -1,0 +1,41 @@
+{
+  "ffmpeg": {
+    "license": "GPL-3.0-or-later (GPL builds, no non-free components)",
+    "targets": {
+      "win-x64": {
+        "version": "6.1.1",
+        "provider": "gyan.dev (via github.com/eugeneware/ffmpeg-static release b6.1.1)",
+        "url": "https://github.com/eugeneware/ffmpeg-static/releases/download/b6.1.1/ffmpeg-win32-x64.gz",
+        "sha256": "8883a3dffbd0a16cf4ef95206ea05283f78908dbfb118f73c83f4951dcc06d77",
+        "archive": "gz",
+        "output": "ffmpeg.exe"
+      },
+      "linux-x64": {
+        "version": "7.0.2",
+        "provider": "johnvansickle.com (via github.com/eugeneware/ffmpeg-static release b6.1.1)",
+        "url": "https://github.com/eugeneware/ffmpeg-static/releases/download/b6.1.1/ffmpeg-linux-x64.gz",
+        "sha256": "bfe8a8fc511530457b528c48d77b5737527b504a3797a9bc4866aeca69c2dffa",
+        "archive": "gz",
+        "output": "ffmpeg"
+      },
+      "mac-arm64": {
+        "version": "9.0.2",
+        "provider": "ffmpeg.martin-riedl.de",
+        "url": "https://ffmpeg.martin-riedl.de/download/macos/arm64/1789931890_9.0.2/ffmpeg.zip",
+        "sha256": "c8ed4c4e6978a03c485edbfe4e0a5dc2380f8a30bba5150531b31b094492d924",
+        "archive": "zip",
+        "member": "ffmpeg",
+        "output": "ffmpeg"
+      },
+      "mac-x64": {
+        "version": "9.0.2",
+        "provider": "ffmpeg.martin-riedl.de",
+        "url": "https://ffmpeg.martin-riedl.de/download/macos/amd64/1789931006_9.0.2/ffmpeg.zip",
+        "sha256": "7c6b4125b191cbf773832dc51f424cf2b6bb7da43007d1e066f95909e47cacd4",
+        "archive": "zip",
+        "member": "ffmpeg",
+        "output": "ffmpeg"
+      }
+    }
+  }
+}

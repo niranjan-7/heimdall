@@ -3,18 +3,23 @@ productName: Heimdall
 directories:
   buildResources: build
   output: dist
+# Only the built app goes into app.asar. Production dependencies are added automatically.
 files:
-  - "!**/.vscode/*"
-  - "!src/*"
-  - "!electron.vite.config.{js,ts,mjs,cjs}"
-  - "!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}"
-  - "!{.env,.env.*,$npm_package_name.env}"
-  - "!node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}"
-  - "!node_modules/*/{test,__tests__,tests,powered-test,example,examples}"
-  - "!node_modules/*.d.ts"
-  - "!node_modules/.bin"
-  - "!**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,vbproj,sln,xproj}"
-  - "!{.editorconfig,.git,.gitignore,.gitattributes}"
+  - out/**/*
+  - package.json
+# Copied next to the asar: the ffmpeg for this platform (see scripts/fetch-binaries.mjs) and
+# the licence notices.
+extraResources:
+  - from: resources/bin/${os}-${arch}
+    to: bin
+  - from: THIRD_PARTY_NOTICES.md
+    to: THIRD_PARTY_NOTICES.md
+# Release file names have no spaces, so GitHub keeps them as written and electron-updater's
+# download URLs match.
+publish:
+  provider: github
+  owner: niranjan-7
+  repo: heimdall
 win:
   target:
     - target: nsis
@@ -24,6 +29,7 @@ win:
   executableName: Heimdall
   signAndEditExecutable: false
 nsis:
+  artifactName: ${productName}-Setup-${version}.${ext}
   oneClick: false
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
@@ -33,15 +39,13 @@ nsis:
   uninstallerIcon: build/icon.ico
   installerHeaderIcon: build/icon.ico
 mac:
+  # One app that runs natively on both Apple Silicon and Intel.
   target:
     - target: dmg
-      arch:
-        - x64
-        - arm64
+      arch: universal
     - target: zip
-      arch:
-        - x64
-        - arm64
+      arch: universal
+  artifactName: ${productName}-${version}-mac-${arch}.${ext}
   icon: build/icon.icns
   category: public.app-category.video
   identity: null
@@ -57,6 +61,7 @@ dmg:
       type: link
       path: /Applications
 linux:
+  artifactName: ${productName}-${version}-linux-${arch}.${ext}
   target:
     - target: AppImage
       arch:
@@ -70,5 +75,5 @@ linux:
   maintainer: "Heimdall <neeru.gojou@gmail.com>"
   category: Video;AudioVideo;Player;
   executableName: heimdall
-  synopsis: VLC and mpv Watch-History & Automated Subtitle Companion
-  description: All-seeing media companion with real-time telemetry, AniList auto-scrobbling, and audio-to-speech subtitle auto-sync.
+  synopsis: Tracks your local anime, shows and movies in VLC and mpv
+  description: A desktop companion for VLC and mpv. Remembers where you stopped, syncs progress to AniList, finds subtitles and gives you a phone remote.
