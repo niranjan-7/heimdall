@@ -1,17 +1,12 @@
 import { app } from 'electron'
-import { randomBytes } from 'crypto'
 import * as path from 'path'
 import * as fs from 'fs'
 import { LibraryData, AppSettings, Series, Episode, Movie } from '../shared/types'
 import { cleanEpisodeTitle, extractEpisodeNumber } from './folderScanner'
+import { generateSecret } from './secrets'
 
 // The password every install shipped with before 1.5.0. Replaced on load.
 const OLD_DEFAULT_VLC_PASSWORD = 'heimdall_secret'
-
-/** Random URL-safe secret. 24 bytes -> 32 characters. */
-export function generateSecret(bytes = 24): string {
-  return randomBytes(bytes).toString('base64url')
-}
 
 const DEFAULT_SETTINGS: AppSettings = {
   vlcPath: '',
