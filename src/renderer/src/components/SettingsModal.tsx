@@ -5,6 +5,7 @@ import {
   Anime4KPreset,
   UpdateInfo,
   UpdateDownloadProgress,
+  UpdateChannel,
   UITheme
 } from '../../../shared/types'
 import {
@@ -49,6 +50,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
   const [downloadingUpdate, setDownloadingUpdate] = useState(false)
   const [downloadProgress, setDownloadProgress] = useState<UpdateDownloadProgress | null>(null)
   const [updateError, setUpdateError] = useState<string | null>(null)
+  const [updateNotice, setUpdateNotice] = useState<string | null>(null)
   const [backupStatus, setBackupStatus] = useState<string | null>(null)
   const [backingUp, setBackingUp] = useState(false)
   const [discordStatus, setDiscordStatus] = useState<{ isConnected: boolean; username: string; clientId: string } | null>(null)
@@ -68,6 +70,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
       setTokenFeedback(null)
       setDetectStatus(null)
       setUpdateError(null)
+      setUpdateNotice(null)
 
       // Background check for latest version on settings open
       window.api
@@ -115,22 +118,30 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
   }
 
   const handleDownloadAndInstall = async () => {
-    if (!updateInfo || !updateInfo.downloadUrl) return
-    setDownloadingUpdate(true)
+    if (!updateInfo?.hasUpdate) return
+    // Builds that cannot install by themselves just open the download page.
+    if (updateInfo.canInstall) setDownloadingUpdate(true)
     setUpdateError(null)
+    setUpdateNotice(null)
     try {
-      const res = await window.api.downloadAndInstallUpdate(
-        updateInfo.downloadUrl,
-        updateInfo.assetName || undefined
-      )
+      const res = await window.api.downloadAndInstallUpdate()
       if (!res.success) {
         setUpdateError(res.message || 'Failed to install update.')
         setDownloadingUpdate(false)
+      } else if (res.message) {
+        setUpdateNotice(res.message)
       }
     } catch (err: any) {
       setUpdateError(err?.message || 'Error occurred while updating.')
       setDownloadingUpdate(false)
     }
+  }
+
+  const handleChannelChange = async (channel: UpdateChannel) => {
+    const next = { ...settings, updateChannel: channel }
+    setSettings(next)
+    await window.api.saveSettings(next)
+    await handleCheckForUpdates()
   }
 
   const handleCreateBackup = async () => {
@@ -989,7 +1000,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
                     Updates & Data Preservation
                   </h4>
                   <p className="text-[11px] text-zinc-400">
-                    Upgrade to latest Heimdall with 100% watch progress & library data retention
+                    Your library and settings are backed up before every update
                   </p>
                 </div>
               </div>
@@ -1025,6 +1036,31 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
               </div>
             )}
 
+            <div className="flex items-center justify-between gap-3 text-[11px]">
+              <div>
+                <span className="text-zinc-300 font-medium">Update channel</span>
+                <p className="text-zinc-500">
+                  Beta also offers pre-release versions for testing.
+                </p>
+              </div>
+              <select
+                value={settings.updateChannel || 'stable'}
+                onChange={(e) => handleChannelChange(e.target.value as UpdateChannel)}
+                disabled={checkingUpdate || downloadingUpdate}
+                className="bg-zinc-900 border border-zinc-800 text-zinc-200 rounded-lg px-2 py-1 text-[11px] focus:outline-none focus:border-bifrost-amber/50"
+              >
+                <option value="stable">Stable</option>
+                <option value="beta">Beta</option>
+              </select>
+            </div>
+
+            {updateNotice && (
+              <div className="text-[11px] px-3 py-1.5 rounded-lg bg-zinc-900/80 border border-surface-border text-zinc-300 flex items-center gap-1.5 animate-in fade-in">
+                <ExternalLink className="w-3.5 h-3.5 shrink-0 text-bifrost-amber" />
+                <span>{updateNotice}</span>
+              </div>
+            )}
+
             {updateError && (
               <div className="text-[11px] px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 flex items-center gap-1.5 animate-in fade-in">
                 <AlertCircle className="w-3.5 h-3.5 shrink-0" />
@@ -1057,8 +1093,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
                       onClick={handleDownloadAndInstall}
                       className="px-3.5 py-1.5 text-xs font-bold bg-amber-500 hover:bg-amber-400 text-zinc-950 rounded-lg flex items-center gap-1.5 transition-colors shadow-md shadow-amber-500/20"
                     >
-                      <Download className="w-3.5 h-3.5" />
-                      Download & Update
+                      {updateInfo.canInstall ? (
+                        <>
+                          <Download className="w-3.5 h-3.5" />
+                          Download & Update
+                        </>
+                      ) : (
+                        <>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          Open Download Page
+                        </>
+                      )}
                     </button>
                   )}
                 </div>
@@ -1089,7 +1134,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
                       />
                     </div>
                     <p className="text-[10px] text-zinc-400">
-                      Zero-Loss Guarantee: Your library and settings will be preserved through the update.
+                      Your library and settings were backed up first. The download is checked
+                      against its published checksum before it installs.
                     </p>
                   </div>
                 )}
@@ -1100,12 +1146,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                   Heimdall is up to date (v{updateInfo.currentVersion})
                 </span>
-                <span className="text-[10px] text-emerald-400 font-medium">Safe & Synced</span>
+                <span className="text-[10px] text-zinc-500 capitalize">{updateInfo.channel} channel</span>
               </div>
             ) : (
               <div className="text-[11px] px-3 py-2 rounded-lg bg-zinc-900/60 border border-surface-border text-zinc-400 flex items-center justify-between">
-                <span>Current version: <span className="font-mono text-zinc-200 font-medium">v1.4.0</span></span>
-                <span className="text-[10px] text-zinc-500">Auto-backup enabled</span>
+                <span>Checking for updates…</span>
               </div>
             )}
           </div>

@@ -157,6 +157,8 @@ Each build job uploads installers **plus** `latest*.yml` and `*.blockmap`. Other
 6. **Protect `main`** in GitHub settings: require the CI check to pass before merging PRs. (Repo setting — you change it, or approve me doing it.)
 
 ### 1.1.f Updater: switch to `electron-updater`
+> **Status: implemented in branch `phase-1.1c-updater`.** Detection stays a small GitHub-API check (works on every platform and in development) with proper semver ordering (`1.5.0-rc.1` < `1.5.0`) and a Stable/Beta channel saved in settings. Installing uses `electron-updater` 6.3.9 (same runtime as electron-builder 25.1.8): it downloads, verifies the sha512 from `latest*.yml`, and installs on Windows and the AppImage; macOS (unsigned), `.deb` and `.tar.gz` open the release page. A backup is made first and the update is cancelled if the backup fails. Logic is in `src/main/updateLogic.ts` (unit-tested). The pipeline was proven end to end with a `v1.5.0-rc.1` test release (all 13 files, checksums match GitHub's digests, CI-built macOS ffmpeg is universal and signed, Linux ffmpeg is ELF), which was then deleted. **Not yet proven:** an actual in-app update from one release to the next — needs two published versions (see step 7).
+
 *(Moved here from the security phase — it depends on this pipeline.)*
 
 > **Context:** Heimdall has no outside users yet — only the owner. So there is **no bridge release**: v1.5.0 is installed by hand once over v1.4.0, and from then on updates are automatic. No need to keep file names compatible with the old v1.4.0 updater.
@@ -177,6 +179,7 @@ Each build job uploads installers **plus** `latest*.yml` and `*.blockmap`. Other
 4. Delete the RC drafts afterwards.
 
 ### 1.1.h Clean up existing releases and repo metadata
+> **Status: done (2026-11-03, approved by the owner).** v1.1.0's wrong installer removed (note added); v1.4.0's six macOS/Linux files removed (note explains why; Windows installer kept); all seven releases' notes replaced with their `CHANGELOG.md` sections (no overclaims left); repo description and topics updated. The old text was backed up before editing. Not done: deleting the merged `phase-*` branches (use **Delete branch** on each merged PR).
 These change public pages, so each one is run only with your OK.
 1. **v1.1.0:** remove the wrong `Heimdall.Setup.1.0.0.exe` and add a note: "The installer for this version is no longer available — please use the latest release." (Rebuilding from the old tag isn't worth it.)
 2. **v1.4.0:** the macOS/Linux files were built from commit `5240557`, which adds packaging config after the tag, and they bundle the wrong-platform and (macOS arm64) non-redistributable ffmpeg described above. Add a note, and with the owner's OK **delete the macOS and Linux assets of v1.4.0** (nobody else uses them yet) so a non-redistributable binary is no longer on the public releases page. v1.5.0 supersedes them.
@@ -186,6 +189,7 @@ These change public pages, so each one is run only with your OK.
 6. Delete `deploy/release.yml`.
 
 ### 1.1.i Code signing (needs money; can come later)
+> **Decided (owner, 2026-11-03): not doing it.** Heimdall is a hobby project with no budget, so builds stay unsigned. Users see the SmartScreen / Gatekeeper warnings documented in `docs/RELEASING.md`, and macOS keeps the "Open Download Page" update path. Revisit only if the project is shared widely; free option to try first: SignPath Foundation (Windows, open source).
 - **Windows:** Azure Trusted Signing or an OV certificate; without it SmartScreen warns on every download.
 - **macOS:** Apple Developer Program → set `identity`, `hardenedRuntime: true`, `notarize: true`. Without it, Apple Silicon users downloading the DMG see "app is damaged". Until then, document the `xattr -dr com.apple.quarantine /Applications/Heimdall.app` workaround in the README and on the landing FAQ.
 - Store certificates and Apple credentials as **GitHub repository secrets** (`CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`); never commit them.
@@ -629,11 +633,10 @@ Split the 1,141-line modal into a routed page with sections: **General · Playba
 3. Heimdall has **no outside users yet**: no bridge release, no public migration notices.
 4. App name is shown **without a version**; version lives in small text under Settings → About (Phase 2.5.d).
 5. Auto-updates via `electron-updater` (Phase 1.1.f).
+6. **No code signing and no paid services** — hobby project (Phase 1.1.i). Prefer free options in every future decision.
 
 **Still open**
-1. Budget for code signing (Apple Developer Program, Windows signing) — Phase 1.1.i.
 2. Ship a built-in TMDB key or require users to supply one.
 3. Whether v1.5.x should already start logging `watch_events` (recommended: yes).
 4. Whether to turn on branch protection for `main` (require CI before merging) — Phase 1.1.e.
 5. Mirror the pinned ffmpeg binaries as assets of a release in this repo, so builds never depend on third-party sites — Phase 1.1.c.
-6. Delete the macOS and Linux assets of the v1.4.0 release (wrong-platform / non-redistributable ffmpeg) — Phase 1.1.h.

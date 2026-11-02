@@ -25,7 +25,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   dimFillerEpisodes: true,
   uiTheme: 'liquid_glass',
   enableRemoteServer: true,
-  remotePort: 42125
+  remotePort: 42125,
+  updateChannel: 'stable'
 }
 
 export class StorageService {
