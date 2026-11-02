@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 // Release helper used by .github/workflows/release.yml (and by you, to preview a release).
 //
 //   node scripts/release-info.mjs v1.5.0                    check the tag, print the release notes

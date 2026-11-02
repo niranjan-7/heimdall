@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 // Downloads the third-party programs Heimdall bundles (currently ffmpeg) into
 // resources/bin/<os>-<arch>/, checking each download against the SHA-256 pinned in
 // scripts/binaries.lock.json. electron-builder then copies the matching folder into the app
