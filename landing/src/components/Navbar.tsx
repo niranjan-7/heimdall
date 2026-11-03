@@ -47,7 +47,7 @@ export const Navbar: React.FC = () => {
             className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-amber-500 via-teal-400 to-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.8)] z-20 pointer-events-none"
           />
 
-          {/* Left Segment: Brand & Live IPC Telemetry Chip */}
+          {/* Left Segment: Brand */}
           <div className="flex items-center gap-3">
             <a href="#" className="flex items-center gap-2.5 group">
               <div className="relative w-8 h-8 rounded-xl bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/25 group-hover:scale-105 transition-transform duration-200">
@@ -60,13 +60,10 @@ export const Navbar: React.FC = () => {
                   <span className="text-xs sm:text-sm font-black tracking-[0.16em] uppercase text-zinc-100 group-hover:text-amber-300 transition-colors">
                     HEIMDALL
                   </span>
-                  <span className="hidden sm:inline-block text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                    v1.4.0
-                  </span>
                 </div>
                 <span className="text-[9px] font-mono text-zinc-400 hidden sm:flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-ping" />
-                  IPC Named Pipe • Active
+                  VLC + mpv companion
                 </span>
               </div>
             </a>

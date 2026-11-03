@@ -59,15 +59,15 @@ export const HeroSection: React.FC = () => {
   const osLabels = {
     windows: {
       name: 'Windows (.exe)',
-      link: 'https://github.com/niranjan-7/heimdall/releases/download/v1.4.0/Heimdall.Setup.1.4.0.exe'
+      link: 'https://github.com/niranjan-7/heimdall/releases/latest'
     },
     mac: {
       name: 'macOS (.dmg)',
-      link: 'https://github.com/niranjan-7/heimdall/releases/download/v1.4.0/Heimdall-1.4.0-arm64.dmg'
+      link: 'https://github.com/niranjan-7/heimdall/releases/latest'
     },
     linux: {
       name: 'Linux (.AppImage)',
-      link: 'https://github.com/niranjan-7/heimdall/releases/download/v1.4.0/Heimdall-1.4.0.AppImage'
+      link: 'https://github.com/niranjan-7/heimdall/releases/latest'
     }
   }
 
@@ -132,7 +132,7 @@ export const HeroSection: React.FC = () => {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
           </span>
-          <span className="tracking-wide">Heimdall v1.4.0 • Smart Companion for Local Media Downloads</span>
+          <span className="tracking-wide">Heimdall • Companion for VLC and mpv</span>
           <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-200 font-mono">
             New
           </span>
@@ -185,7 +185,7 @@ export const HeroSection: React.FC = () => {
           </a>
         </motion.div>
 
-        {/* High-Tech HUD Telemetry Chips */}
+        {/* Feature chips */}
         <motion.div
           variants={textItemVariants}
           className="flex items-center justify-center gap-3 pt-3 text-xs font-mono text-zinc-400 flex-wrap"
@@ -204,7 +204,7 @@ export const HeroSection: React.FC = () => {
           </div>
           <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-zinc-900/60 border border-white/[0.06] shadow-sm">
             <Zap className="w-3.5 h-3.5 text-teal-400" />
-            <span>0ms Push IPC Socket</span>
+            <span>Event-Driven mpv Sync</span>
           </div>
         </motion.div>
       </motion.div>

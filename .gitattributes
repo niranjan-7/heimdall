@@ -6,3 +6,6 @@
 *.ps1 text eol=crlf
 *.bat text eol=crlf
 *.cmd text eol=crlf
+
+# Third-party shader files are kept byte-for-byte as released upstream.
+resources/shaders/** -text

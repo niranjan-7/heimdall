@@ -119,7 +119,10 @@ export interface LibraryData {
 }
 
 export type MediaPlayerType = 'vlc' | 'mpv'
-export type Anime4KPreset = 'hq_lanczos' | 'anime4k' | 'fast'
+/** 'hq_lanczos' = high-quality scaling only; anime4k_* = Anime4K shader modes A/B/C; 'fast' = low power. */
+export type Anime4KPreset = 'hq_lanczos' | 'anime4k_a' | 'anime4k_b' | 'anime4k_c' | 'fast'
+/** Which Anime4K shader sizes to use: 'high' (VL/M) for strong GPUs, 'low' (M/S) for laptops. */
+export type Anime4KGpu = 'high' | 'low'
 
 export type UITheme = 'liquid_glass' | 'classic_dark' | 'oled_black'
 
@@ -132,6 +135,7 @@ export interface AppSettings {
   preferredPlayer?: MediaPlayerType
   enableAnime4K?: boolean
   anime4kPreset?: Anime4KPreset
+  anime4kGpu?: Anime4KGpu
   mpvCustomArgs?: string
   preferredSubtitleLanguage?: string
   openSubtitlesApiKey?: string
@@ -170,7 +174,7 @@ export interface RemoteServerInfo {
 
 export interface SubtitleDownloadResult {
   success: boolean
-  source: 'subdb' | 'opensubtitles' | 'local_extracted' | 'local_matched' | 'none'
+  source: 'opensubtitles' | 'local_extracted' | 'local_matched' | 'none'
   filePath?: string
   language: string
   message: string

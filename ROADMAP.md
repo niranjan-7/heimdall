@@ -263,6 +263,11 @@ Recommendation: implement, it's small and it's a real differentiator for the ani
 
 > Packaging and binary-arch checks moved to **Phase 1.1.c**.
 
+**Status: implemented on branch `phase-1-3-honest-claims`.**
+- 1.3.a: README and landing page rewritten where they overclaimed (SQLite, FFT/Pearson, 0 ms, 100%, phone-remote volume and audio tracks, ±50/250 ms nudges, Tailwind v4, Recycle Bin, hard-coded versions and download links now point at the latest release). TheSubDB removed. `FEATURES_PLAN.md` archived to `docs/archive/`. GitHub release notes and repo description (1.1.h) still need editing on GitHub.
+- 1.3.b: Anime4K v4.0.1 shaders bundled (12 files, MIT) in `resources/shaders/anime4k`, packaged as `shaders/anime4k`. Presets HQ / Mode A / B / C / Fast, plus a "Strong GPU / Laptop" shader size. Shaders are passed with one `--glsl-shaders-append` per file (no OS-specific separator). mpv's version is read once with `mpv --version` to choose `high-quality` or `gpu-hq`. Old `anime4k` settings migrate to Mode A. GPU warning in Settings.
+- Not done: 1.3.b step 5 (switching shaders live over IPC without restarting playback); changes apply on the next launch. Not tested with a real mpv yet (none installed on the dev Mac).
+
 ---
 
 ## Phase 1.4 — Subtitle auto-sync: rebuild the engine

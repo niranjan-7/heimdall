@@ -15,21 +15,21 @@ interface StoryChapter {
 const CHAPTERS: StoryChapter[] = [
   {
     id: 0,
-    pill: 'PILLAR 01 // LOW-LATENCY IPC HANDSHAKE',
-    title: 'Zero Latency.',
-    highlight: 'Direct Player Socket Binding.',
+    pill: 'PILLAR 01 // PLAYER CONNECTION',
+    title: 'Always in Step.',
+    highlight: 'Talks to mpv and VLC Directly.',
     description:
-      'Heimdall binds directly to native mpv Named Pipes (\\\\.\\pipe\\heimdall-mpv) and VLC HTTP endpoints. No polling lag, no CPU strain—instantaneous event push the exact millisecond you hit seek or pause.',
+      'Heimdall connects to mpv through its IPC socket, where mpv pushes every seek and pause as it happens, and to VLC through its local web interface, which it checks about once a second.',
     icon: <Cpu className="w-4 h-4 text-teal-400" />,
     color: 'border-teal-500/40 text-teal-300 bg-teal-500/10'
   },
   {
     id: 1,
-    pill: 'PILLAR 02 // SPEECH ENVELOPE CORRELATION',
+    pill: 'PILLAR 02 // SUBTITLE AUTO-SYNC',
     title: 'Automated Sync.',
-    highlight: 'Fourier Audio Wave Matching.',
+    highlight: 'Matched to the Audio.',
     description:
-      'Say goodbye to guessing subtitle drift. Embedded FFmpeg extracts speech frequencies (300Hz - 3.4kHz) from the audio stream and calculates cross-correlation peaks to snap desynced dialogue into atomic alignment.',
+      'The bundled FFmpeg finds where sound starts and stops in your file, and Heimdall shifts the subtitles to the offset that lines them up best. Nudge buttons handle the rest.',
     icon: <Waves className="w-4 h-4 text-amber-400" />,
     color: 'border-amber-500/40 text-amber-300 bg-amber-500/10'
   },
@@ -39,7 +39,7 @@ const CHAPTERS: StoryChapter[] = [
     title: 'Instant Control.',
     highlight: 'Point Camera & Lean Back.',
     description:
-      'Hosts a lightning-fast local HTTP + Server-Sent Events server directly on your Wi-Fi LAN (port 42125). Scan the QR code from your sofa to adjust volume, scrub playback, and nudge subtitles right from your phone.',
+      'Hosts a small local HTTP + Server-Sent Events server directly on your Wi-Fi LAN (port 42125). Turn it on, scan the pairing QR code, and play, pause, seek and nudge subtitles from your sofa.',
     icon: <Smartphone className="w-4 h-4 text-emerald-400" />,
     color: 'border-emerald-500/40 text-emerald-300 bg-emerald-500/10'
   }
@@ -207,7 +207,7 @@ export const StickyScrollShowcase: React.FC = () => {
                       </span>
                       <span className="text-emerald-400 flex items-center gap-1.5 font-bold">
                         <Activity className="w-3.5 h-3.5 animate-pulse" />
-                        0ms Connected
+                        Connected
                       </span>
                     </div>
 
@@ -278,20 +278,20 @@ export const StickyScrollShowcase: React.FC = () => {
                     <div className="flex items-center justify-between pb-3 border-b border-white/[0.07] text-xs font-mono">
                       <span className="text-zinc-300 flex items-center gap-2">
                         <Waves className="w-4 h-4 text-amber-400" />
-                        FFmpeg Speech Correlation
+                        FFmpeg Audio Analysis
                       </span>
                       <span className="text-amber-300 font-bold font-mono">
-                        Confidence 99.4%
+                        Offset -0.8s
                       </span>
                     </div>
 
                     {/* Audio Waveform Graphic with Frequency Ruler */}
                     <div className="h-32 rounded-2xl bg-black/80 border border-white/[0.08] p-4 flex flex-col justify-between overflow-hidden relative shadow-inner">
-                      {/* Top Frequency Labels */}
+                      {/* Timeline labels */}
                       <div className="flex justify-between text-[9px] font-mono text-zinc-500 border-b border-white/5 pb-1">
-                        <span>300 Hz (Voice Bass)</span>
-                        <span>1.5 kHz (Formant)</span>
-                        <span>3.4 kHz (Sibilance)</span>
+                        <span>00:00</span>
+                        <span>Sound vs. subtitle lines</span>
+                        <span>24:00</span>
                       </div>
 
                       {/* Waveform Bars */}
@@ -357,7 +357,7 @@ export const StickyScrollShowcase: React.FC = () => {
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                           <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                         </span>
-                        <span>0ms SSE Synced</span>
+                        <span>Live (SSE)</span>
                       </span>
                     </div>
 
@@ -384,7 +384,7 @@ export const StickyScrollShowcase: React.FC = () => {
 
                       <div className="flex items-center justify-between text-[11px] font-mono text-zinc-400">
                         <span className="flex items-center gap-1">
-                          <Volume2 className="w-3 h-3 text-amber-400" /> 75% Master Volume
+                          <Volume2 className="w-3 h-3 text-amber-400" /> Paired phone
                         </span>
                         <span className="text-emerald-400 font-semibold">PWA Stream Active</span>
                       </div>
@@ -392,7 +392,7 @@ export const StickyScrollShowcase: React.FC = () => {
 
                     <div className="p-3 rounded-xl bg-zinc-900/70 border border-white/[0.06] flex items-center justify-between text-xs font-mono">
                       <span className="text-zinc-400">LAN Routing</span>
-                      <span className="text-zinc-200 font-bold">100% Local • Zero Cloud</span>
+                      <span className="text-zinc-200 font-bold">Local Wi-Fi only</span>
                     </div>
                   </motion.div>
                 )}

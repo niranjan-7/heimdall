@@ -106,14 +106,14 @@ export const DualPlayerDemo: React.FC = () => {
                       </span>
                       <span className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium">
                         <Activity className="w-3.5 h-3.5 animate-pulse" />
-                        0ms Named Pipe IPC Active
+                        Event-driven IPC
                       </span>
                     </div>
                     <h3 className="text-2xl sm:text-3xl font-extrabold text-white">
-                      Raw GPU Power with Real-Time GLSL Shaders
+                      Anime4K Shaders and High-Quality Scaling
                     </h3>
                     <p className="text-zinc-400 text-sm leading-relaxed">
-                      Connected directly via native Windows Named Pipes (<code className="text-zinc-300 font-mono text-xs bg-zinc-800 px-1.5 py-0.5 rounded">\\.\pipe\heimdall-mpv</code>). Every seek, pause, and chapter jump dispatches instant bi-directional push events with zero polling overhead.
+                      Connected through mpv's JSON IPC (a named pipe on Windows, a Unix socket elsewhere). mpv pushes every seek, pause and file change to Heimdall as it happens, so there is no polling.
                     </p>
                   </div>
 
@@ -125,27 +125,27 @@ export const DualPlayerDemo: React.FC = () => {
                         <span>Anime4K Upscaling</span>
                       </div>
                       <p className="text-zinc-400 text-xs">
-                        Real-time neural network reconstruction filters to upscale 1080p anime into razor-sharp 4K without edge ringing.
+                        Ships the Anime4K v4 shaders. Pick Mode A, B or C, with a lighter set for laptops and older GPUs.
                       </p>
                     </div>
 
                     <div className="p-4 rounded-2xl bg-zinc-900/60 border border-white/5 space-y-1.5">
                       <div className="flex items-center gap-2 text-white font-semibold text-sm">
                         <Gauge className="w-4 h-4 text-bifrost-cyan" />
-                        <span>0ms Event Push</span>
+                        <span>Instant Events</span>
                       </div>
                       <p className="text-zinc-400 text-xs">
-                        True JSON-IPC event stream. Scrobblers trigger instantly the exact millisecond credits roll.
+                        mpv tells Heimdall about progress as it happens, so AniList updates as soon as you pass the completion point.
                       </p>
                     </div>
 
                     <div className="p-4 rounded-2xl bg-zinc-900/60 border border-white/5 space-y-1.5">
                       <div className="flex items-center gap-2 text-white font-semibold text-sm">
                         <Layers className="w-4 h-4 text-bifrost-cyan" />
-                        <span>GPU-HQ Scaling</span>
+                        <span>High-Quality Scaling</span>
                       </div>
                       <p className="text-zinc-400 text-xs">
-                        High-quality EWA Lanczos Sharp video interpolation, anti-ring dither, and native HDR tone-mapping.
+                        EWA Lanczos Sharp scaling with mpv's high-quality profile.
                       </p>
                     </div>
 
@@ -220,18 +220,17 @@ export const DualPlayerDemo: React.FC = () => {
                         )}
 
                         <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/70 backdrop-blur-md text-[10px] font-mono text-white border border-white/10">
-                          {anime4kEnabled ? 'GLSL SHADER: Anime4K v4.0.1 (High)' : 'Source: 1080p Native'}
+                          {anime4kEnabled ? 'Anime4K v4.0.1 (illustration)' : 'Source: 1080p Native'}
                         </div>
                         <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-bifrost-cyan/90 text-zinc-950 font-mono text-[10px] font-bold">
-                          {anime4kEnabled ? 'Sharpness +140%' : 'Bilinear'}
+                          {anime4kEnabled ? 'Mode A' : 'Bilinear'}
                         </div>
                       </div>
                     </div>
 
-                    {/* Live Telemetry Ping */}
                     <div className="p-3 rounded-xl bg-zinc-900/50 border border-white/5 flex items-center justify-between text-xs font-mono">
-                      <span className="text-zinc-500">Telemetry Push Latency</span>
-                      <span className="text-bifrost-cyan font-bold">&lt; 0.4 ms</span>
+                      <span className="text-zinc-500">Progress updates</span>
+                      <span className="text-bifrost-cyan font-bold">Pushed by mpv</span>
                     </div>
                   </div>
                 </div>
@@ -261,7 +260,7 @@ export const DualPlayerDemo: React.FC = () => {
                       The Universal Media Workhorse You Already Love
                     </h3>
                     <p className="text-zinc-400 text-sm leading-relaxed">
-                      Zero configuration required. Heimdall auto-detects running VLC instances via its local HTTP web interface (<code className="text-zinc-300 font-mono text-xs bg-zinc-800 px-1.5 py-0.5 rounded">http://localhost:8080</code>) and tracks your watch history effortlessly.
+                      No setup needed. Heimdall starts VLC with its local web interface turned on (<code className="text-zinc-300 font-mono text-xs bg-zinc-800 px-1.5 py-0.5 rounded">127.0.0.1</code>, protected by a random password) and checks your progress about once a second.
                     </p>
                   </div>
 
@@ -280,10 +279,10 @@ export const DualPlayerDemo: React.FC = () => {
                     <div className="p-4 rounded-2xl bg-zinc-900/60 border border-white/5 space-y-1.5">
                       <div className="flex items-center gap-2 text-white font-semibold text-sm">
                         <Check className="w-4 h-4 text-bifrost-amber" />
-                        <span>Auto-Detect Web API</span>
+                        <span>No Config Editing</span>
                       </div>
                       <p className="text-zinc-400 text-xs">
-                        Discovers local VLC port 8080 automatically. No complicated config file editing needed.
+                        Heimdall passes the web interface settings when it launches VLC, so you never edit VLC's config.
                       </p>
                     </div>
 
@@ -331,8 +330,8 @@ export const DualPlayerDemo: React.FC = () => {
                     </div>
 
                     <div className="p-3 rounded-xl bg-zinc-900/50 border border-white/5 flex items-center justify-between text-xs font-mono">
-                      <span className="text-zinc-500">Compatibility Score</span>
-                      <span className="text-bifrost-amber font-bold">100% (Universal)</span>
+                      <span className="text-zinc-500">Formats</span>
+                      <span className="text-bifrost-amber font-bold">Almost any format</span>
                     </div>
                   </div>
                 </div>

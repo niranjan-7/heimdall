@@ -91,7 +91,7 @@ export const SERIES_ITEMS: MediaItem[] = [
       type: 'filler',
       text: '🛑 205 Non-Manga Fillers Detected (~42.8 GB to be freed)',
       actionLabel: '1-Click Clean to Trash',
-      doneLabel: '✓ 42.8 GB Reclaimed to Recycle Bin'
+      doneLabel: '✓ 42.8 GB Reclaimed to Trash'
     }
   },
   {
@@ -105,7 +105,7 @@ export const SERIES_ITEMS: MediaItem[] = [
     totalDurationSec: 1440,
     subDelay: 0.0,
     player: 'mpv',
-    badges: ['100% Canon Arc', 'FLAC 5.1 Surround', 'Auto-Sync 99.8%'],
+    badges: ['100% Canon Arc', 'FLAC 5.1 Surround', 'Subtitles Auto-Synced'],
     smartTag: {
       type: 'filler',
       text: '🛑 166 Legacy Fillers Cleaned • 35.1 GB Reclaimed',
@@ -178,7 +178,7 @@ export const SERIES_ITEMS: MediaItem[] = [
     badges: ['Shibuya Incident', 'DTS-HD MA 5.1', 'Anime4K Active'],
     smartTag: {
       type: 'quality',
-      text: '4K Anime4K AI Upscaling Active (1080p source ➔ 3840x2160)'
+      text: 'Anime4K Mode A active in mpv'
     }
   },
   {
@@ -195,7 +195,7 @@ export const SERIES_ITEMS: MediaItem[] = [
     badges: ['UFOTABLE 4K Remux', 'Anime4K Ultra', 'FLAC Audio'],
     smartTag: {
       type: 'archive',
-      text: '📦 Season 4 Archived • 18.2 GB Freed to Recycle Bin'
+      text: '📦 Season 4 Archived • 18.2 GB Freed to Trash'
     }
   },
   {
@@ -226,7 +226,7 @@ export const SERIES_ITEMS: MediaItem[] = [
     totalDurationSec: 1560,
     subDelay: 0.0,
     player: 'mpv',
-    badges: ['Completed', 'Title Normalized', '0ms Push IPC'],
+    badges: ['Completed', 'Title Normalized', 'mpv IPC'],
     smartTag: {
       type: 'archive',
       text: '📦 All 24 Episodes Watched • Stored in Local Archive Grid'
@@ -243,10 +243,10 @@ export const SERIES_ITEMS: MediaItem[] = [
     totalDurationSec: 1420,
     subDelay: -0.15,
     player: 'mpv',
-    badges: ['Batch Select Active', 'Auto-Sync 99.8%', 'Zero Seek Bleed'],
+    badges: ['Batch Select Active', 'Subtitles Auto-Synced', 'Zero Seek Bleed'],
     smartTag: {
       type: 'quality',
-      text: 'Vocal Frequency FFT Speech Auto-Sync: -0.15s offset active'
+      text: 'Subtitle auto-sync: -0.15s offset applied'
     }
   },
   {
@@ -402,7 +402,7 @@ export const MOVIE_ITEMS: MediaItem[] = [
     badges: ['192kHz 24-bit', 'HDR10', 'Anime4K Restore'],
     smartTag: {
       type: 'quality',
-      text: 'Audiophile Hypersonic Sound Track 192kHz/24-bit Pass-Through'
+      text: 'Original soundtrack, played as-is by your player'
     }
   },
   {
@@ -433,7 +433,7 @@ export const MOVIE_ITEMS: MediaItem[] = [
     totalDurationSec: 8400,
     subDelay: -0.05,
     player: 'mpv',
-    badges: ['Dolby Vision', 'Atmos TrueHD', '0ms Latency'],
+    badges: ['Dolby Vision', 'Atmos TrueHD', 'Completed'],
     smartTag: {
       type: 'quality',
       text: 'Hardware Decoding Active • 0 dropped frames'
@@ -453,7 +453,7 @@ export const MOVIE_ITEMS: MediaItem[] = [
     badges: ['HDR10+', 'Dolby Atmos', 'Archived'],
     smartTag: {
       type: 'archive',
-      text: '📦 58.9 GB Freed to Recycle Bin • History Safe'
+      text: '📦 58.9 GB Freed to Trash • History Safe'
     }
   },
   {
@@ -470,7 +470,7 @@ export const MOVIE_ITEMS: MediaItem[] = [
     badges: ['Anime4K HQ', 'Dolby Atmos', 'Completed'],
     smartTag: {
       type: 'archive',
-      text: '📦 Movie Watched • Local SQLite Cache Updated'
+      text: '📦 Movie Watched • Library Saved Locally'
     }
   },
   {
@@ -1186,7 +1186,7 @@ export const InteractiveAppMockup: React.FC = () => {
                     </div>
                     <div>
                       <span className="font-bold text-zinc-200">Speech Auto-Sync Engine</span>
-                      <span className="text-[10px] text-zinc-500 block">FFmpeg Fourier vocal wave correlation (300Hz–3.4kHz)</span>
+                      <span className="text-[10px] text-zinc-500 block">FFmpeg sound detection vs. subtitle timing</span>
                     </div>
                   </div>
 
@@ -1226,7 +1226,7 @@ export const InteractiveAppMockup: React.FC = () => {
                   : 'Connected via HTTP: http://127.0.0.1:8080'}
               </span>
               <span className="text-emerald-400 font-semibold flex items-center gap-1 flex-shrink-0">
-                <Check className="w-3 h-3" /> 0ms Push Latency
+                <Check className="w-3 h-3" /> Live mpv Updates
               </span>
             </div>
           </div>

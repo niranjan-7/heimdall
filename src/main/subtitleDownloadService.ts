@@ -152,28 +152,6 @@ export class SubtitleDownloadService {
   }
 
   /**
-   * Downloads exact-match subtitle from SubDB using 64KB video hash
-   */
-  private async fetchFromSubDB(hash: string, lang = 'en'): Promise<string | null> {
-    try {
-      const url = `http://api.thesubdb.com/?action=download&hash=${hash}&language=${lang}`
-      const res = await fetch(url, {
-        headers: {
-          'User-Agent': 'SubDB/1.0 (Heimdall/1.0; https://github.com/niranjan-7/heimdall)'
-        },
-        signal: AbortSignal.timeout(2500)
-      })
-      if (res.ok) {
-        const text = await res.text()
-        if (text && text.length > 50) return text
-      }
-    } catch {
-      // Offline or hash not found on SubDB
-    }
-    return null
-  }
-
-  /**
    * Downloads subtitle via OpenSubtitles.com REST API
    */
   private async fetchFromOpenSubtitles(params: {
@@ -252,8 +230,8 @@ export class SubtitleDownloadService {
    * Smart Subtitle Downloader for TV Episode:
    * 1. Check local files matching language aliases ('sub-eng', 'english', etc.)
    * 2. Compute 64KB OpenSubtitles file hash for exact sync
-   * 3. Fallback to SubDB & OpenSubtitles search
-   * 4. Auto-chain with Module 1 audio speech auto-sync
+   * 3. Ask OpenSubtitles by file hash, then by title and episode
+   * 4. Auto-sync the result to the audio
    */
   public async downloadSubtitleForEpisode(
     seriesId: string,
@@ -298,21 +276,13 @@ export class SubtitleDownloadService {
     // 2. Compute 64KB hash
     const hashInfo = await this.computeOpenSubtitlesHash(episode.filePath)
     let srtContent: string | null = null
-    let downloadSource: 'subdb' | 'opensubtitles' = 'subdb'
-
     if (hashInfo) {
-      // Try SubDB hash first (instant, free, exact)
-      srtContent = await this.fetchFromSubDB(hashInfo.hash, lang)
-    }
-
-    if (!srtContent && hashInfo) {
       // Try OpenSubtitles hash
       srtContent = await this.fetchFromOpenSubtitles({
         hash: hashInfo.hash,
         lang,
         apiKey: settings.openSubtitlesApiKey
       })
-      if (srtContent) downloadSource = 'opensubtitles'
     }
 
     if (!srtContent) {
@@ -326,7 +296,6 @@ export class SubtitleDownloadService {
         lang,
         apiKey: settings.openSubtitlesApiKey
       })
-      if (srtContent) downloadSource = 'opensubtitles'
     }
 
     // 3. Fallback to extracting embedded subtitle if online failed
@@ -352,18 +321,18 @@ export class SubtitleDownloadService {
       }
     }
 
-    // 4. Save downloaded SRT & Auto-chain with Module 1 Auto-Sync Engine!
+    // 4. Save the downloaded SRT and auto-sync it
     try {
       fs.writeFileSync(targetSrtPath, srtContent, 'utf-8')
       const syncRes = await this.subtitleSyncService.autoSyncEpisode(seriesId, episodeId)
 
       return {
         success: true,
-        source: downloadSource,
+        source: 'opensubtitles',
         filePath: targetSrtPath,
         language: lang,
         offsetApplied: syncRes.offsetSec,
-        message: `Downloaded from ${downloadSource.toUpperCase()} & auto-synced to audio (${syncRes.offsetSec > 0 ? `+${syncRes.offsetSec}` : syncRes.offsetSec}s)`
+        message: `Downloaded from OpenSubtitles & auto-synced to audio (${syncRes.offsetSec > 0 ? `+${syncRes.offsetSec}` : syncRes.offsetSec}s)`
       }
     } catch (err: any) {
       return {
@@ -379,8 +348,8 @@ export class SubtitleDownloadService {
    * Smart Subtitle Downloader for Feature Film:
    * 1. Check local files matching language aliases
    * 2. Compute 64KB OpenSubtitles file hash for exact sync
-   * 3. Fallback to SubDB, TMDB ID query, or Clean Title query
-   * 4. Auto-chain with Module 1 audio speech auto-sync
+   * 3. Ask OpenSubtitles by file hash, then by TMDB ID or title
+   * 4. Auto-sync the result to the audio
    */
   public async downloadSubtitleForMovie(
     movieId: string,
@@ -419,21 +388,13 @@ export class SubtitleDownloadService {
     // 2. Compute 64KB hash
     const hashInfo = await this.computeOpenSubtitlesHash(movie.primaryFilePath)
     let srtContent: string | null = null
-    let downloadSource: 'subdb' | 'opensubtitles' = 'subdb'
-
     if (hashInfo) {
-      // SubDB exact hash match
-      srtContent = await this.fetchFromSubDB(hashInfo.hash, lang)
-    }
-
-    if (!srtContent && hashInfo) {
       // OpenSubtitles exact hash match
       srtContent = await this.fetchFromOpenSubtitles({
         hash: hashInfo.hash,
         lang,
         apiKey: settings.openSubtitlesApiKey
       })
-      if (srtContent) downloadSource = 'opensubtitles'
     }
 
     if (!srtContent) {
@@ -444,7 +405,6 @@ export class SubtitleDownloadService {
         lang,
         apiKey: settings.openSubtitlesApiKey
       })
-      if (srtContent) downloadSource = 'opensubtitles'
     }
 
     // 3. Fallback to embedded extraction
@@ -477,11 +437,11 @@ export class SubtitleDownloadService {
 
       return {
         success: true,
-        source: downloadSource,
+        source: 'opensubtitles',
         filePath: targetSrtPath,
         language: lang,
         offsetApplied: syncRes.offsetSec,
-        message: `Downloaded from ${downloadSource.toUpperCase()} & auto-synced (${syncRes.offsetSec > 0 ? `+${syncRes.offsetSec}` : syncRes.offsetSec}s)`
+        message: `Downloaded from OpenSubtitles & auto-synced (${syncRes.offsetSec > 0 ? `+${syncRes.offsetSec}` : syncRes.offsetSec}s)`
       }
     } catch (err: any) {
       return {
