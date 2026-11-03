@@ -150,7 +150,7 @@ export const AutoSyncDemo: React.FC = () => {
           <MotionReveal>
             <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full glass-card border-amber-500/30 text-amber-300 text-xs font-semibold shadow-sm">
               <Waves className="w-3.5 h-3.5 text-amber-400" />
-              <span>Module 1 • Intelligent Waveform Correlation</span>
+              <span>Subtitle Auto-Sync</span>
             </div>
           </MotionReveal>
 
@@ -162,7 +162,7 @@ export const AutoSyncDemo: React.FC = () => {
 
           <MotionReveal delay={0.2}>
             <p className="text-zinc-300 text-sm sm:text-base leading-relaxed">
-              Downloaded a movie with out-of-sync subtitles? Heimdall runs an embedded FFmpeg voice-energy pass against subtitle cue timestamps and calculates the cross-correlation peak. No guessing, no frustration.
+              Downloaded a movie with out-of-sync subtitles? Heimdall uses the bundled FFmpeg to find where sound starts and stops, then shifts the subtitles to the offset that lines them up best. It fixes a constant offset, and you can nudge the rest by hand.
             </p>
           </MotionReveal>
         </div>
@@ -189,7 +189,7 @@ export const AutoSyncDemo: React.FC = () => {
                   </span>
                 </h3>
                 <p className="text-xs text-zinc-400 font-mono">
-                  Dual-channel voice FFT vs. subtitle cue synchronization engine
+                  Audio activity vs. subtitle cue timing
                 </p>
               </div>
             </div>
@@ -224,7 +224,7 @@ export const AutoSyncDemo: React.FC = () => {
                 {isSynced ? (
                   <>
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>0ms Synced</span>
+                    <span>Synced</span>
                   </>
                 ) : (
                   <motion.div
@@ -292,7 +292,7 @@ export const AutoSyncDemo: React.FC = () => {
                     className="absolute bottom-1 text-[10px] font-mono font-medium text-teal-300 bg-zinc-900/90 px-2 py-0.5 rounded border border-teal-500/30"
                     style={{ left: `${peak.start}%` }}
                   >
-                    Vocal Peak
+                    Sound
                   </div>
                 ))}
               </div>
@@ -376,7 +376,7 @@ export const AutoSyncDemo: React.FC = () => {
               </button>
 
               <span className="text-xs text-zinc-400 hidden sm:inline font-mono">
-                FFmpeg Speech Correlation
+                FFmpeg audio analysis
               </span>
             </div>
 
@@ -384,31 +384,19 @@ export const AutoSyncDemo: React.FC = () => {
             <div className="flex items-center gap-2 w-full md:w-auto justify-end">
               <span className="text-xs text-zinc-400 font-medium mr-1 font-mono">Nudge:</span>
               <button
-                onClick={() => nudge(-250)}
+                onClick={() => nudge(-100)}
                 className="px-2.5 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 text-xs font-mono font-medium border border-white/[0.08] transition-all hover:scale-105 active:scale-95 cursor-pointer"
               >
-                -250ms
-              </button>
-              <button
-                onClick={() => nudge(-50)}
-                className="px-2.5 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 text-xs font-mono font-medium border border-white/[0.08] transition-all hover:scale-105 active:scale-95 cursor-pointer"
-              >
-                -50ms
+                -100ms
               </button>
               <div className="px-3 py-1.5 rounded-xl bg-black border border-amber-500/30 text-xs font-mono font-bold text-amber-300 min-w-[70px] text-center shadow-inner">
                 {offsetMs >= 0 ? `+${offsetMs}` : offsetMs}ms
               </div>
               <button
-                onClick={() => nudge(50)}
+                onClick={() => nudge(100)}
                 className="px-2.5 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 text-xs font-mono font-medium border border-white/[0.08] transition-all hover:scale-105 active:scale-95 cursor-pointer"
               >
-                +50ms
-              </button>
-              <button
-                onClick={() => nudge(250)}
-                className="px-2.5 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 text-xs font-mono font-medium border border-white/[0.08] transition-all hover:scale-105 active:scale-95 cursor-pointer"
-              >
-                +250ms
+                +100ms
               </button>
             </div>
           </div>
@@ -425,20 +413,20 @@ export const AutoSyncDemo: React.FC = () => {
           <SpotlightCard variants={cardVariants}>
             <h4 className="text-white font-bold text-base flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.8)]" />
-              Speech Envelope FFT
+              Local Audio Analysis
             </h4>
             <p className="text-zinc-400 text-xs leading-relaxed">
-              Extracts high-energy vocal frequencies (300Hz - 3.4kHz) from local media files without requiring cloud transcription APIs.
+              Runs FFmpeg on your own file to find when there is sound and when there is silence. Nothing is uploaded.
             </p>
           </SpotlightCard>
 
           <SpotlightCard variants={cardVariants}>
             <h4 className="text-white font-bold text-base flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-teal-400 shadow-[0_0_8px_rgba(20,184,166,0.8)]" />
-              Cross-Correlation Peak
+              Best-Overlap Offset
             </h4>
             <p className="text-zinc-400 text-xs leading-relaxed">
-              Calculates Pearson correlation between audio voice energy and subtitle text timestamps to detect exact drift to the millisecond.
+              Tries a range of offsets and keeps the one where subtitle lines overlap the sound the most.
             </p>
           </SpotlightCard>
 
@@ -448,7 +436,7 @@ export const AutoSyncDemo: React.FC = () => {
               Zero Video Re-encoding
             </h4>
             <p className="text-zinc-400 text-xs leading-relaxed">
-              Dispatches non-destructive real-time offset commands straight to VLC HTTP API or mpv IPC socket instantly during playback.
+              Sends the offset to VLC or mpv while the video plays. Your files are never changed.
             </p>
           </SpotlightCard>
         </motion.div>

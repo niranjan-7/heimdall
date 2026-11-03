@@ -10,8 +10,10 @@ GitHub release, so write it for the people who use the app.
 ### Added
 - macOS now ships as one universal app that runs natively on both Apple Silicon and Intel.
 - Automated tests, linting and a continuous-integration check on every pull request.
-
 - Settings → Updates has an update channel: Stable, or Beta to also get pre-releases.
+- Real Anime4K upscaling in mpv. Heimdall now ships the Anime4K v4 shaders: choose Mode A, B or C,
+  and a lighter shader set for laptops and older graphics cards, in Settings → Video Quality. Until
+  now the "Anime4K" option played the same as HQ scaling.
 
 ### Changed
 - Updates on Windows and in the Linux AppImage are downloaded and installed by the app, and the
@@ -19,6 +21,14 @@ GitHub release, so write it for the people who use the app.
   signed) and for `.deb`/`.tar.gz` installs, the app opens the download page instead.
 - Installers have stable names without spaces, for example `Heimdall-Setup-1.5.0.exe`.
 - The app package now contains only the app itself.
+- mpv uses its `high-quality` profile on mpv 0.37 and newer, instead of the deprecated `gpu-hq`.
+- The README and landing page now describe what the app actually does. Claims about SQLite storage,
+  FFT/Pearson subtitle sync, "0 ms" latency, "100% accuracy", phone-remote volume control and
+  Tailwind v4 were removed or corrected.
+
+### Removed
+- TheSubDB subtitle source. The service shut down years ago, so every download waited for it to time
+  out before asking OpenSubtitles.
 
 ### Security
 - The phone remote now needs pairing. The QR code carries a pairing code, and requests without it

@@ -1,10 +1,17 @@
-import { spawn, ChildProcess } from 'child_process'
+import { spawn, execFile, ChildProcess } from 'child_process'
 import * as net from 'net'
 import * as fs from 'fs'
 import { Series, Episode, Movie } from '../../shared/types'
 import { StorageService } from '../storageService'
 import { SyncWorker } from '../syncWorker'
 import { IMediaPlayerDriver, LaunchResult } from './types'
+import {
+  buildVideoQualityArgs,
+  getShaderDir,
+  normalizePreset,
+  parseMpvVersion,
+  shadersAvailable
+} from './anime4k'
 
 export class MpvDriver implements IMediaPlayerDriver {
   public readonly playerType = 'mpv' as const
@@ -19,6 +26,7 @@ export class MpvDriver implements IMediaPlayerDriver {
   private lastDuration = 0
   private isPaused = false
   private currentFilePath = ''
+  private mpvVersionCache = new Map<string, [number, number] | null>()
 
   constructor(storageService: StorageService, syncWorker: SyncWorker) {
     this.storageService = storageService
@@ -99,10 +107,25 @@ export class MpvDriver implements IMediaPlayerDriver {
     this.currentFilePath = ''
   }
 
+  /** Asks mpv for its version once per executable path; null if it can't be read. */
+  private getMpvVersion(mpvPath: string): Promise<[number, number] | null> {
+    if (this.mpvVersionCache.has(mpvPath)) {
+      return Promise.resolve(this.mpvVersionCache.get(mpvPath) ?? null)
+    }
+    return new Promise((resolve) => {
+      execFile(mpvPath, ['--version'], { timeout: 5000 }, (_err, stdout) => {
+        const version = parseMpvVersion(String(stdout || ''))
+        this.mpvVersionCache.set(mpvPath, version)
+        resolve(version)
+      })
+    })
+  }
+
   private buildMpvArgs(
     playlistPaths: string[],
     startTime: number,
-    subDelay: number
+    subDelay: number,
+    mpvVersion: [number, number] | null
   ): string[] {
     const settings = this.storageService.getSettings()
     const pipePath = this.getPipePath()
@@ -118,22 +141,22 @@ export class MpvDriver implements IMediaPlayerDriver {
       args.push(`--sub-delay=${subDelay}`)
     }
 
-    // High quality scaling & Anime4K profile presets
+    // Video quality: high-quality scaling, Anime4K shaders or low-power mode
     if (settings.enableAnime4K) {
-      if (settings.anime4kPreset === 'fast') {
-        args.push('--hwdec=auto-safe', '--profile=fast')
-      } else {
-        // 'hq_lanczos' (default) or 'anime4k'
-        args.push(
-          '--profile=gpu-hq',
-          '--scale=ewa_lanczossharp',
-          '--cscale=ewa_lanczossharp',
-          '--dscale=mitchell',
-          '--correct-downscaling=yes',
-          '--linear-downscaling=yes',
-          '--hwdec=auto-safe'
-        )
+      let shaderDir = getShaderDir()
+      if (!shadersAvailable(shaderDir)) {
+        console.warn(`Anime4K shaders not found in ${shaderDir}; playing without them.`)
+        shaderDir = ''
       }
+      const preset = normalizePreset(settings.anime4kPreset)
+      args.push(
+        ...buildVideoQualityArgs({
+          preset: shaderDir || preset === 'fast' ? preset : 'hq_lanczos',
+          gpu: settings.anime4kGpu,
+          shaderDir,
+          mpvVersion
+        })
+      )
     }
 
     // User-defined custom flags
@@ -271,7 +294,8 @@ export class MpvDriver implements IMediaPlayerDriver {
     this.currentSubDelay = subDelay
     this.currentFilePath = movie.primaryFilePath
 
-    const mpvArgs = this.buildMpvArgs(movie.filePaths, startTime, subDelay)
+    const mpvVersion = await this.getMpvVersion(settings.mpvPath)
+    const mpvArgs = this.buildMpvArgs(movie.filePaths, startTime, subDelay, mpvVersion)
 
     try {
       const child = spawn(settings.mpvPath, mpvArgs, {
@@ -324,7 +348,8 @@ export class MpvDriver implements IMediaPlayerDriver {
     this.currentSubDelay = subDelay
     this.currentFilePath = targetEpisode.filePath
 
-    const mpvArgs = this.buildMpvArgs(playlistPaths, startTime, subDelay)
+    const mpvVersion = await this.getMpvVersion(settings.mpvPath)
+    const mpvArgs = this.buildMpvArgs(playlistPaths, startTime, subDelay, mpvVersion)
 
     try {
       const child = spawn(settings.mpvPath, mpvArgs, {

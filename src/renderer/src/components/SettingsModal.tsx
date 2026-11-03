@@ -447,10 +447,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
                   <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
                   <div>
                     <h5 className="text-xs font-semibold text-zinc-200">
-                      Anime4K & High-End Scaling (mpv)
+                      Video Quality and Anime4K (mpv)
                     </h5>
                     <p className="text-[10px] text-zinc-400">
-                      GPU shader upscaling for razor-sharp anime line art and 4K displays
+                      Sharper scaling and Anime4K upscaling shaders. Only applies when mpv is the player.
                     </p>
                   </div>
                 </div>
@@ -468,24 +468,34 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
               {settings.enableAnime4K && (
                 <div className="space-y-2 pt-1 border-t border-zinc-800/60">
                   <label className="block text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
-                    Upscaling Profile
+                    Video Quality
                   </label>
                   <div className="grid grid-cols-3 gap-1.5">
                     {[
                       {
                         id: 'hq_lanczos' as Anime4KPreset,
-                        label: 'EWA-Lanczos HQ',
-                        desc: 'Best for Movies & 1080p Anime'
+                        label: 'HQ Scaling',
+                        desc: 'Sharp scaling, no shaders. Good for movies.'
                       },
                       {
-                        id: 'anime4k' as Anime4KPreset,
-                        label: 'Anime4K Shaders',
-                        desc: 'Ultra sharp anime edges'
+                        id: 'anime4k_a' as Anime4KPreset,
+                        label: 'Anime4K A',
+                        desc: 'Most 1080p anime'
+                      },
+                      {
+                        id: 'anime4k_b' as Anime4KPreset,
+                        label: 'Anime4K B',
+                        desc: 'Softer, for blurry sources'
+                      },
+                      {
+                        id: 'anime4k_c' as Anime4KPreset,
+                        label: 'Anime4K C',
+                        desc: 'Denoise, for low-quality sources'
                       },
                       {
                         id: 'fast' as Anime4KPreset,
                         label: 'Fast / Low Power',
-                        desc: 'Hardware accelerated'
+                        desc: 'mpv fast profile, hardware decoding'
                       }
                     ].map((preset) => {
                       const isSelected = (settings.anime4kPreset || 'hq_lanczos') === preset.id
@@ -506,6 +516,44 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
                       )
                     })}
                   </div>
+
+                  {(settings.anime4kPreset || '').startsWith('anime4k') && (
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                        Graphics Card
+                      </label>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {(
+                          [
+                            { id: 'high', label: 'Strong GPU', desc: 'Larger, sharper shaders' },
+                            { id: 'low', label: 'Laptop / older GPU', desc: 'Smaller, faster shaders' }
+                          ] as const
+                        ).map((gpu) => {
+                          const isSelected = (settings.anime4kGpu || 'high') === gpu.id
+                          return (
+                            <button
+                              key={gpu.id}
+                              type="button"
+                              onClick={() => setSettings({ ...settings, anime4kGpu: gpu.id })}
+                              className={`p-2 rounded-lg text-left border transition-all ${
+                                isSelected
+                                  ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300'
+                                  : 'bg-zinc-950/40 border-zinc-800 text-zinc-400 hover:text-zinc-200'
+                              }`}
+                            >
+                              <div className="text-[11px] font-bold">{gpu.label}</div>
+                              <div className="text-[9px] text-zinc-500 leading-tight">{gpu.desc}</div>
+                            </button>
+                          )
+                        })}
+                      </div>
+                      <p className="text-[10px] text-amber-300/80 leading-snug">
+                        Anime4K runs on your graphics card for every frame. If playback stutters or
+                        drops frames, pick &quot;Laptop / older GPU&quot; or HQ Scaling. Applies the
+                        next time an episode starts in mpv.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 

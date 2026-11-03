@@ -4,6 +4,7 @@ import * as fs from 'fs'
 import { LibraryData, AppSettings, Series, Episode, Movie } from '../shared/types'
 import { cleanEpisodeTitle, extractEpisodeNumber } from './folderScanner'
 import { generateSecret } from './secrets'
+import { normalizePreset } from './player/anime4k'
 
 // The password every install shipped with before 1.5.0. Replaced on load.
 const OLD_DEFAULT_VLC_PASSWORD = 'heimdall_secret'
@@ -14,6 +15,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   preferredPlayer: 'vlc',
   enableAnime4K: false,
   anime4kPreset: 'hq_lanczos',
+  anime4kGpu: 'high',
   mpvCustomArgs: '',
   preferredSubtitleLanguage: 'en',
   openSubtitlesApiKey: '',
@@ -140,6 +142,12 @@ export class StorageService {
     }
 
     let updated = false
+    const preset = normalizePreset(this.settingsData.anime4kPreset)
+    if (preset !== this.settingsData.anime4kPreset) {
+      this.settingsData.anime4kPreset = preset
+      updated = true
+    }
+
     if (!this.settingsData.vlcPath || !fs.existsSync(this.settingsData.vlcPath)) {
       const detectedVlc = this.detectVlcPath()
       if (detectedVlc) {

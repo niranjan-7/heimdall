@@ -1,3 +1,6 @@
+> **Archived.** This was an early feature plan. It is out of date; see [ROADMAP.md](../../ROADMAP.md) for the current plan.
+
+
 # 🛡️ Heimdall — Next-Generation Features & Architecture Plan
 
 This document defines the comprehensive specification and phased execution roadmap for Heimdall's upcoming feature set.

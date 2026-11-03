@@ -1,11 +1,11 @@
 # Third-party notices
 
-Heimdall itself is MIT licensed (see `LICENSE`). It bundles the following separate programs.
-They are run as their own processes and are not linked into Heimdall.
+Heimdall itself is MIT licensed (see `LICENSE`). It bundles the following third-party files.
 
 ## FFmpeg
 
-Heimdall runs `ffmpeg` to extract subtitles, read file details and make thumbnails.
+Heimdall runs `ffmpeg` as a separate process (it is not linked into Heimdall) to extract subtitles,
+read file details and make thumbnails.
 
 FFmpeg is licensed under the GNU General Public License. The bundled builds are GPL builds
 (`--enable-gpl`); they contain no non-free components. They are unmodified third-party builds,
@@ -24,3 +24,11 @@ pinned by SHA-256 in `scripts/binaries.lock.json`:
 
 To use your own ffmpeg instead, remove the bundled one and put `ffmpeg` on your PATH: Heimdall
 falls back to the system `ffmpeg` when it cannot find the bundled file.
+
+## Anime4K
+
+The mpv video shaders in `resources/shaders/anime4k/` (packaged as `shaders/anime4k/`) are
+unmodified files from [Anime4K](https://github.com/bloc97/Anime4K) v4.0.1 by bloc97, released
+under the MIT License. The license text is in `resources/shaders/anime4k/LICENSE` and at the top
+of each `.glsl` file. They are only loaded by mpv, and only when an Anime4K mode is chosen in
+Settings.

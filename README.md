@@ -6,12 +6,12 @@
 
 <p align="center">
   <strong>The all-seeing watcher for your local media collection.</strong><br>
-  A modern, high-performance Series, Movie & Anime Tracker with dual-engine VLC & mpv support, intelligent speech subtitle auto-sync, and an instant couch remote for your phone.
+  A desktop tracker for your local anime, shows and movies. It plays them in VLC or mpv, remembers where you stopped, finds and syncs subtitles, and gives you a remote on your phone.
 </p>
 
 <p align="center">
   <a href="https://landing-six-indol-41.vercel.app"><img src="https://img.shields.io/badge/Live_Landing_Page-landing--six--indol--41.vercel.app-f59e0b?style=for-the-badge&logo=vercel" alt="Live Landing Page" /></a>
-  <a href="https://github.com/niranjan-7/heimdall/releases/tag/v1.4.0"><img src="https://img.shields.io/badge/Release-v1.4.0-06b6d4?style=for-the-badge&logo=github" alt="GitHub Release v1.4.0" /></a>
+  <a href="https://github.com/niranjan-7/heimdall/releases/latest"><img src="https://img.shields.io/github/v/release/niranjan-7/heimdall?style=for-the-badge&logo=github&color=06b6d4" alt="Latest release" /></a>
   <a href="https://github.com/niranjan-7/heimdall/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-10b981?style=for-the-badge" alt="MIT License" /></a>
 </p>
 
@@ -19,7 +19,7 @@
 
 ## 🌐 Live Animated Landing Page
 
-Experience the interactive 3D application frame, live audio speech correlation visualizer, and dual-engine comparison on our production website:
+See the app and its features on the landing page:
 
 👉 **[https://landing-six-indol-41.vercel.app](https://landing-six-indol-41.vercel.app)**
 
@@ -29,53 +29,48 @@ Experience the interactive 3D application frame, live audio speech correlation v
 
 Most media players require you to manually keep track of where you paused, battle subtitle desync with tedious hotkeys, or install bloated media server stacks just to get basic watch history.
 
-**Heimdall is different.** It is a native, lightweight companion application that sits beside your media player. It communicates with **native VLC** and **mpv** via high-speed local IPC, automatically tracking playback, synchronizing subtitles, managing metadata, and giving you couch remote controls right from your smartphone.
+**Heimdall is different.** It is a native, lightweight companion application that sits beside your media player. It talks to **VLC** (through its local web interface) and **mpv** (through its IPC socket) to track playback, sync subtitles, fetch metadata, and let you control playback from your phone.
 
 ---
 
-## 🚀 Key Modules & Capabilities
+## 🚀 Features
 
-### ⚡ Module 1: Intelligent Audio-to-Subtitle Auto-Sync Engine
-- **Vocal Frequency FFT Extraction:** Samples audio speech energy (300Hz - 3.4kHz) using embedded FFmpeg.
-- **Cross-Correlation Drift Detection:** Computes Pearson correlation between speech energy and subtitle timestamps to calculate exact desync down to the millisecond.
-- **Zero Video Re-encoding:** Dispatches non-destructive real-time offset commands straight to VLC HTTP API or mpv IPC socket during playback.
-- **Micro-Nudge Bar:** In-app floating micro-nudge buttons (`[-250ms]`, `[-50ms]`, `[+50ms]`, `[+250ms]`) for fine adjustments.
+### ⚡ Subtitle Auto-Sync
+- **Audio-based offset:** Uses the bundled FFmpeg to find where sound starts and stops in the episode, then picks the subtitle offset whose lines best overlap those sounds. It fixes a constant offset; it does not fix subtitles that drift over time. (A more accurate engine is planned for v1.5.0; see the [roadmap](ROADMAP.md).)
+- **No re-encoding:** The offset is sent to VLC or mpv while the video plays; your files are not changed.
+- **Nudge buttons:** Move subtitles 0.1 s earlier or later by hand.
 
-### 🎬 Module 2: Dedicated Movies & TV Library
-- **TMDB Metadata Scraping:** Auto-fetches official movie backdrops, release years, cast, genres, and ratings.
-- **Multi-Part Film Merging:** Seamlessly groups multi-part releases (`CD1 / CD2`, `Part 1 / Part 2`) into a unified film entry with sequential playback chaining.
-- **Local Hardware Thumbnails:** Hover video scrubbing through film frames extracted with hardware acceleration.
-- **Offline Tech Specs:** Fallback video resolution (`4K`, `1080p`), audio codec badges (`DTS-HD`, `Dolby Atmos`), and container tech specs.
+### 🎬 Movies Library
+- **TMDB metadata:** Posters, backdrops, release years, genres and ratings.
+- **Multi-part films:** Groups `CD1 / CD2` and `Part 1 / Part 2` files into one film and plays them in order.
+- **Local thumbnails:** Frames taken from your own files with FFmpeg, shown on hover.
+- **File details:** Resolution and audio codec read from the file.
 
-### 🎛️ Module 3: Dual Media Player Engine (mpv + VLC)
-- **mpv Player:**
-  - Connected via native Windows Named Pipes (`\\.\pipe\heimdall-mpv`) / Unix sockets with **0ms event push latency**.
-  - **Anime4K Real-Time GLSL Upscaling:** Built-in shader toggle (`Anime4K_Restore_CNN_M` + `Upscale_CNN_x2_M`) upscaling 1080p anime into razor-sharp 4K.
-  - GPU-HQ scaling profile with `ewa_lanczossharp` video interpolation.
-- **VLC Media Player:**
-  - Connected via local HTTP status interface (`http://127.0.0.1:8080/requests/status.xml`).
-  - Rock-solid universal playback for any legacy codec (`.mkv`, `.avi`, `.wmv`, `.vob`, `.ts`).
+### 🎛️ VLC or mpv
+- **mpv:**
+  - Connected through a named pipe on Windows (`\\.\pipe\heimdall-mpv`) or a Unix socket elsewhere. mpv pushes playback events, so progress updates are instant.
+  - **Anime4K upscaling:** Ships the [Anime4K](https://github.com/bloc97/Anime4K) v4 shaders. Pick Mode A, B or C, and a smaller shader set for weaker GPUs, in Settings.
+  - High-quality scaling (`ewa_lanczossharp`) with the `high-quality` profile on mpv 0.37+ (`gpu-hq` on older versions).
+- **VLC:**
+  - Connected through VLC's local web interface on `127.0.0.1`, protected by a random password Heimdall creates. Heimdall checks progress about once a second.
+  - Plays almost any format (`.mkv`, `.avi`, `.wmv`, `.vob`, `.ts`).
 
-### 📥 Module 4: Smart Subtitle Downloader
-- **64KB OpenSubtitles File Hash:** Calculates 64KB head & tail checksums to match the exact cut/release on OpenSubtitles with 100% accuracy.
-- **Multi-Name Fallback Resolver:** Resolves embedded languages, `sub-eng/`, `english.srt`, and folder-level subtitle tracks.
-- **Auto-Sync Chaining:** Subtitles downloaded through the app automatically trigger the Module 1 auto-sync engine on launch.
+### 📥 Subtitle Downloader
+- **File hash match:** Computes the OpenSubtitles hash of your file, which finds subtitles made for your exact release when OpenSubtitles has them. Otherwise it searches by title and episode (or TMDB ID for movies).
+- **Local subtitles first:** Finds existing files such as `sub-eng/` or `english.srt`, and can extract subtitles embedded in the video.
+- **Auto-sync:** Downloaded subtitles go through the auto-sync above.
 
-### 📱 Module 5: Mobile Web Companion (PWA Couch Remote)
-- **Local Wi-Fi PWA Server:** Spins up a local Node.js HTTP + Server-Sent Events (SSE) server on port `42125`.
-- **Instant LAN QR Code:** Scan the in-app QR code with your phone camera to instantly open the remote.
-- **Zero App Store Install:** Add to Home Screen as a standalone PWA on iOS or Android.
-- **Full Living Room Controls:** Play/pause, 10s seek scrubber, volume control, audio track switcher, and live subtitle offset nudging.
+### 📱 Phone Remote
+- **Off by default:** Turn it on in the app. It runs a small web server on your Wi-Fi (port `42125`) with live updates over Server-Sent Events.
+- **Pairing QR code:** Scan the QR code to pair your phone. Phones without the pairing code can't see or control anything; you can reset pairing at any time.
+- **No app to install:** Opens in Safari or Chrome, and can be added to the home screen.
+- **Controls:** Browse your library, start an episode or movie, play/pause, seek, stop, and nudge subtitles.
 
-### 📦 Module 6: Cross-Platform Packaging & Official Releases
-- **Windows:** Native NSIS Installer (`Heimdall.Setup.1.2.0.exe`) and portable unpacked binaries.
-- **macOS:** DMG universal installer for Apple Silicon (M1/M2/M3/M4) & Intel.
-- **Linux:** Standalone AppImage with desktop integration.
-- **Automated CI/CD Workflow:** Multi-platform build template saved in [`deploy/release.yml`](deploy/release.yml).
-
-### 🌌 Module 7: Animated Vercel Landing Page
-- Production Vite + React 19 + Tailwind CSS v4 + Framer Motion site hosted on Vercel: [https://landing-six-indol-41.vercel.app](https://landing-six-indol-41.vercel.app).
-- Interactive 3D mouse-tilt desktop app mockup, live audio auto-sync simulation, and dual-player matrix.
+### 📦 Installers and Updates
+- **Windows:** NSIS installer.
+- **macOS:** One universal DMG for Apple Silicon and Intel (unsigned; see the release notes for how to open it).
+- **Linux:** AppImage, `.deb` and `.tar.gz`.
+- **Built by CI:** Every release is built by GitHub Actions from a git tag, with a `SHA256SUMS.txt` file. The app checks for updates and installs them itself on Windows and the AppImage; on macOS it opens the download page.
 
 ---
 
@@ -85,28 +80,25 @@ Most media players require you to manually keep track of where you paused, battl
 | :--- | :--- |
 | **Desktop Framework** | [Electron 35](https://www.electronjs.org/) + [electron-vite](https://electron-vite.org/) |
 | **Frontend UI** | [React 19](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/) |
-| **Styling** | [Tailwind CSS v4](https://tailwindcss.com/) + Obsidian Frosted Glass Theme |
-| **Media Engines** | [mpv](https://mpv.io/) (Named Pipe IPC) & [VLC Media Player](https://www.videolan.org/vlc/) (HTTP Web API) |
-| **Audio Processing** | [FFmpeg](https://ffmpeg.org/) (High-energy speech FFT extraction) |
-| **Mobile Remote** | Native Node.js HTTP Server + Server-Sent Events (SSE) PWA |
+| **Styling** | [Tailwind CSS 3.4](https://tailwindcss.com/) (the landing page uses Tailwind v4) |
+| **Players** | [mpv](https://mpv.io/) (JSON IPC) and [VLC](https://www.videolan.org/vlc/) (HTTP interface), installed separately |
+| **Audio and video tools** | [FFmpeg](https://ffmpeg.org/) (bundled; subtitle sync, thumbnails, file details) |
+| **Phone Remote** | Node.js HTTP server + Server-Sent Events |
 | **Landing Page** | Vite + Framer Motion + Vercel Deployment |
-| **Packager** | [electron-builder](https://www.electron.build/) (NSIS, DMG, AppImage) |
+| **Packaging and updates** | [electron-builder](https://www.electron.build/) + [electron-updater](https://www.electron.build/auto-update), GitHub Actions |
 
 ---
 
 ## 📥 Downloads & Installation
 
-Pre-built binaries for the latest release (**[v1.4.0](https://github.com/niranjan-7/heimdall/releases/tag/v1.4.0)**) are available on [GitHub Releases](https://github.com/niranjan-7/heimdall/releases/tag/v1.4.0):
+Download the installer for your system from the **[latest release](https://github.com/niranjan-7/heimdall/releases/latest)**. Each release from v1.5.0 on includes a `SHA256SUMS.txt` file to check your download:
 
-| OS / Platform | Asset Name | Format | Size | SHA-256 Digest |
-| :--- | :--- | :--- | :--- | :--- |
-| **Windows 10/11** | [Heimdall.Setup.1.4.0.exe](https://github.com/niranjan-7/heimdall/releases/download/v1.4.0/Heimdall.Setup.1.4.0.exe) | NSIS Installer | `99.87 MiB` | `bd402afde269a151a37efc24db441ba26f885470159aa8c3b7f746e38f43373a` |
-| **macOS (Apple Silicon)** | [Heimdall-1.4.0-arm64.dmg](https://github.com/niranjan-7/heimdall/releases/download/v1.4.0/Heimdall-1.4.0-arm64.dmg) | Native DMG | `119.51 MiB` | `1df69bceeba14970ac785c323dc808157ff7e13908d5802c4f77ad2281f5b4ea` |
-| **macOS (Apple Silicon)** | [Heimdall-1.4.0-arm64-mac.zip](https://github.com/niranjan-7/heimdall/releases/download/v1.4.0/Heimdall-1.4.0-arm64-mac.zip) | Portable Zip | `115.29 MiB` | `2e570a5c9392a0e7dde9baf4ce76c5e351fda46d0c759b27e843965a4cf89196` |
-| **macOS (Intel)** | [Heimdall-1.4.0.dmg](https://github.com/niranjan-7/heimdall/releases/download/v1.4.0/Heimdall-1.4.0.dmg) | Native DMG | `123.73 MiB` | `111006f5b568145e005024435d62f210025eb9ce9d7c52eb57bfbf4cd675be7f` |
-| **macOS (Intel)** | [Heimdall-1.4.0-mac.zip](https://github.com/niranjan-7/heimdall/releases/download/v1.4.0/Heimdall-1.4.0-mac.zip) | Portable Zip | `119.49 MiB` | `6c36fd3371fc30c9dc9a874f3fde29a5ccfcdba7ae34232fdc4310f43e555bec` |
-| **Linux (Universal)** | [Heimdall-1.4.0.AppImage](https://github.com/niranjan-7/heimdall/releases/download/v1.4.0/Heimdall-1.4.0.AppImage) | Standalone AppImage | `126.64 MiB` | `5e84eb4a0a00d44a563517308f2a183d081385d0063d4a25e7acdc3a38475a2b` |
-| **Linux (Portable)** | [heimdall-1.4.0.tar.gz](https://github.com/niranjan-7/heimdall/releases/download/v1.4.0/heimdall-1.4.0.tar.gz) | Tarball Archive | `119.76 MiB` | `79cac256788c0c7247c5fa364a64ea56d57fab089e3c7b4b56fc9771773ed647` |
+```bash
+# macOS / Linux, in the folder with the download and SHA256SUMS.txt
+shasum -a 256 --check --ignore-missing SHA256SUMS.txt
+```
+
+Heimdall needs [VLC](https://www.videolan.org/vlc/) or [mpv](https://mpv.io/) installed to play videos.
 
 ---
 
@@ -144,13 +136,13 @@ npm run landing:dev
 ### 4. Build Desktop Executables
 
 ```bash
-# Windows Installer (.exe)
+# Windows installer (.exe)
 npm run build:win
 
 # macOS (.dmg)
 npm run build:mac
 
-# Linux (.AppImage)
+# Linux (.AppImage, .deb, .tar.gz)
 npm run build:linux
 ```
 
@@ -159,18 +151,19 @@ npm run build:linux
 ## 🚢 Releasing
 
 Releases are built by GitHub Actions from a tag. See [docs/RELEASING.md](docs/RELEASING.md) and the
-[CHANGELOG](CHANGELOG.md).
+[CHANGELOG](CHANGELOG.md). What's planned next is in the [roadmap](ROADMAP.md).
 
 ---
 
 ## 🔒 Privacy & Architecture
 
-- **100% Local & Offline:** Watch history is stored in local SQLite (`heimdall.db`) and Electron `userData/`.
-- **Zero Cloud Relay:** The mobile couch remote communicates strictly across your home Wi-Fi network. No video streams or credentials ever leave your local machine.
-- **Zero Tracking:** No telemetry cookies, no trackers, and no mandatory cloud accounts.
+- **Local data:** Your library and watch history are stored as JSON files (`library.json`, `settings.json`) in the app's user data folder. Nothing is uploaded.
+- **What goes online:** Heimdall contacts AniList and TMDB for metadata, OpenSubtitles when you download subtitles, Discord for Rich Presence (can be turned off), and GitHub to check for updates when it starts. It sends titles, IDs and a file hash, never the files themselves.
+- **Phone remote stays on your network:** It works only on your Wi-Fi, is off by default, and needs the pairing code.
+- **No tracking:** No analytics, no telemetry, no account.
 
 ---
 
 ## 📄 License
 
-Licensed under the [MIT License](LICENSE). Built for cinephiles and media enthusiasts worldwide.
+Licensed under the [MIT License](LICENSE). Bundled third-party files (FFmpeg, Anime4K) are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

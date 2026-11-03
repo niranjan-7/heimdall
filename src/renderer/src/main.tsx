@@ -17,6 +17,7 @@ if (typeof window !== 'undefined' && !window.api) {
       preferredPlayer: 'vlc',
       enableAnime4K: false,
       anime4kPreset: 'hq_lanczos',
+      anime4kGpu: 'high',
       mpvCustomArgs: '',
       completionThreshold: 0.9,
       httpPort: 42120,

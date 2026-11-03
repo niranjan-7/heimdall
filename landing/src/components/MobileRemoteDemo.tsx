@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion'
-import { Smartphone, Wifi, Play, Pause, Volume2, FastForward, Rewind, MessageSquare, Sparkles } from 'lucide-react'
+import { Smartphone, Wifi, Play, Pause, FastForward, Rewind, MessageSquare, Sparkles } from 'lucide-react'
 import { MotionReveal } from './MotionReveal'
 
 export const MobileRemoteDemo: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState<boolean>(true)
   const [progress, setProgress] = useState<number>(42)
-  const [volume, setVolume] = useState<number>(75)
   const [subOffset, setSubOffset] = useState<number>(0)
   const sectionRef = useRef<HTMLElement>(null)
   const shouldReduceMotion = useReducedMotion()
@@ -64,7 +63,7 @@ export const MobileRemoteDemo: React.FC = () => {
 
           <MotionReveal delay={0.2}>
             <p className="text-zinc-300 text-sm sm:text-base leading-relaxed">
-              No keyboard reach. No App Store download. Heimdall spins up a lightning-fast local web server. Just point your phone’s camera at the QR code and control playback, volume, and subtitle offsets instantly.
+              No keyboard reach. No App Store download. Turn on the phone remote, scan the pairing QR code, and control playback and subtitle timing from your phone.
             </p>
           </MotionReveal>
         </div>
@@ -111,7 +110,7 @@ export const MobileRemoteDemo: React.FC = () => {
                   </div>
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    0ms SSE
+                    Live
                   </span>
                 </div>
 
@@ -178,49 +177,22 @@ export const MobileRemoteDemo: React.FC = () => {
                       {subOffset >= 0 ? `+${subOffset}` : subOffset}ms
                     </span>
                   </div>
-                  <div className="grid grid-cols-4 gap-1.5">
+                  <div className="grid grid-cols-2 gap-1.5">
                     <button
-                      onClick={() => nudgeSub(-250)}
+                      onClick={() => nudgeSub(-100)}
                       className="py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-mono font-medium active:scale-95 transition-transform cursor-pointer"
                     >
-                      -250ms
+                      -100ms
                     </button>
                     <button
-                      onClick={() => nudgeSub(-50)}
+                      onClick={() => nudgeSub(100)}
                       className="py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-mono font-medium active:scale-95 transition-transform cursor-pointer"
                     >
-                      -50ms
-                    </button>
-                    <button
-                      onClick={() => nudgeSub(50)}
-                      className="py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-mono font-medium active:scale-95 transition-transform cursor-pointer"
-                    >
-                      +50ms
-                    </button>
-                    <button
-                      onClick={() => nudgeSub(250)}
-                      className="py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-mono font-medium active:scale-95 transition-transform cursor-pointer"
-                    >
-                      +250ms
+                      +100ms
                     </button>
                   </div>
                 </div>
 
-                {/* Volume Slider */}
-                <div className="flex items-center gap-3 px-1">
-                  <Volume2 className="w-4 h-4 text-zinc-400" />
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={volume}
-                    onChange={(e) => setVolume(Number(e.target.value))}
-                    className="w-full accent-amber-400 h-1.5 bg-zinc-800 rounded-lg cursor-pointer"
-                  />
-                  <span className="text-[10px] font-mono text-zinc-400 min-w-[28px] text-right font-bold">
-                    {volume}%
-                  </span>
-                </div>
               </div>
             </motion.div>
           </motion.div>
@@ -314,7 +286,7 @@ export const MobileRemoteDemo: React.FC = () => {
             <div className="p-4 rounded-2xl bg-zinc-900/60 border border-white/[0.08] flex items-center gap-3 text-xs text-zinc-300">
               <Sparkles className="w-4 h-4 text-amber-400 flex-shrink-0" />
               <span>
-                <strong>100% Zero-Cloud Architecture.</strong> The remote connection only communicates within your local private subnet.
+                <strong>Stays on your Wi-Fi.</strong> The remote only works on your local network, and only on phones you paired.
               </span>
             </div>
           </motion.div>

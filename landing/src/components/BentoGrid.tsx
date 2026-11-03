@@ -94,7 +94,7 @@ export const BentoGrid: React.FC = () => {
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                    New in v1.4
+                    Anime
                   </span>
                   <span className="text-[10px] text-zinc-400 font-mono">AnimeFillerList API</span>
                 </div>
@@ -139,7 +139,7 @@ export const BentoGrid: React.FC = () => {
                 <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/30 text-emerald-200 border border-emerald-500/40">
                   🟢 Manga Canon
                 </span>
-                <p className="text-[10px] text-zinc-400 leading-snug">100% official manga story</p>
+                <p className="text-[10px] text-zinc-400 leading-snug">Follows the manga story</p>
               </div>
 
               <div className="p-3 rounded-2xl bg-sky-950/40 border border-sky-500/40 space-y-1.5 shadow-md">
@@ -173,7 +173,7 @@ export const BentoGrid: React.FC = () => {
                   1-Click Space Cleaners
                 </h3>
                 <p className="text-zinc-300 text-sm leading-relaxed">
-                  Purge 60+ filler episodes or watched files straight to the Windows Recycle Bin to free up 30+ GB.
+                  Move filler episodes or watched files to the Trash (Recycle Bin on Windows) in one click to free up space.
                 </p>
               </div>
             </div>
@@ -189,7 +189,7 @@ export const BentoGrid: React.FC = () => {
                 <span className="text-zinc-300 font-semibold flex items-center gap-1.5">
                   <Archive className="w-3.5 h-3.5 text-amber-400" /> Watch History
                 </span>
-                <span className="text-[10px] text-emerald-400 font-mono font-bold">100% Preserved</span>
+                <span className="text-[10px] text-emerald-400 font-mono font-bold">Kept</span>
               </div>
             </div>
           </TiltCard>
@@ -294,10 +294,10 @@ export const BentoGrid: React.FC = () => {
               </div>
               <div className="space-y-1">
                 <h3 className="text-2xl font-bold text-white group-hover:text-emerald-300 transition-colors">
-                  Zero-Loss In-App Updates & Automated Safety Backups
+                  In-App Updates with Automatic Backups
                 </h3>
                 <p className="text-zinc-300 text-sm leading-relaxed max-w-xl">
-                  Update Heimdall seamlessly from inside the app with zero fear of data loss. Every update creates an automated pre-flight snapshot backup of your entire library (<code className="text-emerald-300 font-mono text-xs bg-zinc-900 border border-white/10 px-2 py-0.5 rounded">library_pre_update.json</code>), preserving 100% of your watch history, paths, and credentials.
+                  Heimdall checks GitHub for new versions and installs them itself on Windows and Linux (AppImage); on macOS it opens the download page. Before every update it copies your library and settings into a timestamped <code className="text-emerald-300 font-mono text-xs bg-zinc-900 border border-white/10 px-2 py-0.5 rounded">backups/</code> folder.
                 </p>
               </div>
             </div>
@@ -307,19 +307,19 @@ export const BentoGrid: React.FC = () => {
                 <span className="text-zinc-400 font-mono text-[10px] flex items-center gap-1.5">
                   <Database className="w-3 h-3 text-emerald-400" /> BACKUP
                 </span>
-                <p className="text-white font-bold text-sm">Automated Pre-Flight Snapshot</p>
+                <p className="text-white font-bold text-sm">Backup Before Every Update</p>
               </div>
               <div className="p-3.5 rounded-2xl bg-black/80 border border-white/[0.08] space-y-1 shadow-inner">
                 <span className="text-zinc-400 font-mono text-[10px] flex items-center gap-1.5">
                   <RefreshCw className="w-3 h-3 text-emerald-400" /> UPDATES
                 </span>
-                <p className="text-emerald-400 font-bold text-sm">1-Click In-App Upgrade</p>
+                <p className="text-emerald-400 font-bold text-sm">In-App Updates</p>
               </div>
               <div className="p-3.5 rounded-2xl bg-black/80 border border-white/[0.08] space-y-1 shadow-inner">
                 <span className="text-zinc-400 font-mono text-[10px] flex items-center gap-1.5">
                   <Lock className="w-3 h-3 text-emerald-400" /> PRIVACY
                 </span>
-                <p className="text-white font-bold text-sm">100% Offline & Local</p>
+                <p className="text-white font-bold text-sm">Data Stays on Your Computer</p>
               </div>
             </div>
           </TiltCard>
