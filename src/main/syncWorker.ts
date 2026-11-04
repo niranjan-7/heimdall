@@ -18,6 +18,7 @@ export class SyncWorker {
   private consecutiveErrors = 0
   private scrobbledEpisodeIds = new Set<string>()
   private onStateChange?: (update: VlcStateUpdate | null) => void
+  private lastUpdate: VlcStateUpdate | null = null
 
   constructor(
     storageService: StorageService,
@@ -29,6 +30,11 @@ export class SyncWorker {
     this.discordService = discordService
     this.anilistService = anilistService
     this.getMainWindow = getMainWindow
+  }
+
+  /** The last playback update, or null when nothing is playing. */
+  public getNowPlaying(): VlcStateUpdate | null {
+    return this.lastUpdate
   }
 
   public setOnStateChange(cb: (update: VlcStateUpdate | null) => void): void {
@@ -84,6 +90,7 @@ export class SyncWorker {
 
     this.storageService.saveLibrary()
     this.discordService.clearActivity().catch(() => {})
+    this.lastUpdate = null
     this.onStateChange?.(null)
 
     const win = this.getMainWindow()
@@ -207,6 +214,7 @@ export class SyncWorker {
       if (win && !win.isDestroyed()) {
         win.webContents.send('vlc:progress-update', update)
       }
+      this.lastUpdate = update
       this.onStateChange?.(update)
       return
     }
@@ -283,7 +291,8 @@ export class SyncWorker {
     if (win && !win.isDestroyed()) {
       win.webContents.send('vlc:progress-update', update)
     }
-    this.onStateChange?.(update)
+    this.lastUpdate = update
+      this.onStateChange?.(update)
   }
 
   private async triggerAniListScrobble(

@@ -58,6 +58,20 @@ export class PlayerManager implements IMediaPlayerController {
     return this.vlcDriver.getSubtitleDelay() || this.mpvDriver.getSubtitleDelay()
   }
 
+  public async addSubtitle(filePath: string): Promise<boolean> {
+    if (this.activeDriver && this.activeDriver.isRunning()) {
+      return await this.activeDriver.addSubtitle(filePath)
+    }
+    return false
+  }
+
+  public async getSelectedExternalSubtitle(): Promise<string | null> {
+    if (this.activeDriver && this.activeDriver.isRunning()) {
+      return await this.activeDriver.getSelectedExternalSubtitle()
+    }
+    return null
+  }
+
   public async togglePause(): Promise<boolean> {
     if (this.activeDriver && this.activeDriver.isRunning()) {
       return await this.activeDriver.togglePause()

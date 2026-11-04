@@ -1,9 +1,11 @@
 import { spawn, ChildProcess } from 'child_process'
+import { pathToFileURL } from 'url'
 import * as fs from 'fs'
 import { Series, Episode, Movie } from '../../shared/types'
 import { StorageService } from '../storageService'
 import { SyncWorker } from '../syncWorker'
 import { IMediaPlayerDriver, LaunchResult } from './types'
+import { existingSubFile, vlcPlaylistArgs, vlcSubDelayArg } from './playlist'
 
 export class VlcDriver implements IMediaPlayerDriver {
   public readonly playerType = 'vlc' as const
@@ -55,6 +57,26 @@ export class VlcDriver implements IMediaPlayerDriver {
     } catch {
       return false
     }
+  }
+
+  /** Loads an external subtitle into the playing item; VLC switches to the track it adds. */
+  public async addSubtitle(filePath: string): Promise<boolean> {
+    if (!this.isRunning()) return false
+    try {
+      const settings = this.storageService.getSettings()
+      const auth = 'Basic ' + Buffer.from(':' + settings.httpPassword).toString('base64')
+      const val = encodeURIComponent(pathToFileURL(filePath).href)
+      const url = `http://127.0.0.1:${settings.httpPort}/requests/status.json?command=addsubtitle&val=${val}`
+      const res = await fetch(url, { headers: { Authorization: auth }, signal: AbortSignal.timeout(1000) })
+      return res.ok
+    } catch {
+      return false
+    }
+  }
+
+  /** VLC's web interface doesn't say which subtitle file is showing. */
+  public async getSelectedExternalSubtitle(): Promise<string | null> {
+    return null
   }
 
   public async seek(timeSec: number): Promise<boolean> {
@@ -110,23 +132,21 @@ export class VlcDriver implements IMediaPlayerDriver {
     await this.stop()
     this.currentSubDelay = subDelay
 
-    const firstPart = movie.filePaths[0]
-    const subsequentParts = movie.filePaths.slice(1)
-
-    const vlcArgs: string[] = [firstPart]
-    if (startTime > 0) {
-      // Colon prefix applies option strictly to the preceding item in VLC playlist
-      vlcArgs.push(`:start-time=${Math.max(0, Math.floor(startTime))}`)
-    }
+    const vlcArgs = vlcPlaylistArgs(
+      movie.filePaths.map((p, i) => ({
+        path: p,
+        subFile: i === 0 ? existingSubFile(movie.syncedSubtitlePath) : undefined
+      })),
+      startTime
+    )
     vlcArgs.push(
-      ...subsequentParts,
       '--extraintf=http',
       `--http-port=${settings.httpPort}`,
       `--http-password=${settings.httpPassword}`
     )
 
     if (subDelay !== 0) {
-      vlcArgs.push(`--sub-delay=${subDelay}`)
+      vlcArgs.push(vlcSubDelayArg(subDelay))
     }
 
     try {
@@ -173,29 +193,20 @@ export class VlcDriver implements IMediaPlayerDriver {
     await this.stop()
 
     const remainingEpisodes = series.episodes.slice(startIndex).filter((e) => !e.fileMissing && fs.existsSync(e.filePath))
-    const playlistPaths = remainingEpisodes.map((e) => e.filePath)
     this.currentSubDelay = subDelay
 
-    // VLC command-line syntax:
-    // Prefixing an option with a single colon ':' applies it strictly to the preceding item.
-    // Double-dash '--start-time' applies globally to all items in the playlist, causing
-    // every next episode to skip halfway into the episode.
-    const firstEpPath = playlistPaths[0]
-    const subsequentEpPaths = playlistPaths.slice(1)
-
-    const vlcArgs: string[] = [firstEpPath]
-    if (startTime > 0) {
-      vlcArgs.push(`:start-time=${Math.max(0, Math.floor(startTime))}`)
-    }
+    const vlcArgs = vlcPlaylistArgs(
+      remainingEpisodes.map((e) => ({ path: e.filePath, subFile: existingSubFile(e.syncedSubtitlePath) })),
+      startTime
+    )
     vlcArgs.push(
-      ...subsequentEpPaths,
       '--extraintf=http',
       `--http-port=${settings.httpPort}`,
       `--http-password=${settings.httpPassword}`
     )
 
     if (subDelay !== 0) {
-      vlcArgs.push(`--sub-delay=${subDelay}`)
+      vlcArgs.push(vlcSubDelayArg(subDelay))
     }
 
     try {

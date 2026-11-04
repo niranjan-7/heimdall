@@ -24,6 +24,9 @@ export interface Episode {
   lastWatchedAt: number | null
   hasThumbnail?: boolean
   subDelaySec?: number
+  /** Retimed copy written by auto-sync; loaded instead of the original subtitle. */
+  syncedSubtitlePath?: string
+  syncReport?: SyncReport
   fillerType?: FillerCategory
   fillerLabel?: string
   fileMissing?: boolean
@@ -98,6 +101,8 @@ export interface Movie {
   // Local video thumbnail (revealed on hover):
   hasThumbnail?: boolean
   subDelaySec?: number
+  syncedSubtitlePath?: string
+  syncReport?: SyncReport
 }
 
 export interface TmdbMovieSearchResult {
@@ -172,13 +177,59 @@ export interface RemoteServerInfo {
   connectedClients: number
 }
 
+export type SyncTarget =
+  | { kind: 'episode'; seriesId: string; episodeId: string }
+  | { kind: 'movie'; movieId: string }
+
+export type SyncConfidence = 'high' | 'medium' | 'low'
+
+export interface SyncReport {
+  engine: 'native'
+  /** Seconds added to every subtitle time (after `scale`). */
+  offsetSec: number
+  /** Frame-rate correction; 1 when none. */
+  scale: number
+  /** Human-readable frame-rate change, e.g. "25 → 23.976 fps". */
+  fpsChange?: string
+  score: number
+  originalScore: number
+  confidence: SyncConfidence
+  /** The subtitle file the synced copy was made from. */
+  sourcePath: string
+  at: number
+}
+
+export interface SyncOutcome {
+  status:
+    | 'applied'
+    | 'needs-confirmation'
+    | 'refused'
+    | 'already-in-sync'
+    | 'no-subtitle'
+    | 'cancelled'
+    | 'error'
+  message: string
+  report?: SyncReport
+  /** For 'needs-confirmation': pass to applyPendingSync / discardPendingSync. */
+  pendingId?: string
+  /** For 'no-subtitle': the video has an embedded text subtitle that can be synced on request. */
+  embeddedAvailable?: boolean
+}
+
+export interface SyncProgress {
+  stage: 'audio' | 'aligning'
+  /** 0..1 */
+  fraction: number
+}
+
 export interface SubtitleDownloadResult {
   success: boolean
   source: 'opensubtitles' | 'local_extracted' | 'local_matched' | 'none'
   filePath?: string
   language: string
   message: string
-  offsetApplied?: number
+  /** Result of the automatic sync that runs after a download. */
+  sync?: SyncOutcome
 }
 
 export interface VlcStateUpdate {

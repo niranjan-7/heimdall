@@ -53,16 +53,12 @@ if (typeof window !== 'undefined' && !window.api) {
     resetMovieProgress: async () => null,
     searchTmdb: async () => [],
     fixMovieMatch: async () => ({} as any),
-    autoSyncSubtitle: async () => ({
-      success: false,
-      offsetSec: 0,
-      message: 'Desktop app required'
-    }),
-    autoSyncMovieSubtitle: async () => ({
-      success: false,
-      offsetSec: 0,
-      message: 'Desktop app required'
-    }),
+    runSubtitleSync: async () => ({ status: 'error', message: 'Desktop app required' }),
+    applySubtitleSync: async () => ({ status: 'error', message: 'Desktop app required' }),
+    discardSubtitleSync: async () => {},
+    cancelSubtitleSync: async () => {},
+    undoSubtitleSync: async () => ({ status: 'error', message: 'Desktop app required' }),
+    onSubtitleSyncProgress: () => () => {},
     nudgeSubtitleDelay: async () => ({ currentDelay: 0 }),
     nudgeMovieSubtitleDelay: async () => ({ currentDelay: 0 }),
     resetSubtitleDelay: async () => ({ currentDelay: 0 }),

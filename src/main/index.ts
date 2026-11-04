@@ -26,7 +26,7 @@ import { TmdbService } from './tmdbService'
 import { UpdateService } from './updateService'
 import { scanSeriesFolders } from './folderScanner'
 import { scanMoviesFolder } from './movieScanner'
-import { Series, Movie, Episode, FreeSpacePreview, DeleteEpisodesResult } from '../shared/types'
+import { Series, Movie, Episode, FreeSpacePreview, DeleteEpisodesResult, SyncTarget } from '../shared/types'
 
 // Register privileged custom scheme for video thumbnails
 protocol.registerSchemesAsPrivileged([
@@ -641,13 +641,28 @@ function registerIpcHandlers(): void {
     return movie
   })
 
-  // Module 1: Subtitle Sync IPC
-  ipcMain.handle('subsync:auto-sync', async (_event, seriesId: string, episodeId: string) => {
-    return await subtitleSyncService.autoSyncEpisode(seriesId, episodeId)
+  // Subtitle sync IPC
+  ipcMain.handle(
+    'subsync:run',
+    async (_event, target: SyncTarget, opts?: { allowEmbedded?: boolean }) => {
+      return await subtitleSyncService.run(target, { allowEmbedded: !!opts?.allowEmbedded })
+    }
+  )
+
+  ipcMain.handle('subsync:apply', async (_event, pendingId: string) => {
+    return await subtitleSyncService.applyPending(pendingId)
   })
 
-  ipcMain.handle('subsync:auto-sync-movie', async (_event, movieId: string) => {
-    return await subtitleSyncService.autoSyncMovie(movieId)
+  ipcMain.handle('subsync:discard', (_event, pendingId: string) => {
+    subtitleSyncService.discardPending(pendingId)
+  })
+
+  ipcMain.handle('subsync:cancel', () => {
+    subtitleSyncService.cancel()
+  })
+
+  ipcMain.handle('subsync:undo', async (_event, target: SyncTarget) => {
+    return await subtitleSyncService.undo(target)
   })
 
   ipcMain.handle(
@@ -917,7 +932,9 @@ app.whenReady().then(() => {
   thumbnailService = new ThumbnailService(storageService)
   syncWorker = new SyncWorker(storageService, discordService, anilistService, () => mainWindow)
   vlcController = new VlcController(storageService, syncWorker)
-  subtitleSyncService = new SubtitleSyncService(storageService, vlcController)
+  subtitleSyncService = new SubtitleSyncService(storageService, vlcController, syncWorker, (p) => {
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('subsync:progress', p)
+  })
   subtitleDownloadService = new SubtitleDownloadService(storageService, subtitleSyncService)
   tmdbService = new TmdbService()
   updateService = new UpdateService(() => mainWindow, storageService)

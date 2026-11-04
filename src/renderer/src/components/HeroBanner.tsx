@@ -368,12 +368,14 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
         )}
       </div>
 
-      {/* Module 1: Subtitle Sync Engine Widget */}
+      {/* Subtitle sync */}
       {resumeEpisode && (
         <div className="relative z-10 pt-1">
           <SubtitleSyncWidget
-            series={series}
-            activeEpisode={resumeEpisode}
+            target={{ kind: 'episode', seriesId: series.id, episodeId: resumeEpisode.id }}
+            subDelaySec={resumeEpisode.subDelaySec}
+            syncReport={resumeEpisode.syncReport}
+            syncedSubtitlePath={resumeEpisode.syncedSubtitlePath}
             onNotification={onNotification}
             onDelayUpdated={onDelayUpdated}
           />

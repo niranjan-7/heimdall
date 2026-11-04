@@ -14,6 +14,7 @@ GitHub release, so write it for the people who use the app.
 - Real Anime4K upscaling in mpv. Heimdall now ships the Anime4K v4 shaders: choose Mode A, B or C,
   and a lighter shader set for laptops and older graphics cards, in Settings → Video Quality. Until
   now the "Anime4K" option played the same as HQ scaling.
+- Subtitle auto-sync shows its progress while it reads the audio, can be cancelled, and can be undone.
 
 ### Changed
 - Updates on Windows and in the Linux AppImage are downloaded and installed by the app, and the
@@ -25,6 +26,17 @@ GitHub release, so write it for the people who use the app.
 - The README and landing page now describe what the app actually does. Claims about SQLite storage,
   FFT/Pearson subtitle sync, "0 ms" latency, "100% accuracy", phone-remote volume control and
   Tailwind v4 were removed or corrected.
+
+- Subtitle auto-sync was rebuilt. It reads the whole episode instead of the first 15 minutes, listens
+  to the voice frequencies only, finds shifts of up to two minutes instead of 20 seconds, and fixes
+  subtitles made for a different frame rate (for example 25 fps subtitles on a 23.976 fps video).
+- Auto-sync now checks its own result. It applies a sync only when it is confident, asks first when
+  it is fairly sure, and changes nothing when it can't find a reliable match. Before, it always
+  applied whatever it found.
+- A synced subtitle is saved as a separate `.heimdall-synced` file next to the video and loaded by
+  the player; your original subtitle file is never changed. Auto-sync no longer touches subtitles
+  built into the video unless you ask it to.
+- Movies use the same subtitle sync panel as episodes.
 
 ### Removed
 - TheSubDB subtitle source. The service shut down years ago, so every download waited for it to time
@@ -46,6 +58,9 @@ GitHub release, so write it for the people who use the app.
 - Each platform now bundles its own ffmpeg. In 1.4.0 the Linux and Intel Mac builds contained an Apple
   Silicon ffmpeg, so thumbnails, subtitle sync and movie details could not work there.
 - The macOS ffmpeg is now a redistributable build.
+- A saved subtitle delay was applied 10 times too small when VLC started (VLC counts tenths of a
+  second).
+- "Download Subtitle" no longer picks up another episode's subtitle from the same folder.
 
 ## [1.4.0] - 2026-10-28
 

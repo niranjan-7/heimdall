@@ -264,9 +264,9 @@ Recommendation: implement, it's small and it's a real differentiator for the ani
 > Packaging and binary-arch checks moved to **Phase 1.1.c**.
 
 **Status: implemented on branch `phase-1-3-honest-claims`.**
-- 1.3.a: README and landing page rewritten where they overclaimed (SQLite, FFT/Pearson, 0 ms, 100%, phone-remote volume and audio tracks, ±50/250 ms nudges, Tailwind v4, Recycle Bin, hard-coded versions and download links now point at the latest release). TheSubDB removed. `FEATURES_PLAN.md` archived to `docs/archive/`. GitHub release notes and repo description (1.1.h) still need editing on GitHub.
+- 1.3.a: README and landing page rewritten where they overclaimed (SQLite, FFT/Pearson, 0 ms, 100%, phone-remote volume and audio tracks, ±50/250 ms nudges, Tailwind v4, Recycle Bin, hard-coded versions and download links now point at the latest release). TheSubDB removed. `FEATURES_PLAN.md` archived to `docs/archive/`. GitHub release notes and repo description were already cleaned up in 1.1.h.
 - 1.3.b: Anime4K v4.0.1 shaders bundled (12 files, MIT) in `resources/shaders/anime4k`, packaged as `shaders/anime4k`. Presets HQ / Mode A / B / C / Fast, plus a "Strong GPU / Laptop" shader size. Shaders are passed with one `--glsl-shaders-append` per file (no OS-specific separator). mpv's version is read once with `mpv --version` to choose `high-quality` or `gpu-hq`. Old `anime4k` settings migrate to Mode A. GPU warning in Settings.
-- Not done: 1.3.b step 5 (switching shaders live over IPC without restarting playback); changes apply on the next launch. Not tested with a real mpv yet (none installed on the dev Mac).
+- Moved to the backlog: 1.3.b step 5 (switching shaders live over IPC). Not tested with a real mpv yet (none installed on the dev Mac).
 
 ---
 
@@ -373,6 +373,19 @@ If the original subtitle already scores High → "Subtitles already look in sync
 3. Unit tests: SRT/ASS/VTT parsing, rasterisation, fps snapping, verifier classification, writer preserves ASS styling.
 
 **Phase done when:** benchmark passes, the old `computeOptimalOffset` path is deleted, and landing/README copy describes this engine accurately.
+
+### Status
+Split into two PRs.
+
+**1.4a — native engine (branch `phase-1-4-subtitle-sync`).** Implemented:
+- `src/main/subsync/`: `subtitleFormat.ts` (SRT/VTT/ASS parse + retime, only timestamps change), `speechEnvelope.ts` (whole-file ffmpeg pass, 200–3500 Hz, 10 ms frames, adaptive threshold between the 10th and 90th percentile of the surrounding 30 s, cached per file in `userData/cache/speech`), `aligner.ts` (±120 s search at 100 ms, then 10 ms; tries the common fps ratios instead of fitting drift windows), `verifier.ts` (lift over chance + peak sharpness + 8-section agreement → 0–100; High ≥ 75 and +10 over the original applies, Medium 60–74 asks, otherwise refuses; "already in sync" when the original scores High), `subtitleSource.ts` (playing file → last source → downloaded → nearby; never embedded unless asked).
+- Retimed copy `<video>.<lang>.heimdall-synced.<ext>`, loaded per file at launch (mpv `--{ --sub-file }`, VLC `:sub-file=`) and live (mpv `sub-add … select`, VLC `addsubtitle`). `syncedSubtitlePath` + `syncReport` on episodes and movies; Undo deletes the copy.
+- Widget: progress with cancel, confirm card for Medium, explanation for refusals, "Sync built-in track anyway", Undo. Movies use the same widget.
+- Fixed on the way: VLC `--sub-delay` is in tenths of a second; local-subtitle search could take another episode's file.
+- Tests: synthetic shifts (0.5–110 s), both fps directions, wrong episode, silence, formats, file choice, playlists. An ffmpeg end-to-end test (generated soundtrack) runs in CI on all three OSes.
+- Not done: Preview button, "apply to whole season" verification, cut/segment handling (a 90 s cut scores Medium today), worker thread (the search blocks the main process for about 0.5 s per 24-minute episode, so an estimated 2.5–3 s on a 2-hour film), selected audio track (uses the first one), real-media benchmark corpus (thresholds are tuned on synthetic data).
+
+**1.4b — bundle `alass`.** Not started. alass has release binaries only for Windows and Linux; macOS needs `cargo build` in CI for both architectures plus `lipo`. Plan: feed alass a reference subtitle built from our speech frames (avoids bundling ffprobe), run the same verifier on its result, and keep the native engine as the fallback.
 
 ---
 
@@ -630,6 +643,11 @@ Split the 1,141-line modal into a routed page with sections: **General · Playba
 - Works offline (degrades quietly).
 - README/landing updated **only** after the feature is merged.
 - No new claim without code behind it.
+
+## Backlog (not scheduled)
+- Anime4K: switch shaders during playback over mpv IPC (`change-list glsl-shaders set …`) instead of on the next launch (from 1.3.b).
+- Subtitle sync: Preview before applying, "apply to whole season" with verification on the next episodes, piecewise offsets for cut/recap edits, run the search in a worker thread, sync against the audio track the player selected.
+- Subtitle sync: build a small private benchmark of real clips and tune the verifier thresholds on it.
 
 ## Decisions
 
