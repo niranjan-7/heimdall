@@ -5,6 +5,7 @@ import { Series, Episode, Movie } from '../../shared/types'
 import { StorageService } from '../storageService'
 import { SyncWorker } from '../syncWorker'
 import { IMediaPlayerDriver, LaunchResult } from './types'
+import { PlaylistEntry, existingSubFile, mpvPlaylistArgs } from './playlist'
 import {
   buildVideoQualityArgs,
   getShaderDir,
@@ -27,6 +28,8 @@ export class MpvDriver implements IMediaPlayerDriver {
   private isPaused = false
   private currentFilePath = ''
   private mpvVersionCache = new Map<string, [number, number] | null>()
+  private nextRequestId = 1
+  private pendingRequests = new Map<number, (reply: { error?: string; data?: unknown }) => void>()
 
   constructor(storageService: StorageService, syncWorker: SyncWorker) {
     this.storageService = storageService
@@ -56,6 +59,51 @@ export class MpvDriver implements IMediaPlayerDriver {
 
   public getSubtitleDelay(): number {
     return this.currentSubDelay
+  }
+
+  /** Sends an IPC command and waits for mpv's reply (null if mpv isn't connected or doesn't answer). */
+  private request(command: unknown[], timeoutMs = 1500): Promise<{ error?: string; data?: unknown } | null> {
+    const socket = this.socket
+    if (!socket || socket.destroyed) return Promise.resolve(null)
+    const id = this.nextRequestId++
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        this.pendingRequests.delete(id)
+        resolve(null)
+      }, timeoutMs)
+      this.pendingRequests.set(id, (reply) => {
+        clearTimeout(timer)
+        resolve(reply)
+      })
+      try {
+        socket.write(JSON.stringify({ command, request_id: id }) + '\n')
+      } catch {
+        clearTimeout(timer)
+        this.pendingRequests.delete(id)
+        resolve(null)
+      }
+    })
+  }
+
+  public getCurrentFilePath(): string {
+    return this.currentFilePath
+  }
+
+  /** Loads an external subtitle into the playing file and switches to it. */
+  public async addSubtitle(filePath: string): Promise<boolean> {
+    const reply = await this.request(['sub-add', filePath, 'select'])
+    return reply?.error === 'success'
+  }
+
+  /** The external subtitle file mpv is showing, or null for none / an embedded track. */
+  public async getSelectedExternalSubtitle(): Promise<string | null> {
+    const reply = await this.request(['get_property', 'track-list'])
+    if (!reply || reply.error !== 'success' || !Array.isArray(reply.data)) return null
+    const track = (reply.data as Array<Record<string, unknown>>).find(
+      (t) => t.type === 'sub' && t.selected === true && t.external === true
+    )
+    const file = track?.['external-filename']
+    return typeof file === 'string' ? file : null
   }
 
   public async togglePause(): Promise<boolean> {
@@ -122,7 +170,7 @@ export class MpvDriver implements IMediaPlayerDriver {
   }
 
   private buildMpvArgs(
-    playlistPaths: string[],
+    entries: PlaylistEntry[],
     startTime: number,
     subDelay: number,
     mpvVersion: [number, number] | null
@@ -165,18 +213,7 @@ export class MpvDriver implements IMediaPlayerDriver {
       args.push(...customTokens)
     }
 
-    if (startTime > 0 && playlistPaths.length > 0) {
-      // Per-file option scope in mpv: only the first file starts at startTime
-      args.push(
-        '--{',
-        `--start=${Math.max(0, Math.floor(startTime))}`,
-        playlistPaths[0],
-        '--}',
-        ...playlistPaths.slice(1)
-      )
-    } else {
-      args.push(...playlistPaths)
-    }
+    args.push(...mpvPlaylistArgs(entries, startTime))
     return args
   }
 
@@ -233,6 +270,12 @@ export class MpvDriver implements IMediaPlayerDriver {
         if (line) {
           try {
             const parsed = JSON.parse(line)
+            if (typeof parsed.request_id === 'number' && this.pendingRequests.has(parsed.request_id)) {
+              const done = this.pendingRequests.get(parsed.request_id)
+              this.pendingRequests.delete(parsed.request_id)
+              done?.(parsed)
+              continue
+            }
             this.handleIpcEvent(parsed)
           } catch {
             // ignore JSON parse errors on malformed chunks
@@ -295,7 +338,11 @@ export class MpvDriver implements IMediaPlayerDriver {
     this.currentFilePath = movie.primaryFilePath
 
     const mpvVersion = await this.getMpvVersion(settings.mpvPath)
-    const mpvArgs = this.buildMpvArgs(movie.filePaths, startTime, subDelay, mpvVersion)
+    const entries = movie.filePaths.map((p, i) => ({
+      path: p,
+      subFile: i === 0 ? existingSubFile(movie.syncedSubtitlePath) : undefined
+    }))
+    const mpvArgs = this.buildMpvArgs(entries, startTime, subDelay, mpvVersion)
 
     try {
       const child = spawn(settings.mpvPath, mpvArgs, {
@@ -344,12 +391,15 @@ export class MpvDriver implements IMediaPlayerDriver {
     await this.stop()
 
     const remainingEpisodes = series.episodes.slice(startIndex).filter((e) => !e.fileMissing && fs.existsSync(e.filePath))
-    const playlistPaths = remainingEpisodes.map((e) => e.filePath)
+    const entries = remainingEpisodes.map((e) => ({
+      path: e.filePath,
+      subFile: existingSubFile(e.syncedSubtitlePath)
+    }))
     this.currentSubDelay = subDelay
     this.currentFilePath = targetEpisode.filePath
 
     const mpvVersion = await this.getMpvVersion(settings.mpvPath)
-    const mpvArgs = this.buildMpvArgs(playlistPaths, startTime, subDelay, mpvVersion)
+    const mpvArgs = this.buildMpvArgs(entries, startTime, subDelay, mpvVersion)
 
     try {
       const child = spawn(settings.mpvPath, mpvArgs, {

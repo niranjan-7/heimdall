@@ -3,23 +3,11 @@ import * as path from 'path'
 import { spawn } from 'child_process'
 import { StorageService } from './storageService'
 import { SubtitleSyncService } from './subtitleSyncService'
+import { findLocalSubtitleFor } from './subsync/subtitleSource'
 import { SubtitleDownloadResult } from '../shared/types'
 import { getBinaryPath } from './binaries'
 
 
-const LANGUAGE_ALIASES: Record<string, string[]> = {
-  en: ['en', 'eng', 'english', 'en-us', 'en-gb', 'sub-eng', 'sub_eng', 'sub eng', 'english_sdh', 'sdh'],
-  es: ['es', 'esp', 'spa', 'spanish', 'espanol', 'sub-esp', 'sub_esp'],
-  fr: ['fr', 'fre', 'fra', 'french', 'francais'],
-  de: ['de', 'ger', 'deu', 'german', 'deutsch'],
-  ja: ['ja', 'jpn', 'japanese', 'nihongo'],
-  ko: ['ko', 'kor', 'korean'],
-  zh: ['zh', 'chi', 'zho', 'chinese', 'chs', 'cht'],
-  it: ['it', 'ita', 'italian', 'italiano'],
-  pt: ['pt', 'por', 'portuguese', 'portugues', 'pt-br'],
-  hi: ['hi', 'hin', 'hindi'],
-  ar: ['ar', 'ara', 'arabic']
-}
 
 export class SubtitleDownloadService {
   private storageService: StorageService
@@ -78,55 +66,11 @@ export class SubtitleDownloadService {
    * Checks for locally existing subtitle files matching language aliases
    * (e.g. 'sub-eng', 'english', '2_English', etc.)
    */
+  /** A subtitle file for this video in `lang` (or with no language in its name). */
   public findLocalSubtitle(videoPath: string, lang = 'en'): string | null {
-    try {
-      const dir = path.dirname(videoPath)
-      const ext = path.extname(videoPath)
-      const base = path.basename(videoPath, ext).toLowerCase()
-      const aliases = LANGUAGE_ALIASES[lang] || [lang]
-
-      // Check standard adjacent file names
-      const directCandidates = [
-        path.join(dir, `${base}.${lang}.synced.srt`),
-        path.join(dir, `${base}.${lang}.srt`),
-        path.join(dir, `${base}.synced.srt`),
-        path.join(dir, `${base}.srt`)
-      ]
-      for (const cand of directCandidates) {
-        if (fs.existsSync(cand)) return cand
-      }
-
-      // Check all files in directory and Subs/ folder
-      const dirsToCheck = [dir, path.join(dir, 'Subs'), path.join(dir, 'Subtitles'), path.join(dir, 'sub')]
-      for (const folder of dirsToCheck) {
-        if (!fs.existsSync(folder)) continue
-        const files = fs.readdirSync(folder)
-        for (const file of files) {
-          const lower = file.toLowerCase()
-          if (!lower.endsWith('.srt') && !lower.endsWith('.vtt') && !lower.endsWith('.ass')) {
-            continue
-          }
-
-          // Check if file name matches any language alias
-          const hasLang = aliases.some((alias) => {
-            const regex = new RegExp(`(^|[-._\\s])${alias}([-._\\s]|$)`, 'i')
-            return regex.test(lower)
-          })
-
-          if (hasLang) {
-            return path.join(folder, file)
-          }
-        }
-      }
-    } catch {
-      // ignore filesystem scan errors
-    }
-    return null
+    return findLocalSubtitleFor(videoPath, lang)
   }
 
-  /**
-   * Extracts embedded subtitle stream to local .srt using bundled FFmpeg
-   */
   public async extractEmbeddedSubtitle(videoPath: string, lang = 'en'): Promise<string | null> {
     const dir = path.dirname(videoPath)
     const ext = path.extname(videoPath)
@@ -258,15 +202,14 @@ export class SubtitleDownloadService {
     const localExisting = this.findLocalSubtitle(episode.filePath, lang)
     if (localExisting && localExisting !== targetSrtPath) {
       try {
-        fs.copyFileSync(localExisting, targetSrtPath)
-        const syncRes = await this.subtitleSyncService.autoSyncEpisode(seriesId, episodeId)
+        const sync = await this.subtitleSyncService.run({ kind: 'episode', seriesId, episodeId }, { sourcePath: localExisting })
         return {
           success: true,
           source: 'local_matched',
-          filePath: targetSrtPath,
+          filePath: localExisting,
           language: lang,
-          offsetApplied: syncRes.offsetSec,
-          message: `Found local subtitle "${path.basename(localExisting)}" & auto-synced!`
+          sync,
+          message: `Found local subtitle "${path.basename(localExisting)}". ${sync.message}`
         }
       } catch {
         // continue to online download
@@ -302,14 +245,12 @@ export class SubtitleDownloadService {
     if (!srtContent) {
       const extractedPath = await this.extractEmbeddedSubtitle(episode.filePath, lang)
       if (extractedPath) {
-        const syncRes = await this.subtitleSyncService.autoSyncEpisode(seriesId, episodeId)
         return {
           success: true,
           source: 'local_extracted',
           filePath: extractedPath,
           language: lang,
-          offsetApplied: syncRes.offsetSec,
-          message: `Extracted embedded subtitle & auto-synced (${syncRes.offsetSec > 0 ? `+${syncRes.offsetSec}` : syncRes.offsetSec}s)`
+          message: 'Extracted the subtitle built into the video. Built-in subtitles are normally already in sync, so it was not auto-synced.'
         }
       }
 
@@ -324,15 +265,15 @@ export class SubtitleDownloadService {
     // 4. Save the downloaded SRT and auto-sync it
     try {
       fs.writeFileSync(targetSrtPath, srtContent, 'utf-8')
-      const syncRes = await this.subtitleSyncService.autoSyncEpisode(seriesId, episodeId)
+      const sync = await this.subtitleSyncService.run({ kind: 'episode', seriesId, episodeId }, { sourcePath: targetSrtPath })
 
       return {
         success: true,
         source: 'opensubtitles',
         filePath: targetSrtPath,
         language: lang,
-        offsetApplied: syncRes.offsetSec,
-        message: `Downloaded from OpenSubtitles & auto-synced to audio (${syncRes.offsetSec > 0 ? `+${syncRes.offsetSec}` : syncRes.offsetSec}s)`
+        sync,
+        message: `Downloaded from OpenSubtitles. ${sync.message}`
       }
     } catch (err: any) {
       return {
@@ -370,15 +311,14 @@ export class SubtitleDownloadService {
     const localExisting = this.findLocalSubtitle(movie.primaryFilePath, lang)
     if (localExisting && localExisting !== targetSrtPath) {
       try {
-        fs.copyFileSync(localExisting, targetSrtPath)
-        const syncRes = await this.subtitleSyncService.autoSyncMovie(movieId)
+        const sync = await this.subtitleSyncService.run({ kind: 'movie', movieId }, { sourcePath: localExisting })
         return {
           success: true,
           source: 'local_matched',
-          filePath: targetSrtPath,
+          filePath: localExisting,
           language: lang,
-          offsetApplied: syncRes.offsetSec,
-          message: `Found local subtitle "${path.basename(localExisting)}" & auto-synced!`
+          sync,
+          message: `Found local subtitle "${path.basename(localExisting)}". ${sync.message}`
         }
       } catch {
         // continue
@@ -411,14 +351,12 @@ export class SubtitleDownloadService {
     if (!srtContent) {
       const extractedPath = await this.extractEmbeddedSubtitle(movie.primaryFilePath, lang)
       if (extractedPath) {
-        const syncRes = await this.subtitleSyncService.autoSyncMovie(movieId)
         return {
           success: true,
           source: 'local_extracted',
           filePath: extractedPath,
           language: lang,
-          offsetApplied: syncRes.offsetSec,
-          message: `Extracted embedded subtitle & auto-synced (${syncRes.offsetSec > 0 ? `+${syncRes.offsetSec}` : syncRes.offsetSec}s)`
+          message: 'Extracted the subtitle built into the video. Built-in subtitles are normally already in sync, so it was not auto-synced.'
         }
       }
 
@@ -433,15 +371,15 @@ export class SubtitleDownloadService {
     // 4. Save and auto-sync
     try {
       fs.writeFileSync(targetSrtPath, srtContent, 'utf-8')
-      const syncRes = await this.subtitleSyncService.autoSyncMovie(movieId)
+      const sync = await this.subtitleSyncService.run({ kind: 'movie', movieId }, { sourcePath: targetSrtPath })
 
       return {
         success: true,
         source: 'opensubtitles',
         filePath: targetSrtPath,
         language: lang,
-        offsetApplied: syncRes.offsetSec,
-        message: `Downloaded from OpenSubtitles & auto-synced (${syncRes.offsetSec > 0 ? `+${syncRes.offsetSec}` : syncRes.offsetSec}s)`
+        sync,
+        message: `Downloaded from OpenSubtitles. ${sync.message}`
       }
     } catch (err: any) {
       return {

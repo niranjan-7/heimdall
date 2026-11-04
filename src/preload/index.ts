@@ -14,7 +14,10 @@ import {
   UpdateInfo,
   UpdateDownloadProgress,
   FreeSpacePreview,
-  DeleteEpisodesResult
+  DeleteEpisodesResult,
+  SyncTarget,
+  SyncOutcome,
+  SyncProgress
 } from '../shared/types'
 
 export interface IElectronAPI {
@@ -56,14 +59,13 @@ export interface IElectronAPI {
   searchTmdb: (query: string, year?: number) => Promise<TmdbMovieSearchResult[]>
   fixMovieMatch: (movieId: string, tmdbId: number) => Promise<Movie>
 
-  // Module 1: Subtitle Sync
-  autoSyncSubtitle: (
-    seriesId: string,
-    episodeId: string
-  ) => Promise<{ success: boolean; offsetSec: number; message: string }>
-  autoSyncMovieSubtitle: (
-    movieId: string
-  ) => Promise<{ success: boolean; offsetSec: number; message: string }>
+  // Subtitle Sync
+  runSubtitleSync: (target: SyncTarget, opts?: { allowEmbedded?: boolean }) => Promise<SyncOutcome>
+  applySubtitleSync: (pendingId: string) => Promise<SyncOutcome>
+  discardSubtitleSync: (pendingId: string) => Promise<void>
+  cancelSubtitleSync: () => Promise<void>
+  undoSubtitleSync: (target: SyncTarget) => Promise<SyncOutcome>
+  onSubtitleSyncProgress: (callback: (progress: SyncProgress) => void) => () => void
   nudgeSubtitleDelay: (
     seriesId: string,
     episodeId: string,
@@ -194,9 +196,18 @@ const api: IElectronAPI = {
   fixMovieMatch: (movieId, tmdbId) => ipcRenderer.invoke('movies:fix-match', movieId, tmdbId),
 
   // Subtitle Sync
-  autoSyncSubtitle: (seriesId, episodeId) =>
-    ipcRenderer.invoke('subsync:auto-sync', seriesId, episodeId),
-  autoSyncMovieSubtitle: (movieId) => ipcRenderer.invoke('subsync:auto-sync-movie', movieId),
+  runSubtitleSync: (target, opts) => ipcRenderer.invoke('subsync:run', target, opts),
+  applySubtitleSync: (pendingId) => ipcRenderer.invoke('subsync:apply', pendingId),
+  discardSubtitleSync: (pendingId) => ipcRenderer.invoke('subsync:discard', pendingId),
+  cancelSubtitleSync: () => ipcRenderer.invoke('subsync:cancel'),
+  undoSubtitleSync: (target) => ipcRenderer.invoke('subsync:undo', target),
+  onSubtitleSyncProgress: (callback) => {
+    const handler = (_event: unknown, data: SyncProgress): void => callback(data)
+    ipcRenderer.on('subsync:progress', handler)
+    return () => {
+      ipcRenderer.removeListener('subsync:progress', handler)
+    }
+  },
   nudgeSubtitleDelay: (seriesId, episodeId, deltaSec, applyToSeason) =>
     ipcRenderer.invoke('subsync:nudge', seriesId, episodeId, deltaSec, applyToSeason),
   nudgeMovieSubtitleDelay: (movieId, deltaSec) =>

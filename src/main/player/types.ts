@@ -25,6 +25,8 @@ export interface IMediaPlayerDriver {
   getSubtitleDelay(): number
   togglePause(): Promise<boolean>
   seek(timeSec: number): Promise<boolean>
+  addSubtitle(filePath: string): Promise<boolean>
+  getSelectedExternalSubtitle(): Promise<string | null>
 }
 
 export interface IMediaPlayerController {

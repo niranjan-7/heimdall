@@ -1,6 +1,7 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { Movie, VlcStateUpdate } from '../../../shared/types'
 import { formatTime } from '../utils/formatters'
+import { SubtitleSyncWidget } from './SubtitleSyncWidget'
 import {
   Play,
   Trash2,
@@ -9,14 +10,7 @@ import {
   Edit3,
   Radio,
   Clock,
-  Layers,
-  Sparkles,
-  Zap,
-  RotateCcw,
-  Minus,
-  Plus,
-  Loader2,
-  Download
+  Layers
 } from 'lucide-react'
 
 interface MovieHeroBannerProps {
@@ -38,77 +32,8 @@ export const MovieHeroBanner: React.FC<MovieHeroBannerProps> = ({
   onNotification,
   onDelayUpdated
 }) => {
-  const [isSyncing, setIsSyncing] = useState(false)
-  const [currentDelay, setCurrentDelay] = useState<number>(movie.subDelaySec || 0)
-
   const isPlayingThisMovie =
     activeVlcState?.isRunning && activeVlcState?.movieId === movie.id
-  const [isDownloading, setIsDownloading] = useState(false)
-
-  const handleDownloadSubtitle = async () => {
-    setIsDownloading(true)
-    try {
-      const res = await window.api.downloadMovieSubtitle(movie.id)
-      if (res.success) {
-        if (res.offsetApplied !== undefined) {
-          setCurrentDelay(res.offsetApplied)
-        }
-        onNotification('success', res.message)
-        onDelayUpdated()
-      } else {
-        onNotification('info', res.message)
-      }
-    } catch (err: any) {
-      onNotification('error', err?.message || 'Subtitle download failed')
-    } finally {
-      setIsDownloading(false)
-    }
-  }
-
-  const handleAutoSync = async () => {
-    setIsSyncing(true)
-    try {
-      const res = await window.api.autoSyncMovieSubtitle(movie.id)
-      if (res.success) {
-        setCurrentDelay(res.offsetSec)
-        onNotification('success', res.message)
-        onDelayUpdated()
-      } else {
-        onNotification('error', res.message)
-      }
-    } catch (err: any) {
-      onNotification('error', err.message || 'Auto-sync failed')
-    } finally {
-      setIsSyncing(false)
-    }
-  }
-
-  const handleNudge = async (deltaSec: number) => {
-    try {
-      const res = await window.api.nudgeMovieSubtitleDelay(movie.id, deltaSec)
-      setCurrentDelay(res.currentDelay)
-      onDelayUpdated()
-    } catch (err: any) {
-      onNotification('error', err.message || 'Failed to adjust delay')
-    }
-  }
-
-  const handleResetDelay = async () => {
-    try {
-      await window.api.resetMovieSubtitleDelay(movie.id)
-      setCurrentDelay(0)
-      onNotification('info', 'Subtitle delay reset to 0.0s')
-      onDelayUpdated()
-    } catch (err: any) {
-      onNotification('error', err.message || 'Failed to reset delay')
-    }
-  }
-
-  const formatDelay = (sec: number) => {
-    if (sec === 0) return '0.00s'
-    const sign = sec > 0 ? '+' : ''
-    return `${sign}${sec.toFixed(2)}s`
-  }
 
   return (
     <div className="relative overflow-hidden rounded-2xl liquid-glass p-6 shadow-2xl mb-6 space-y-5">
@@ -270,103 +195,16 @@ export const MovieHeroBanner: React.FC<MovieHeroBannerProps> = ({
         </div>
       </div>
 
-      {/* Subtitle Sync Controller for Movie */}
+      {/* Subtitle sync */}
       <div className="relative z-10 pt-1">
-        <div className="p-3 bg-zinc-950/70 border border-surface-border rounded-xl backdrop-blur-md flex flex-wrap items-center justify-between gap-3 shadow-lg">
-          <div className="flex items-center gap-2.5">
-            <div className="p-1.5 rounded-lg bg-bifrost-amber/15 text-bifrost-amber">
-              <Zap className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-zinc-200 uppercase tracking-wider">
-                  Movie Subtitle Sync Engine
-                </span>
-                <span
-                  className={`px-2 py-0.5 rounded text-[11px] font-mono font-bold ${
-                    currentDelay !== 0
-                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                      : 'bg-zinc-800 text-zinc-400'
-                  }`}
-                >
-                  {formatDelay(currentDelay)}
-                </span>
-              </div>
-              <p className="text-[10px] text-zinc-400">
-                Align movie audio speech with subtitle track
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex items-center bg-zinc-900 border border-surface-border rounded-lg p-0.5">
-              <button
-                type="button"
-                onClick={() => handleNudge(-0.1)}
-                className="px-2 py-1 text-xs text-zinc-300 hover:text-white hover:bg-zinc-800 rounded font-mono flex items-center gap-0.5"
-              >
-                <Minus className="w-3 h-3" /> 0.1s
-              </button>
-              <div className="w-px h-4 bg-zinc-800" />
-              <button
-                type="button"
-                onClick={() => handleNudge(0.1)}
-                className="px-2 py-1 text-xs text-zinc-300 hover:text-white hover:bg-zinc-800 rounded font-mono flex items-center gap-0.5"
-              >
-                <Plus className="w-3 h-3" /> 0.1s
-              </button>
-            </div>
-
-            {currentDelay !== 0 && (
-              <button
-                type="button"
-                onClick={handleResetDelay}
-                className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 border border-zinc-800"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-              </button>
-            )}
-
-            <button
-              type="button"
-              disabled={isSyncing || isDownloading}
-              onClick={handleAutoSync}
-              className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-bifrost-amber hover:from-amber-400 hover:to-bifrost-amber text-zinc-950 text-xs font-bold flex items-center gap-1.5 shadow-md shadow-bifrost-amber/20 transition-all disabled:opacity-50"
-            >
-              {isSyncing ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>Analyzing Movie Audio...</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Auto-Sync Subtitles</span>
-                </>
-              )}
-            </button>
-
-            <button
-              type="button"
-              disabled={isDownloading || isSyncing}
-              onClick={handleDownloadSubtitle}
-              className="px-3.5 py-1.5 rounded-lg bg-emerald-950/70 hover:bg-emerald-900/70 text-emerald-300 border border-emerald-700/50 text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm disabled:opacity-50"
-              title="Download exact subtitle by 64KB hash or clean title & auto-sync"
-            >
-              {isDownloading ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>Fetching Subtitle...</span>
-                </>
-              ) : (
-                <>
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Download Subtitle</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
+        <SubtitleSyncWidget
+          target={{ kind: 'movie', movieId: movie.id }}
+          subDelaySec={movie.subDelaySec}
+          syncReport={movie.syncReport}
+          syncedSubtitlePath={movie.syncedSubtitlePath}
+          onNotification={onNotification}
+          onDelayUpdated={onDelayUpdated}
+        />
       </div>
     </div>
   )
