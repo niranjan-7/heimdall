@@ -133,6 +133,7 @@ export type UITheme = 'liquid_glass' | 'classic_dark' | 'oled_black'
 
 /** Stable gets normal releases; Beta also gets pre-releases (e.g. 2.0.0-beta.1). */
 export type UpdateChannel = 'stable' | 'beta'
+export type StealthPlaybackMode = 'none' | 'minimize' | 'tray'
 
 export interface AppSettings {
   vlcPath: string
@@ -164,6 +165,8 @@ export interface AppSettings {
   /** Pairing code phones must send to use the remote. Managed by the app, never by the UI. */
   remoteToken?: string
   updateChannel?: UpdateChannel
+  /** Background behavior when playback begins: 'none' | 'minimize' | 'tray' */
+  stealthPlaybackMode?: StealthPlaybackMode
 }
 
 export interface RemoteServerInfo {

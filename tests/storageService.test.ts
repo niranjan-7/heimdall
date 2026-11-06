@@ -64,4 +64,18 @@ describe('StorageService secrets', () => {
   it('keeps the phone remote off for new installs', () => {
     expect(new StorageService().getSettings().enableRemoteServer).toBe(false)
   })
+
+  it('defaults stealthPlaybackMode to minimize and theme to classic_dark', () => {
+    const settings = new StorageService().getSettings()
+    expect(settings.stealthPlaybackMode).toBe('minimize')
+    expect(settings.uiTheme).toBe('classic_dark')
+    expect(settings.enableLiquidGlass).toBe(false)
+  })
+
+  it('persists stealthPlaybackMode changes', () => {
+    const storage = new StorageService()
+    storage.saveSettings({ stealthPlaybackMode: 'tray' })
+    expect(storage.getSettings().stealthPlaybackMode).toBe('tray')
+    expect(new StorageService().getSettings().stealthPlaybackMode).toBe('tray')
+  })
 })

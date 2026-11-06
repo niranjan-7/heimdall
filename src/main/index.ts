@@ -7,7 +7,7 @@ function formatBytes(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
-import { app, shell, BrowserWindow, ipcMain, dialog, protocol, net } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, dialog, protocol, net, Tray, Menu } from 'electron'
 import { join, basename } from 'path'
 import { pathToFileURL } from 'url'
 import * as fs from 'fs'
@@ -42,6 +42,8 @@ protocol.registerSchemesAsPrivileged([
 ])
 
 let mainWindow: BrowserWindow | null = null
+let appTray: Tray | null = null
+let wasStealthHidden = false
 let storageService: StorageService
 let syncWorker: SyncWorker
 let vlcController: VlcController
@@ -55,7 +57,74 @@ let remoteServer: RemoteServer
 let tmdbService: TmdbService
 let updateService: UpdateService
 
+function initTray(): void {
+  if (appTray) return
+  const iconPath =
+    process.platform === 'win32'
+      ? join(__dirname, '../../build/icon.ico')
+      : join(__dirname, '../../build/icon.png')
+  if (!fs.existsSync(iconPath)) return
+
+  try {
+    appTray = new Tray(iconPath)
+    appTray.setToolTip('Heimdall Media Tracker')
+
+    const contextMenu = Menu.buildFromTemplate([
+      {
+        label: 'Heimdall Media Tracker',
+        enabled: false
+      },
+      { type: 'separator' },
+      {
+        label: 'Open Heimdall',
+        click: () => {
+          if (mainWindow) {
+            mainWindow.show()
+            mainWindow.restore()
+            mainWindow.focus()
+            syncWorker?.flushPendingProgress()
+          }
+        }
+      },
+      { type: 'separator' },
+      {
+        label: 'Quit',
+        click: () => {
+          app.quit()
+        }
+      }
+    ])
+
+    appTray.setContextMenu(contextMenu)
+
+    appTray.on('double-click', () => {
+      if (mainWindow) {
+        mainWindow.show()
+        mainWindow.restore()
+        mainWindow.focus()
+        syncWorker?.flushPendingProgress()
+      }
+    })
+
+    appTray.on('click', () => {
+      if (mainWindow) {
+        mainWindow.show()
+        mainWindow.restore()
+        mainWindow.focus()
+        syncWorker?.flushPendingProgress()
+      }
+    })
+  } catch (err) {
+    console.warn('[Tray] Failed to initialize system tray:', err)
+  }
+}
+
 function createWindow(): void {
+  const settings = storageService ? storageService.getSettings() : null
+  const isLiquidGlass =
+    settings?.uiTheme === 'liquid_glass' ||
+    (settings?.enableLiquidGlass && settings?.uiTheme !== 'classic_dark' && settings?.uiTheme !== 'oled_black')
+
   mainWindow = new BrowserWindow({
     width: 1360,
     height: 900,
@@ -68,10 +137,10 @@ function createWindow(): void {
       process.platform === 'win32'
         ? join(__dirname, '../../build/icon.ico')
         : join(__dirname, '../../build/icon.png'),
-    transparent: true,
-    backgroundColor: '#00000000',
-    backgroundMaterial: 'acrylic',
-    vibrancy: 'under-window',
+    transparent: isLiquidGlass,
+    backgroundColor: isLiquidGlass ? '#00000000' : '#0c0d12',
+    backgroundMaterial: isLiquidGlass ? 'acrylic' : undefined,
+    vibrancy: isLiquidGlass ? 'under-window' : undefined,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: true,
@@ -82,7 +151,7 @@ function createWindow(): void {
 
   mainWindow.on('ready-to-show', () => {
     if (mainWindow) {
-      if (process.platform === 'win32') {
+      if (process.platform === 'win32' && isLiquidGlass) {
         try {
           mainWindow.setBackgroundMaterial('acrylic')
         } catch {}
@@ -90,6 +159,16 @@ function createWindow(): void {
       mainWindow.show()
       mainWindow.focus()
     }
+  })
+
+  mainWindow.on('restore', () => {
+    syncWorker?.flushPendingProgress()
+  })
+  mainWindow.on('show', () => {
+    syncWorker?.flushPendingProgress()
+  })
+  mainWindow.on('focus', () => {
+    syncWorker?.flushPendingProgress()
   })
 
   // Links open in the system browser, and only web links (never file:, smb: and the like).
@@ -943,6 +1022,39 @@ app.whenReady().then(() => {
 
   syncWorker.setOnStateChange((state) => {
     remoteServer.broadcastState(state)
+
+    if (!mainWindow || mainWindow.isDestroyed()) return
+
+    const settings = storageService.getSettings()
+    const mode = settings.stealthPlaybackMode || 'minimize'
+    if (mode === 'none') return
+
+    if (state && state.isRunning && state.state === 'playing') {
+      if (!wasStealthHidden) {
+        wasStealthHidden = true
+        if (mode === 'minimize') {
+          mainWindow.minimize()
+        } else if (mode === 'tray') {
+          initTray()
+          mainWindow.hide()
+          if (appTray) {
+            const title = state.filename || 'Video'
+            appTray.setToolTip(`Heimdall - Playing: ${title}`)
+          }
+        }
+      }
+    } else if (!state || !state.isRunning || state.state === 'stopped') {
+      if (wasStealthHidden) {
+        wasStealthHidden = false
+        if (mode === 'tray' && appTray) {
+          appTray.setToolTip('Heimdall Media Tracker')
+        }
+        mainWindow.show()
+        mainWindow.restore()
+        mainWindow.focus()
+        syncWorker.flushPendingProgress()
+      }
+    }
   })
 
   thumbnailService.setCallback((id, isMovie) => {
@@ -975,6 +1087,10 @@ app.on('window-all-closed', () => {
 })
 
 app.on('before-quit', async () => {
+  if (appTray) {
+    appTray.destroy()
+    appTray = null
+  }
   if (remoteServer) {
     remoteServer.stop()
   }

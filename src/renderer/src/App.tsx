@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { Series, Movie, LibraryData, VlcStateUpdate, AppNotification, AppSettings, UITheme, FreeSpacePreview } from '../../shared/types'
 import { Sidebar } from './components/Sidebar'
 import { HeroBanner } from './components/HeroBanner'
@@ -75,9 +75,21 @@ export const App: React.FC = () => {
     loadLibrary()
   }, [loadLibrary])
 
+  const lastLibrarySyncRef = useRef<number>(0)
+  const prevCompletedRef = useRef<boolean>(false)
+
   useEffect(() => {
     const unsubProgress = window.api.onVlcProgressUpdate((update: VlcStateUpdate) => {
       setActiveVlcState(update)
+
+      const now = Date.now()
+      const isCompletionChange = !!update.completed !== prevCompletedRef.current
+      const shouldSyncLibrary = isCompletionChange || now - lastLibrarySyncRef.current > 10000
+
+      if (!shouldSyncLibrary) return
+
+      lastLibrarySyncRef.current = now
+      prevCompletedRef.current = !!update.completed
 
       // Live update movie
       if (update.movieId) {
@@ -126,6 +138,8 @@ export const App: React.FC = () => {
 
     const unsubStopped = window.api.onVlcStopped(() => {
       setActiveVlcState(null)
+      prevCompletedRef.current = false
+      lastLibrarySyncRef.current = 0
       loadLibrary()
     })
 
