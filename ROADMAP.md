@@ -440,6 +440,7 @@ Today series metadata only comes from AniList, so western TV gets nothing.
 1. **Opaque theme by default** (`classic_dark` for new installs). Liquid Glass stays as an option. On Windows, `transparent: true` + `backgroundMaterial: 'acrylic'` breaks snap/maximize and costs GPU; only enable transparency when the Liquid Glass theme is active (needs a window re-create on theme switch — acceptable, or ask to restart).
 2. **Minimum font size 12px** for all body/label text (replace `text-[10px]` usages). Uppercase+tracking only for tiny section labels.
 3. Respect `prefers-reduced-motion`: disable caustic animations and large transitions.
+4. **Pause renderer IPC progress spam when window is hidden/minimized**: `SyncWorker` currently pushes `vlc:progress-update` to `win.webContents` every 1.5 s. In `App.tsx`, this clones and re-renders the entire library object tree (`setLibrary(prev => ...)`) every tick, preventing V8 garbage collection and keeping the renderer active. When the window is minimized or hidden, suspend these IPC broadcasts until the window is restored, then send a single sync.
 
 ### v1.5.0 release checklist
 - [ ] All phases merged, CI green, subtitle-sync benchmark passing.
@@ -471,8 +472,8 @@ Watch history, intro markers, tracker sync state and stats all need real queries
 ### 2.0.b Renderer architecture
 `App.tsx` (633 lines) holds all state; `SettingsModal.tsx` is 1,141 lines.
 1. Add a router (`react-router` or TanStack Router): `/home`, `/series`, `/series/:id`, `/movies`, `/movies/:id`, `/calendar`, `/stats`, `/settings/:section`, `/big-picture`.
-2. Add a store (`zustand`) for library/player state, and a query layer (TanStack Query) wrapping the preload IPC calls.
-3. Push events (player state, library changes) from main → renderer through one typed channel instead of ad-hoc listeners.
+2. Add a store (`zustand`) for library/player state, and a query layer (TanStack Query) wrapping the preload IPC calls. **Isolate high-frequency player progress (`currentTime`, `state`) in a transient store slice** so 1.5 s polling updates never trigger re-renders of the episode or series grid.
+3. Push events (player state, library changes) from main → renderer through one typed channel instead of ad-hoc listeners. Suspend UI streaming when the window is minimized or docked in the tray.
 4. Rename `VlcController` / `VlcStateUpdate` → `PlayerManager` / `PlayerState` everywhere (the shim exists already).
 
 ### 2.0.c Player abstraction upgrades (needed by 2.2)
@@ -532,6 +533,22 @@ Deliverable: `docs/brand.md` (name, voice rules, colours, type, logo usage, word
 1. Series setting: preferred audio language(s), subtitle language(s), "subtitles: always / only for foreign audio / never", preferred subtitle track name contains (e.g. "Full", not "Signs & Songs").
 2. mpv: `--alang=jpn,ja --slang=eng,en`, and for the "Signs & Songs" case pick the track by title via IPC after load. VLC: `--audio-language`, `--sub-language` at launch.
 3. Global defaults in Settings; series overrides; remember the user's in-player track change as the new series preference (ask once).
+
+### 2.2.d Ultra-lean "Stealth Watcher" & background memory throttling (sub-50MB RAM)
+**Problem today:** In Task Manager, Heimdall consumes ~270 MB RAM across 4 processes (Renderer: 133 MB, GPU: 72 MB, Main: 57 MB, Broker: 7 MB) while VLC decoding 1080p video uses only ~140–170 MB. Over 75% of Heimdall's RAM (205 MB) is consumed by the Chromium renderer DOM, Acrylic GPU textures, and continuous 1.5 s React tree re-allocations while sitting hidden behind the player. A background tracker should never consume more memory than the media player it is tracking.
+
+1. **Auto-minimize / Tray stealth mode during playback:**
+   - Setting: "Stealth playback mode" in Settings → Playback (*Minimize to taskbar* / *Hide to system tray* / *Keep open* — default: *Minimize to tray*).
+   - When playback starts (`state === 'playing'`), automatically minimize or hide the Heimdall window.
+   - On Windows, minimizing commands Chromium and DWM to immediately drop Direct3D swapchains and surface textures, shedding ~50–60 MB from the GPU process.
+2. **Headless tracking & suspended renderer IPC:**
+   - While the window is hidden or minimized, `SyncWorker` suspends all 1.5 s `vlc:progress-update` IPC broadcasts to the renderer.
+   - All playback tracking (timestamp updates, completion threshold detection, AniList scrobbling, Discord Rich Presence) executes strictly within the lightweight Node.js main process runtime (~5 MB active state).
+   - The Chromium renderer V8 engine completely idles, allowing Windows and Chromium's background memory compression ("Efficiency mode") to reclaim renderer heap.
+3. **State reconciliation on restore:**
+   - When the user clicks the tray icon / unminimizes, or when playback ends, Heimdall sends a single consolidated state update to the renderer to refresh watch status and episode positions.
+4. **Auto-restore on episode finish:**
+   - When the episode finishes (or VLC/mpv exits), automatically restore and focus the window, showing the scrobbled status and next episode ready to watch (or triggering the autoplay countdown card, 2.2.b).
 
 ---
 
