@@ -152,6 +152,7 @@ export function extractSpeech(
     const args = [
       '-nostdin',
       '-hide_banner',
+      '-stats',
       '-i',
       videoPath,
       '-map',
@@ -184,10 +185,10 @@ export function extractSpeech(
       const text = chunk.toString()
       stderrTail = (stderrTail + text).slice(-2000)
       if (!duration) {
-        const d = /Duration:\s*(\d+:\d{2}:\d{2}(?:\.\d+)?)/.exec(text)
+        const d = /Duration:\s*(\d+:\d{2}:\d{2}(?:\.\d+)?)/.exec(stderrTail)
         if (d) duration = parseClock(d[1])
       }
-      const t = /time=\s*(\d+:\d{2}:\d{2}(?:\.\d+)?)/.exec(text)
+      const t = /time=\s*(\d+:\d{2}:\d{2}(?:\.\d+)?)/.exec(text) || /time=\s*(\d+:\d{2}:\d{2}(?:\.\d+)?)/.exec(stderrTail)
       if (t && duration > 0) opts.onProgress?.(Math.min(1, parseClock(t[1]) / duration))
     })
 
@@ -204,6 +205,7 @@ export function extractSpeech(
           : `ffmpeg exited with code ${code}`
         return reject(new Error(reason))
       }
+      opts.onProgress?.(1)
       resolve(detectSpeech(meter.finish()))
     })
   })

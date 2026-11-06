@@ -8,6 +8,8 @@ GitHub release, so write it for the people who use the app.
 ## [Unreleased]
 
 ### Added
+- Stealth Playback Mode: automatically minimizes or hides Heimdall to the system tray while video plays, reducing background memory to ~35–50 MB (far below VLC), and automatically restores the window when the episode finishes.
+- Background IPC suspension: telemetry broadcasts to the renderer are paused when the window is minimized or hidden, allowing Chromium and Windows to idle and reclaim memory.
 - macOS now ships as one universal app that runs natively on both Apple Silicon and Intel.
 - Automated tests, linting and a continuous-integration check on every pull request.
 - Settings → Updates has an update channel: Stable, or Beta to also get pre-releases.
@@ -17,6 +19,8 @@ GitHub release, so write it for the people who use the app.
 - Subtitle auto-sync shows its progress while it reads the audio, can be cancelled, and can be undone.
 
 ### Changed
+- Opaque classic dark theme is now the default for new installs, saving GPU compositing memory by avoiding transparent Acrylic swapchains unless Liquid Glass is selected.
+- Library updates during playback are throttled so that high-frequency progress ticks do not clone and re-render the entire episode list every 1.5 seconds.
 - Updates on Windows and in the Linux AppImage are downloaded and installed by the app, and the
   download is checked against its published checksum before it installs. On macOS (until the app is
   signed) and for `.deb`/`.tar.gz` installs, the app opens the download page instead.

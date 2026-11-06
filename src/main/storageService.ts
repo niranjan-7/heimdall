@@ -28,12 +28,13 @@ const DEFAULT_SETTINGS: AppSettings = {
   discordClientId: '737663962677510245',
   enableAniListScrobble: true,
   enableThumbnails: true,
-  enableLiquidGlass: true,
+  enableLiquidGlass: false,
   dimFillerEpisodes: true,
-  uiTheme: 'liquid_glass',
+  uiTheme: 'classic_dark',
   enableRemoteServer: false,
   remotePort: 42125,
-  updateChannel: 'stable'
+  updateChannel: 'stable',
+  stealthPlaybackMode: 'minimize'
 }
 
 export class StorageService {
@@ -174,6 +175,11 @@ export class StorageService {
 
     if (!this.settingsData.remoteToken) {
       this.settingsData.remoteToken = generateSecret()
+      updated = true
+    }
+
+    if (!this.settingsData.stealthPlaybackMode) {
+      this.settingsData.stealthPlaybackMode = 'minimize'
       updated = true
     }
 

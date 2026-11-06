@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import {
   AppSettings,
-  MediaPlayerType,
   Anime4KPreset,
   UpdateInfo,
   UpdateDownloadProgress,
   UpdateChannel,
-  UITheme
+  StealthPlaybackMode
 } from '../../../shared/types'
 import {
   Settings,
@@ -20,7 +19,6 @@ import {
   Film,
   UserCheck,
   Zap,
-  Sliders,
   Search,
   Play,
   Languages,
@@ -28,7 +26,8 @@ import {
   RefreshCw,
   CheckCircle2,
   AlertCircle,
-  Archive
+  Archive,
+  Minimize2
 } from 'lucide-react'
 
 interface SettingsModalProps {
@@ -596,6 +595,58 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
             />
             <p className="text-[11px] text-zinc-500 mt-1">
               Marks episode as Watched & triggers AniList scrobble once progress reaches this threshold.
+            </p>
+          </div>
+
+          {/* Stealth Playback Mode & Memory Throttling */}
+          <div className="p-4 rounded-xl bg-zinc-950/60 border border-surface-border space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-lg bg-indigo-500/15 text-indigo-400">
+                  <Minimize2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wider">
+                    Stealth Playback & Memory Throttling
+                  </h4>
+                  <p className="text-[11px] text-zinc-400">
+                    Reduces background RAM to ~35–50 MB while video plays
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { id: 'minimize', label: 'Minimize', desc: 'Auto-minimize to taskbar on play' },
+                { id: 'tray', label: 'System Tray', desc: 'Hide to system tray on play' },
+                { id: 'none', label: 'Keep Open', desc: 'Leave window open as-is' }
+              ].map((mode) => {
+                const isSelected = (settings.stealthPlaybackMode || 'minimize') === mode.id
+                return (
+                  <button
+                    key={mode.id}
+                    type="button"
+                    onClick={() =>
+                      setSettings({
+                        ...settings,
+                        stealthPlaybackMode: mode.id as StealthPlaybackMode
+                      })
+                    }
+                    className={`p-2.5 rounded-lg text-left border transition-all ${
+                      isSelected
+                        ? 'bg-indigo-500/15 border-indigo-500/40 text-indigo-300'
+                        : 'bg-zinc-900/40 border-zinc-800 text-zinc-400 hover:text-zinc-200'
+                    }`}
+                  >
+                    <div className="text-[11px] font-bold">{mode.label}</div>
+                    <div className="text-[9px] text-zinc-500 leading-tight mt-0.5">{mode.desc}</div>
+                  </button>
+                )
+              })}
+            </div>
+            <p className="text-[10px] text-zinc-500 leading-snug">
+              When minimized or hidden, Heimdall pauses high-frequency UI updates and frees GPU composition buffers. The window automatically restores when playback ends.
             </p>
           </div>
 

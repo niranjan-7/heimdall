@@ -437,6 +437,8 @@ Today series metadata only comes from AniList, so western TV gets nothing.
 
 ## Phase 1.8 — Quick UI fixes that are really bugs
 
+> **Status: items 1 & 4 implemented in branch `phase-1.8-memory-throttling`.** Default theme switched to `classic_dark` (opaque), eliminating D3D acrylic composition swapchains; `SyncWorker` suspends `vlc:progress-update` IPC broadcasts when the window is minimized or hidden, flushing a single consolidated update on restore; `App.tsx` throttles library state cloning to at most once per 10s or upon completion transitions; Stealth Playback Mode added (minimize / system tray / keep open) with auto-restore on episode completion; documented in `docs/STEALTH_WATCHER.md` with unit test suite in `tests/syncWorkerThrottling.test.ts`. Items 2 and 3 remain to complete Phase 1.8.
+
 1. **Opaque theme by default** (`classic_dark` for new installs). Liquid Glass stays as an option. On Windows, `transparent: true` + `backgroundMaterial: 'acrylic'` breaks snap/maximize and costs GPU; only enable transparency when the Liquid Glass theme is active (needs a window re-create on theme switch — acceptable, or ask to restart).
 2. **Minimum font size 12px** for all body/label text (replace `text-[10px]` usages). Uppercase+tracking only for tiny section labels.
 3. Respect `prefers-reduced-motion`: disable caustic animations and large transitions.

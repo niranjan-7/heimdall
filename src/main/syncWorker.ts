@@ -19,6 +19,7 @@ export class SyncWorker {
   private scrobbledEpisodeIds = new Set<string>()
   private onStateChange?: (update: VlcStateUpdate | null) => void
   private lastUpdate: VlcStateUpdate | null = null
+  private hasPendingProgressSync = false
 
   constructor(
     storageService: StorageService,
@@ -88,6 +89,7 @@ export class SyncWorker {
       this.timer = null
     }
 
+    this.hasPendingProgressSync = false
     this.storageService.saveLibrary()
     this.discordService.clearActivity().catch(() => {})
     this.lastUpdate = null
@@ -210,12 +212,7 @@ export class SyncWorker {
         playerType
       }
 
-      const win = this.getMainWindow()
-      if (win && !win.isDestroyed()) {
-        win.webContents.send('vlc:progress-update', update)
-      }
-      this.lastUpdate = update
-      this.onStateChange?.(update)
+      this.sendProgressUpdate(update)
       return
     }
 
@@ -287,12 +284,46 @@ export class SyncWorker {
       playerType
     }
 
-    const win = this.getMainWindow()
-    if (win && !win.isDestroyed()) {
-      win.webContents.send('vlc:progress-update', update)
-    }
+    this.sendProgressUpdate(update)
+  }
+
+  /**
+   * Dispatch progress update to renderer if window is visible and active.
+   * If window is minimized or hidden, defer sending until window is restored
+   * to eliminate background V8 heap churn and React reconciliation loops.
+   */
+  private sendProgressUpdate(update: VlcStateUpdate): void {
     this.lastUpdate = update
-      this.onStateChange?.(update)
+    this.onStateChange?.(update)
+
+    const win = this.getMainWindow()
+    if (!win || win.isDestroyed()) return
+
+    // When minimized or hidden, suspend sending IPC progress updates to allow
+    // the Chromium renderer heap to idle and Windows/Chromium to reclaim background memory.
+    if (win.isMinimized() || !win.isVisible()) {
+      this.hasPendingProgressSync = true
+      return
+    }
+
+    win.webContents.send('vlc:progress-update', update)
+    this.hasPendingProgressSync = false
+  }
+
+  /**
+   * Flush any deferred progress update when window is restored/shown.
+   */
+  public flushPendingProgress(): void {
+    if (!this.hasPendingProgressSync || !this.lastUpdate) return
+    const win = this.getMainWindow()
+    if (win && !win.isDestroyed() && !win.isMinimized() && win.isVisible()) {
+      win.webContents.send('vlc:progress-update', this.lastUpdate)
+      this.hasPendingProgressSync = false
+    }
+  }
+
+  public getPendingProgressSync(): boolean {
+    return this.hasPendingProgressSync
   }
 
   private async triggerAniListScrobble(
