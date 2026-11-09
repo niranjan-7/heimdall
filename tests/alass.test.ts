@@ -12,6 +12,7 @@ import { capBySections } from '../src/main/subsync/verifier'
 import {
   Cue,
   cuesToSrt,
+  parseLabeledSrt,
   parseCues,
   retimeSubtitle,
   retimeSubtitleCues
@@ -129,6 +130,18 @@ describe('giving each cue its own time', () => {
     expect(retimeSubtitleCues(SRT, 'srt', shifted)).toBe(
       retimeSubtitle(SRT, 'srt', { offset: 3, scale: 1 })
     )
+  })
+
+  it('labels cues and reads the labels back, in written order', () => {
+    const cues = [
+      { start: 1, end: 2 },
+      { start: 5, end: 6 }
+    ]
+    const srt = cuesToSrt(cues, (i) => `L${i}`)
+    expect(parseLabeledSrt(srt)).toEqual([
+      { label: 'L0', start: 1, end: 2 },
+      { label: 'L1', start: 5, end: 6 }
+    ])
   })
 
   it('writes a minimal SRT that reads back the same', () => {
@@ -279,8 +292,13 @@ describe('running alass', () => {
     await expect(withMode('fail')).rejects.toThrow(/code 3.*failing on purpose/s)
   })
 
-  it('rejects a result with a different number of lines', async () => {
-    await expect(withMode('drop')).rejects.toThrow(/returned 39 lines for 40/)
+  it('rejects a result with lines missing', async () => {
+    await expect(withMode('drop')).rejects.toThrow(/returned 39 of 40 lines/)
+  })
+
+  it('matches lines by label when alass reorders them', async () => {
+    const r = await withMode('reverse')
+    r.cues.forEach((c, i) => expect(c.start).toBeCloseTo(cues[i].start, 2))
   })
 
   it('stops when cancelled', async () => {

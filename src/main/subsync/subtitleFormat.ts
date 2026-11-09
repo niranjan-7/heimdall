@@ -196,14 +196,31 @@ export function retimeSubtitleCues(content: string, format: SubtitleFormat, cues
   return retimeWith(content, format, (i) => cues[i])
 }
 
-/** A minimal SRT made of the given cues (text "-"); used as input for external tools. */
-export function cuesToSrt(cues: Cue[]): string {
+/**
+ * A minimal SRT made of the given cues, for external tools. Each cue's text is `label(i)` (default
+ * "-"); a tool that reorders lines can then be matched back by label.
+ */
+export function cuesToSrt(cues: Cue[], label: (index: number) => string = () => '-'): string {
   return (
     cues
       .map(
         (c, i) =>
-          `${i + 1}\n${formatSrtVttTime(c.start, ',')} --> ${formatSrtVttTime(c.end, ',')}\n-\n`
+          `${i + 1}\n${formatSrtVttTime(c.start, ',')} --> ${formatSrtVttTime(c.end, ',')}\n${label(i)}\n`
       )
       .join('\n') + '\n'
   )
+}
+
+/** Reads an SRT as {label, start, end} in the order it is written; label is the first text line. */
+export function parseLabeledSrt(content: string): { label: string; start: number; end: number }[] {
+  const out: { label: string; start: number; end: number }[] = []
+  const lines = content.split(/\r?\n/)
+  for (let i = 0; i < lines.length; i++) {
+    const m = SRT_VTT_LINE.exec(lines[i])
+    if (!m) continue
+    const start = parseSrtVttTime(m[2])
+    const end = parseSrtVttTime(m[8])
+    if (start !== null && end !== null) out.push({ label: (lines[i + 1] ?? '').trim(), start, end })
+  }
+  return out
 }

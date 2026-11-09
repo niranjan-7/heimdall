@@ -3,7 +3,7 @@ import * as fs from 'fs'
 import * as os from 'os'
 import { join } from 'path'
 import { FRAME_SEC } from './speechEnvelope'
-import { Cue, cuesToSrt, parseCues } from './subtitleFormat'
+import { Cue, cuesToSrt, parseLabeledSrt } from './subtitleFormat'
 import { nearestFpsChange } from './aligner'
 
 /**
@@ -130,7 +130,7 @@ function runProcess(
 
 /**
  * Runs alass on the detected speech and the subtitle's cues (in file order) and returns the new
- * time of every cue. Throws if alass fails or gives back a different number of lines.
+ * time of every cue. Throws if alass fails or leaves out lines.
  */
 export async function runAlass(
   binary: string,
@@ -147,7 +147,10 @@ export async function runAlass(
     const incPath = join(dir, 'subtitle.srt')
     const outPath = join(dir, 'synced.srt')
     fs.writeFileSync(refPath, cuesToSrt(reference))
-    fs.writeFileSync(incPath, cuesToSrt(cues))
+    fs.writeFileSync(
+      incPath,
+      cuesToSrt(cues, (i) => String(i))
+    )
 
     const launcher = opts.launcher ?? { file: binary, args: [] }
     await runProcess(
@@ -165,9 +168,18 @@ export async function runAlass(
       opts.timeoutMs ?? 180_000
     )
 
-    const aligned = parseCues(fs.readFileSync(outPath, 'utf-8'), 'srt', { fileOrder: true })
-    if (aligned.length !== cues.length) {
-      throw new Error(`alass returned ${aligned.length} lines for ${cues.length}.`)
+    // alass may reorder lines whose times overlap (a cut recap does that), so match by label.
+    const aligned: Cue[] = new Array(cues.length)
+    let found = 0
+    for (const line of parseLabeledSrt(fs.readFileSync(outPath, 'utf-8'))) {
+      const index = /^\d+$/.test(line.label) ? Number(line.label) : -1
+      if (index >= 0 && index < cues.length && !aligned[index]) {
+        aligned[index] = { start: line.start, end: line.end }
+        found++
+      }
+    }
+    if (found !== cues.length) {
+      throw new Error(`alass returned ${found} of ${cues.length} lines.`)
     }
     return { cues: aligned, ...summarizeShift(cues, aligned) }
   } finally {

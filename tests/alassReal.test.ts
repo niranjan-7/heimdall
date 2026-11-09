@@ -28,7 +28,8 @@ describe.runIf(enabled)('real alass', () => {
     expect(binary).not.toBeNull()
   })
 
-  it.each([3.4, -42, 95])(
+  // Positive offsets move the subtitle earlier, so keep them small enough that no line goes below 0.
+  it.each([3.4, -42, -95])(
     'recovers a shift of %s s as one section',
     async (shift) => {
       const broken = invert(truth, { offset: shift, scale: 1 })
@@ -47,7 +48,8 @@ describe.runIf(enabled)('real alass', () => {
   }, 60_000)
 
   it('finds a cut as separate sections', async () => {
-    // The first part of the subtitle is 2 s early, the rest 92 s early (a 90 s block was cut).
+    // The first part of the subtitle is 2 s early, the rest 92 s early (a 90 s block was cut). The
+    // second part then overlaps the first in time, so alass has to cope with lines out of order.
     const half = Math.floor(truth.length / 2)
     const broken = truth.map((c, i) => {
       const d = i < half ? 2 : 92

@@ -31,6 +31,22 @@ const cacheDir = join(root, 'node_modules', '.cache', 'heimdall-alass')
 
 const OS_NAMES = { win32: 'win', darwin: 'mac', linux: 'linux' }
 
+// alass builds a small C library (libfvad). Its 2019 build script does not tell the C compiler
+// which architecture to target, so an Intel build on an Apple Silicon Mac (or the reverse) would
+// compile the C code for the wrong one and fail to link. Say it explicitly.
+const APPLE_ARCH = { 'aarch64-apple-darwin': 'arm64', 'x86_64-apple-darwin': 'x86_64' }
+
+function compilerEnv(rustTarget) {
+  const arch = APPLE_ARCH[rustTarget]
+  if (!arch) return {}
+  const key = rustTarget.replaceAll('-', '_')
+  return {
+    [`CFLAGS_${key}`]: `-arch ${arch}`,
+    [`CXXFLAGS_${key}`]: `-arch ${arch}`,
+    CMAKE_OSX_ARCHITECTURES: arch
+  }
+}
+
 function parseArgs(argv) {
   const opts = { targets: [], host: false, force: false }
   for (let i = 0; i < argv.length; i++) {
@@ -85,7 +101,8 @@ function buildOne(target, entry, force) {
   const src = join(cacheDir, commit)
   checkoutSource(src, repo, commit)
   run('cargo', ['build', '--release', '--locked', '-p', 'alass-cli', '--target', rustTarget], {
-    cwd: src
+    cwd: src,
+    env: { ...process.env, ...compilerEnv(rustTarget) }
   })
 
   const built = join(src, 'target', rustTarget, 'release', 'alass-cli')

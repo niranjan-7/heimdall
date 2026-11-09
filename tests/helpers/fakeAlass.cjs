@@ -2,6 +2,7 @@
 // FAKE_ALASS=shift:<seconds>  moves every line by that many seconds
 // FAKE_ALASS=fail             exits with an error
 // FAKE_ALASS=drop             writes one line fewer than it was given
+// FAKE_ALASS=reverse          writes the lines in reverse order (as alass may when times overlap)
 // FAKE_ALASS=hang             never finishes
 const fs = require('fs')
 
@@ -28,6 +29,7 @@ else {
     (_m, a, b, c, d, e, f, g, h) =>
       `${stamp(secs(a, b, c, d) + shift)} --> ${stamp(secs(e, f, g, h) + shift)}`
   )
+  if (mode === 'reverse') text = text.trimEnd().split('\n\n').reverse().join('\n\n') + '\n'
   if (mode === 'drop') text = text.trimEnd().split('\n\n').slice(0, -1).join('\n\n') + '\n'
   fs.writeFileSync(outPath, text)
 }
