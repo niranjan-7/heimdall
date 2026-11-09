@@ -154,6 +154,59 @@ export class AniListService {
     }
   }
 
+  /**
+   * Titles (English, Romaji, synonyms — in that order), airing status, episode
+   * count and the nearest TV prequel. Used to match animefillerlist pages.
+   */
+  public async getFillerMatchInfo(mediaId: number): Promise<AniListFillerMatchInfo | null> {
+    const graphqlQuery = `
+      query ($id: Int) {
+        Media (id: $id, type: ANIME) {
+          id
+          status
+          episodes
+          title { romaji english }
+          synonyms
+          relations {
+            edges {
+              relationType
+              node { id type format }
+            }
+          }
+        }
+      }
+    `
+    try {
+      const response = await fetch(ANILIST_GRAPHQL_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ query: graphqlQuery, variables: { id: mediaId } }),
+        signal: AbortSignal.timeout(8000)
+      })
+      if (!response.ok) return null
+      const json = await response.json()
+      return toFillerMatchInfo(json?.data?.Media)
+    } catch (err) {
+      console.warn('[AniListService] Failed to get filler match info:', err)
+      return null
+    }
+  }
+
+  /** Earlier TV seasons, nearest first (at most `maxDepth`). Stops quietly on errors. */
+  public async getPrequelChain(info: AniListFillerMatchInfo, maxDepth = 8): Promise<AniListFillerMatchInfo[]> {
+    const chain: AniListFillerMatchInfo[] = []
+    const seen = new Set<number>([info.id])
+    let nextId = info.prequelId
+    while (nextId && !seen.has(nextId) && chain.length < maxDepth) {
+      seen.add(nextId)
+      const prev = await this.getFillerMatchInfo(nextId)
+      if (!prev) break
+      chain.push(prev)
+      nextId = prev.prequelId
+    }
+    return chain
+  }
+
   public async getAnimeDetails(
     mediaId: number,
     token?: string
@@ -210,5 +263,38 @@ export class AniListService {
       console.warn('[AniListService] Failed to get anime details:', err)
       return null
     }
+  }
+}
+
+export interface AniListFillerMatchInfo {
+  id: number
+  status: string | null
+  episodes: number | null
+  /** English, Romaji, then synonyms; de-duplicated. */
+  titles: string[]
+  prequelId: number | null
+}
+
+const SEASON_FORMATS = new Set(['TV', 'TV_SHORT', 'ONA'])
+
+/** Converts an AniList `Media` object into match info. Exported for tests. */
+export function toFillerMatchInfo(media: any): AniListFillerMatchInfo | null {
+  if (!media || typeof media.id !== 'number') return null
+  const titles = [media.title?.english, media.title?.romaji, ...(Array.isArray(media.synonyms) ? media.synonyms : [])]
+    .filter((t): t is string => typeof t === 'string' && t.trim().length > 0)
+    .map((t) => t.trim())
+  const prequel = (media.relations?.edges || []).find(
+    (e: any) =>
+      e?.relationType === 'PREQUEL' &&
+      e?.node?.type === 'ANIME' &&
+      SEASON_FORMATS.has(e?.node?.format) &&
+      typeof e?.node?.id === 'number'
+  )
+  return {
+    id: media.id,
+    status: media.status || null,
+    episodes: typeof media.episodes === 'number' ? media.episodes : null,
+    titles: [...new Set(titles)],
+    prequelId: prequel ? prequel.node.id : null
   }
 }

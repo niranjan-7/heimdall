@@ -409,6 +409,12 @@ Current: scrapes `animefillerlist.com` HTML; page slug guessed from the folder t
 
 **Tests:** slug candidates from AniList titles; fuzzy match picks the right show for 20 known titles; absolute vs relative numbering mapping; parser fixtures.
 
+**Status: implemented on branch `phase-1-5-filler` (ships after v1.5.0, in 1.5.1 or 1.6.0).**
+- Pure code in `src/main/fillerParser.ts` (HTML) and `src/main/fillerMatcher.ts` (slug candidates, Jaro-Winkler + token-sort scoring, offsets, cache TTL, throttle); `fillerService.ts` does I/O only. Cache is now per show (`show_<slug>.json`), not per series.
+- Tests: `tests/fillerParser.test.ts` (4 trimmed real pages + show list in `tests/fixtures/filler/`, captured 2026-11-10) and `tests/fillerMatcher.test.ts` (28 known titles).
+- The hero has no `…` menu, so "Fix Filler Match" is a button in the action row next to "Refresh Filler Data"; the Fillers badge also opens it.
+- Auto offset walks AniList TV prequels and only counts seasons that match the same filler page; it is 0 when local files already start past those seasons.
+
 ---
 
 ## Phase 1.6 — TMDB metadata for non-anime TV series

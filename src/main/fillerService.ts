@@ -1,284 +1,307 @@
 import { app } from 'electron'
 import * as fs from 'fs'
 import * as path from 'path'
-import { Series, FillerCategory, SeriesFillerStats } from '../shared/types'
+import { Series, SeriesFillerStats, FillerShowOption, FillerShowPreview } from '../shared/types'
+import { FillerShowEntry, ParsedEpisodeFiller, parseShowList, parseShowPage } from './fillerParser'
+import {
+  applyFillerToEpisodes,
+  bestShowMatch,
+  computeEpisodeOffset,
+  createThrottle,
+  fillerCacheTtlMs,
+  prequelEpisodeTotal,
+  rankShows,
+  searchShows,
+  slugCandidatesFromTitles
+} from './fillerMatcher'
+import type { AniListService, AniListFillerMatchInfo } from './anilistService'
 
-interface ParsedEpisodeFiller {
-  type: FillerCategory
-  label: string
-  title: string
+const SITE = 'https://www.animefillerlist.com'
+/** The master show list changes rarely; refresh it monthly. */
+const SHOW_LIST_TTL_MS = 30 * 24 * 60 * 60 * 1000
+
+interface CachedShow {
+  slug: string
+  sourceUrl: string
+  lastSyncedAt: number
+  counts: Omit<SeriesFillerStats, 'sourceUrl' | 'lastSyncedAt'>
+  episodes: Array<{ epNum: number } & ParsedEpisodeFiller>
 }
+
+interface CachedShowList {
+  fetchedAt: number
+  shows: FillerShowEntry[]
+}
+
+export interface EnrichOptions {
+  /** Ignore the cache TTL and fetch the page again ("Refresh filler data"). */
+  force?: boolean
+}
+
+export interface EnrichResult {
+  series: Series
+  /** The page was matched but could not be fetched and no cache exists (offline, site down). */
+  unavailable: boolean
+}
+
+/** Every request to animefillerlist goes through this: at most one request per second. */
+const throttle = createThrottle(1000)
 
 export class FillerService {
   private cacheDir: string
   private showListCachePath: string
-  private cachedShowList: { slug: string; title: string }[] | null = null
+  private showList: CachedShowList | null = null
+  private userAgent: string
 
-  constructor() {
+  constructor(private anilist: Pick<AniListService, 'getFillerMatchInfo' | 'getPrequelChain'>) {
     const userData = app.getPath('userData')
     this.cacheDir = path.join(userData, 'cache', 'filler')
     this.showListCachePath = path.join(this.cacheDir, 'shows_master_list.json')
+    this.userAgent = `Heimdall/${app.getVersion()} (personal media library app; +https://github.com/niranjan-7/heimdall)`
     try {
-      if (!fs.existsSync(this.cacheDir)) {
-        fs.mkdirSync(this.cacheDir, { recursive: true })
-      }
+      fs.mkdirSync(this.cacheDir, { recursive: true })
     } catch (err) {
       console.error('[FillerService] Failed to create cache dir:', err)
     }
   }
 
-  public generateSlug(title: string): string {
-    return title
-      .replace(/\[[^\]]*\]/g, '')
-      .replace(/\([^)]*\)/g, '')
-      .replace(/Season \d+/gi, '')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // remove accents
-      .replace(/[^a-zA-Z0-9\s-]/g, '')
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, '-')
-  }
+  // ── Network ───────────────────────────────────────────────────────────────
 
-  public async getFillerData(
-    title: string,
-    seriesId: string
-  ): Promise<{ episodeMap: Map<number, ParsedEpisodeFiller>; stats: SeriesFillerStats } | null> {
-    const cacheFile = path.join(this.cacheDir, `${seriesId}.json`)
-
-    // 1. Check local file cache (valid for 14 days)
-    if (fs.existsSync(cacheFile)) {
+  private async fetchHtml(url: string): Promise<string | null> {
+    return throttle(async () => {
       try {
-        const raw = fs.readFileSync(cacheFile, 'utf8')
-        const data = JSON.parse(raw)
-        const ageMs = Date.now() - (data.stats?.lastSyncedAt || 0)
-        if (ageMs < 14 * 24 * 60 * 60 * 1000 && Array.isArray(data.episodes)) {
-          const map = new Map<number, ParsedEpisodeFiller>()
-          for (const item of data.episodes) {
-            map.set(item.epNum, {
-              type: item.type,
-              label: item.label,
-              title: item.title
-            })
-          }
-          return { episodeMap: map, stats: data.stats }
-        }
-      } catch (err) {
-        console.warn('[FillerService] Error reading filler cache:', err)
-      }
-    }
-
-    // 2. Fetch from AnimeFillerList
-    const directSlug = this.generateSlug(title)
-    let parsed = await this.scrapeShowPage(directSlug)
-
-    // Fallback: search directory if direct slug 404s
-    if (!parsed) {
-      const matchedSlug = await this.findMatchingSlug(title)
-      if (matchedSlug && matchedSlug !== directSlug) {
-        parsed = await this.scrapeShowPage(matchedSlug)
-      }
-    }
-
-    if (!parsed) {
-      return null
-    }
-
-    // 3. Save to disk cache
-    try {
-      const serializableEpisodes = Array.from(parsed.episodeMap.entries()).map(([epNum, info]) => ({
-        epNum,
-        ...info
-      }))
-      fs.writeFileSync(
-        cacheFile,
-        JSON.stringify(
-          {
-            stats: parsed.stats,
-            episodes: serializableEpisodes
-          },
-          null,
-          2
-        ),
-        'utf8'
-      )
-    } catch (err) {
-      console.warn('[FillerService] Failed to write cache file:', err)
-    }
-
-    return parsed
-  }
-
-  private async scrapeShowPage(
-    slug: string
-  ): Promise<{ episodeMap: Map<number, ParsedEpisodeFiller>; stats: SeriesFillerStats } | null> {
-    const url = `https://www.animefillerlist.com/shows/${slug}`
-    try {
-      const res = await fetch(url, {
-        headers: {
-          'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        },
-        signal: AbortSignal.timeout(8000)
-      })
-
-      if (!res.ok) {
-        return null
-      }
-
-      const html = await res.text()
-      const rowRegex =
-        /<tr class="([^"]*)"\s+id="eps-(\d+)">[\s\S]*?<td class="Number">(\d+)<\/td>[\s\S]*?<td class="Title"><a[^>]*>([^<]+)<\/a><\/td>[\s\S]*?<td class="Type"><span>([^<]+)<\/span><\/td>/gi
-
-      const episodeMap = new Map<number, ParsedEpisodeFiller>()
-      let mangaCanon = 0
-      let animeCanon = 0
-      let mixedCanon = 0
-      let filler = 0
-
-      let match: RegExpExecArray | null
-      while ((match = rowRegex.exec(html)) !== null) {
-        const epNum = parseInt(match[3], 10)
-        const epTitle = match[4].trim()
-        const rawType = match[5].trim()
-        const cssClass = match[1].toLowerCase()
-
-        let type: FillerCategory = 'manga_canon'
-        let label = 'Manga Canon'
-
-        if (cssClass.includes('mixed') || rawType.toLowerCase().includes('mixed')) {
-          type = 'mixed_canon'
-          label = 'Mixed Canon'
-          mixedCanon++
-        } else if (cssClass.includes('filler') || rawType.toLowerCase().includes('filler')) {
-          type = 'filler'
-          label = 'Filler'
-          filler++
-        } else if (
-          cssClass.includes('anime_canon') ||
-          rawType.toLowerCase().includes('anime canon')
-        ) {
-          type = 'anime_canon'
-          label = 'Anime Canon'
-          animeCanon++
-        } else {
-          mangaCanon++
-        }
-
-        episodeMap.set(epNum, { type, label, title: epTitle })
-      }
-
-      if (episodeMap.size === 0) {
-        return null
-      }
-
-      const total = mangaCanon + animeCanon + mixedCanon + filler
-      const fillerPercentage = total > 0 ? Math.round((filler / total) * 100) : 0
-
-      return {
-        episodeMap,
-        stats: {
-          mangaCanonCount: mangaCanon,
-          animeCanonCount: animeCanon,
-          mixedCanonCount: mixedCanon,
-          fillerCount: filler,
-          fillerPercentage,
-          sourceUrl: url,
-          lastSyncedAt: Date.now()
-        }
-      }
-    } catch (err) {
-      console.error(`[FillerService] Failed to scrape filler list for ${slug}:`, err)
-      return null
-    }
-  }
-
-  private async findMatchingSlug(queryTitle: string): Promise<string | null> {
-    try {
-      if (!this.cachedShowList && fs.existsSync(this.showListCachePath)) {
-        try {
-          const raw = fs.readFileSync(this.showListCachePath, 'utf8')
-          this.cachedShowList = JSON.parse(raw)
-        } catch {}
-      }
-
-      if (!this.cachedShowList) {
-        const res = await fetch('https://www.animefillerlist.com/shows', {
-          headers: {
-            'User-Agent':
-              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-          },
+        const res = await fetch(url, {
+          headers: { 'User-Agent': this.userAgent, Accept: 'text/html' },
           signal: AbortSignal.timeout(8000)
         })
         if (!res.ok) return null
-        const html = await res.text()
-        const showRegex = /<a href="\/shows\/([^"]+)">([^<]+)<\/a>/gi
-        const list: { slug: string; title: string }[] = []
-        let match: RegExpExecArray | null
-        while ((match = showRegex.exec(html)) !== null) {
-          list.push({ slug: match[1], title: match[2].trim() })
-        }
-        this.cachedShowList = list
-        try {
-          fs.writeFileSync(this.showListCachePath, JSON.stringify(list, null, 2), 'utf8')
-        } catch {}
+        return await res.text()
+      } catch (err) {
+        console.warn(
+          `[FillerService] Request failed for ${url}: ${err instanceof Error ? err.message : err}`
+        )
+        return null
       }
+    })
+  }
 
-      const cleanQuery = queryTitle.toLowerCase().replace(/[^a-z0-9]/g, '')
-      let bestMatch: string | null = null
-      let bestScore = 0
+  // ── Master show list ──────────────────────────────────────────────────────
 
-      for (const item of this.cachedShowList || []) {
-        const cleanItem = item.title.toLowerCase().replace(/[^a-z0-9]/g, '')
-        if (cleanItem === cleanQuery) {
-          return item.slug
-        }
-        if (cleanItem.includes(cleanQuery) || cleanQuery.includes(cleanItem)) {
-          const score = Math.min(cleanItem.length, cleanQuery.length)
-          if (score > bestScore) {
-            bestScore = score
-            bestMatch = item.slug
-          }
-        }
+  /** Master list from memory → disk → network. Returns a stale copy rather than nothing. */
+  public async getShowList(force = false): Promise<FillerShowEntry[]> {
+    if (!this.showList) this.showList = this.readShowListCache()
+    const fresh = this.showList && Date.now() - this.showList.fetchedAt < SHOW_LIST_TTL_MS
+    if (this.showList && fresh && !force) return this.showList.shows
+
+    const html = await this.fetchHtml(`${SITE}/shows`)
+    const shows = html ? parseShowList(html) : []
+    if (shows.length > 0) {
+      this.showList = { fetchedAt: Date.now(), shows }
+      try {
+        fs.writeFileSync(this.showListCachePath, JSON.stringify(this.showList), 'utf8')
+      } catch (err) {
+        console.warn('[FillerService] Failed to write show list cache:', err)
       }
+    } else if (html) {
+      console.warn('[FillerService] Show list parsed to 0 entries; keeping the previous copy')
+    }
+    return this.showList?.shows ?? []
+  }
 
-      return bestMatch
+  private readShowListCache(): CachedShowList | null {
+    try {
+      if (!fs.existsSync(this.showListCachePath)) return null
+      const raw = JSON.parse(fs.readFileSync(this.showListCachePath, 'utf8'))
+      // Older versions stored a bare array.
+      if (Array.isArray(raw)) return { fetchedAt: 0, shows: raw }
+      if (raw && Array.isArray(raw.shows))
+        return { fetchedAt: raw.fetchedAt || 0, shows: raw.shows }
     } catch (err) {
-      console.warn('[FillerService] Failed to find matching slug:', err)
+      console.warn('[FillerService] Could not read show list cache:', err)
+    }
+    return null
+  }
+
+  // ── Show pages ────────────────────────────────────────────────────────────
+
+  private showCachePath(slug: string): string {
+    return path.join(this.cacheDir, `show_${slug.replace(/[^a-zA-Z0-9-]/g, '_')}.json`)
+  }
+
+  private readShowCache(slug: string): CachedShow | null {
+    try {
+      const file = this.showCachePath(slug)
+      if (!fs.existsSync(file)) return null
+      const data = JSON.parse(fs.readFileSync(file, 'utf8')) as CachedShow
+      return Array.isArray(data?.episodes) && data.episodes.length > 0 ? data : null
+    } catch (err) {
+      console.warn('[FillerService] Error reading filler cache:', err)
       return null
     }
   }
 
-  public async enrichSeries(series: Series): Promise<Series> {
-    const title = series.aniListTitle || series.title
-    const data = await this.getFillerData(title, series.id)
-    if (!data) {
-      return series
+  /**
+   * Show page from cache when fresh, otherwise from the site. When the fetch
+   * fails or parses to 0 episodes, the previous cache is kept and returned.
+   */
+  public async getShow(slug: string, ttlMs: number, force = false): Promise<CachedShow | null> {
+    const cached = this.readShowCache(slug)
+    if (cached && !force && Date.now() - cached.lastSyncedAt < ttlMs) return cached
+
+    const sourceUrl = `${SITE}/shows/${slug}`
+    const html = await this.fetchHtml(sourceUrl)
+    if (html === null) return cached
+
+    const parsed = parseShowPage(html)
+    if (parsed.episodes.size === 0) {
+      if (cached) {
+        console.warn(
+          `[FillerService] ${slug}: page parsed to 0 episodes; keeping cached data from ${new Date(cached.lastSyncedAt).toISOString()}`
+        )
+      }
+      return cached
     }
 
-    const { episodeMap, stats } = data
+    const fresh: CachedShow = {
+      slug,
+      sourceUrl,
+      lastSyncedAt: Date.now(),
+      counts: parsed.counts,
+      episodes: Array.from(parsed.episodes.entries()).map(([epNum, info]) => ({ epNum, ...info }))
+    }
+    try {
+      fs.writeFileSync(this.showCachePath(slug), JSON.stringify(fresh), 'utf8')
+    } catch (err) {
+      console.warn('[FillerService] Failed to write cache file:', err)
+    }
+    return fresh
+  }
 
-    // Apply filler classification to each episode
-    let matchedCount = 0
-    for (const ep of series.episodes) {
-      if (ep.episodeNumber !== null) {
-        const filler = episodeMap.get(ep.episodeNumber)
-        if (filler) {
-          ep.fillerType = filler.type
-          ep.fillerLabel = filler.label
-          matchedCount++
+  public async previewShow(slug: string): Promise<FillerShowPreview | null> {
+    const show = await this.getShow(slug, fillerCacheTtlMs(null))
+    if (!show) return null
+    return {
+      slug,
+      totalEpisodes: show.episodes.length,
+      lastSyncedAt: show.lastSyncedAt,
+      ...show.counts
+    }
+  }
+
+  // ── Matching ──────────────────────────────────────────────────────────────
+
+  private async titlesFor(
+    series: Series
+  ): Promise<{ titles: string[]; info: AniListFillerMatchInfo | null }> {
+    const info = series.aniListId ? await this.anilist.getFillerMatchInfo(series.aniListId) : null
+    const titles = info?.titles.length
+      ? info.titles
+      : [series.aniListTitle, series.title].filter((t): t is string => Boolean(t))
+    return { titles, info }
+  }
+
+  /** Suggestions and search results for the "Fix filler match" modal. */
+  public async searchForSeries(series: Series, query: string): Promise<FillerShowOption[]> {
+    const shows = await this.getShowList()
+    if (query.trim()) return searchShows(query, shows, 50)
+    const titles = [series.aniListTitle, series.title].filter((t): t is string => Boolean(t))
+    return rankShows(titles, shows, 15)
+  }
+
+  /** Returns false when nothing could be looked up (no show list and no direct hit). */
+  private async autoMatch(series: Series): Promise<boolean> {
+    const { titles, info } = await this.titlesFor(series)
+    if (info?.status) series.aniListStatus = info.status
+    const shows = await this.getShowList()
+
+    let slug: string | null = null
+    if (shows.length > 0) {
+      slug = bestShowMatch(titles, shows)?.slug ?? null
+    } else {
+      // No master list (offline or the list page changed): try the most likely slugs directly.
+      for (const candidate of slugCandidatesFromTitles(titles).slice(0, 3)) {
+        if (await this.getShow(candidate, fillerCacheTtlMs(series.aniListStatus))) {
+          slug = candidate
+          break
         }
       }
     }
+    if (!slug) {
+      console.log(
+        `[FillerService] No filler page matched "${series.title}" (tried: ${titles.join(' | ')})`
+      )
+      return shows.length > 0
+    }
 
-    series.fillerStats = stats
+    let offset = 0
+    if (info && shows.length > 0) {
+      const chain = await this.anilist.getPrequelChain(info)
+      const prequels = chain.map((p) => ({
+        slug: bestShowMatch(p.titles, shows)?.slug ?? null,
+        episodes: p.episodes
+      }))
+      offset = computeEpisodeOffset(
+        series.episodes.map((e) => e.episodeNumber),
+        prequelEpisodeTotal(slug, prequels)
+      )
+    }
+
+    series.fillerSlug = slug
+    series.fillerMatchSource = 'auto'
+    series.fillerEpisodeOffset = offset
+    console.log(`[FillerService] Matched "${series.title}" → ${slug} (offset ${offset})`)
+    return true
+  }
+
+  /** Clears an automatic match so it is recomputed (e.g. after the AniList link changes). */
+  public resetAutoMatch(series: Series): void {
+    if (series.fillerMatchSource === 'manual') return
+    delete series.fillerSlug
+    delete series.fillerMatchSource
+    delete series.fillerEpisodeOffset
+    this.clearSeriesFiller(series)
+  }
+
+  private clearSeriesFiller(series: Series): void {
+    applyFillerToEpisodes(series.episodes, null)
+    delete series.fillerStats
+  }
+
+  public async enrichSeries(series: Series, opts: EnrichOptions = {}): Promise<EnrichResult> {
+    let lookedUp = true
+    if (!series.fillerMatchSource) {
+      lookedUp = await this.autoMatch(series)
+    }
+
+    if (!series.fillerSlug) {
+      if (series.fillerMatchSource === 'manual') this.clearSeriesFiller(series)
+      return { series, unavailable: !lookedUp }
+    }
+
+    const show = await this.getShow(
+      series.fillerSlug,
+      fillerCacheTtlMs(series.aniListStatus),
+      opts.force
+    )
+    if (!show) {
+      return { series, unavailable: true }
+    }
+
+    const map = new Map<number, ParsedEpisodeFiller>(
+      show.episodes.map(({ epNum, ...info }) => [epNum, info])
+    )
+    const matched = applyFillerToEpisodes(series.episodes, map, series.fillerEpisodeOffset || 0)
+    series.fillerStats = {
+      ...show.counts,
+      sourceUrl: show.sourceUrl,
+      lastSyncedAt: show.lastSyncedAt
+    }
     series.lastFillerSyncAt = Date.now()
     series.updatedAt = Date.now()
 
     console.log(
-      `[FillerService] Enriched "${series.title}" with filler data (${matchedCount} of ${series.episodes.length} episodes matched, ${stats.fillerCount} fillers total)`
+      `[FillerService] Enriched "${series.title}" from ${show.slug} (${matched} of ${series.episodes.length} episodes matched, ${show.counts.fillerCount} fillers total)`
     )
-
-    return series
+    return { series, unavailable: false }
   }
 }
