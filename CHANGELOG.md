@@ -7,11 +7,12 @@ GitHub release, so write it for the people who use the app.
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-11-10
+
 ### Added
 - Stealth Playback Mode: automatically minimizes or hides Heimdall to the system tray while video plays, reducing background memory to ~35–50 MB (far below VLC), and automatically restores the window when the episode finishes.
 - Background IPC suspension: telemetry broadcasts to the renderer are paused when the window is minimized or hidden, allowing Chromium and Windows to idle and reclaim memory.
 - macOS now ships as one universal app that runs natively on both Apple Silicon and Intel.
-- Automated tests, linting and a continuous-integration check on every pull request.
 - Settings → Updates has an update channel: Stable, or Beta to also get pre-releases.
 - Real Anime4K upscaling in mpv. Heimdall now ships the Anime4K v4 shaders: choose Mode A, B or C,
   and a lighter shader set for laptops and older graphics cards, in Settings → Video Quality. Until
@@ -30,7 +31,6 @@ GitHub release, so write it for the people who use the app.
 - The README and landing page now describe what the app actually does. Claims about SQLite storage,
   FFT/Pearson subtitle sync, "0 ms" latency, "100% accuracy", phone-remote volume control and
   Tailwind v4 were removed or corrected.
-
 - Subtitle auto-sync was rebuilt. It reads the whole episode instead of the first 15 minutes, listens
   to the voice frequencies only, finds shifts of up to two minutes instead of 20 seconds, and fixes
   subtitles made for a different frame rate (for example 25 fps subtitles on a 23.976 fps video).
