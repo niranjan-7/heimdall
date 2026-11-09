@@ -48,17 +48,23 @@ describe.runIf(enabled)('real alass', () => {
   }, 60_000)
 
   it('finds a cut as separate sections', async () => {
-    // The first part of the subtitle is 2 s early, the rest 92 s early (a 90 s block was cut). The
-    // second part then overlaps the first in time, so alass has to cope with lines out of order.
-    const half = Math.floor(truth.length / 2)
-    const broken = truth.map((c, i) => {
-      const d = i < half ? 2 : 92
+    // The video has an extra 90 s block with no dialogue (an ad break, say) in the middle. The
+    // subtitle was made without it, so from that point on it is 90 s early. Both parts are also
+    // 2 s early. Lines in a real subtitle never overlap in time, so the dialogue is removed from
+    // the block rather than left under the shifted lines.
+    const middle = truth[Math.floor(truth.length / 2)].start
+    const kept = truth.filter((c) => c.start < middle || c.start >= middle + 90)
+    const cutSpeech = makeSpeech(kept, MINUTES, 11)
+    const broken = kept.map((c) => {
+      const d = c.start < middle ? 2 : 92
       return { start: c.start - d, end: c.end - d }
     })
-    const r = await runAlass(binary as string, speech, broken)
+
+    const r = await runAlass(binary as string, cutSpeech, broken)
     expect(r.segments).toBeGreaterThanOrEqual(2)
     expect(r.segments).toBeLessThanOrEqual(3)
-    expect(maxError(r.cues)).toBeLessThanOrEqual(0.5)
+    const worst = Math.max(...r.cues.map((c, i) => Math.abs(c.start - kept[i].start)))
+    expect(worst).toBeLessThanOrEqual(0.5)
   }, 60_000)
 
   it('end to end: applies a confident result and refuses another episode', async () => {
