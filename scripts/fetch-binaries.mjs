@@ -1,4 +1,4 @@
-// Downloads the third-party programs Heimdall bundles (currently ffmpeg) into
+// Downloads the third-party programs Heimdall bundles (ffmpeg and alass) into
 // resources/bin/<os>-<arch>/, checking each download against the SHA-256 pinned in
 // scripts/binaries.lock.json. electron-builder then copies the matching folder into the app
 // (see extraResources in electron-builder.yml).
@@ -68,6 +68,11 @@ function extractZipMember(zipPath, member, destDir) {
 }
 
 async function fetchOne(name, target, entry, force) {
+  if (entry.build) {
+    // Programs without a published binary for this platform are compiled by scripts/build-alass.mjs.
+    console.log(`  skip     ${name} ${target} (built from source: node scripts/build-alass.mjs)`)
+    return
+  }
   const outDir = join(binDir, target)
   const outFile = join(outDir, entry.output)
   const stateFile = join(binDir, '.state', `${name}-${target}.json`)
@@ -100,6 +105,9 @@ async function fetchOne(name, target, entry, force) {
     if (entry.archive === 'gz') {
       extracted = join(tmp, entry.output)
       writeFileSync(extracted, gunzipSync(archive))
+    } else if (entry.archive === 'raw') {
+      extracted = join(tmp, entry.output)
+      writeFileSync(extracted, archive)
     } else if (entry.archive === 'zip') {
       const zipPath = join(tmp, 'archive.zip')
       writeFileSync(zipPath, archive)

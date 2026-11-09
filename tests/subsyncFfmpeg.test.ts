@@ -5,7 +5,7 @@ import { join } from 'path'
 import { getBinaryPath } from '../src/main/binaries'
 import { extractSpeech } from '../src/main/subsync/speechEnvelope'
 import { alignNative } from '../src/main/subsync/aligner'
-import { evaluateTiming, judge } from '../src/main/subsync/verifier'
+import { evaluateTiming, judge, transformMoves } from '../src/main/subsync/verifier'
 import { applyTransform } from '../src/main/subsync/subtitleFormat'
 import { invert, makeCues, rng } from './helpers/syncFixtures'
 
@@ -92,7 +92,7 @@ describe.runIf(enabled)('subtitle sync with the real ffmpeg', () => {
     const verdict = judge(
       evaluateTiming(speech, broken, { offset: 0, scale: 1 }),
       evaluateTiming(speech, broken, tr),
-      tr
+      transformMoves(tr)
     )
     expect(verdict.confidence).toBe('high')
   })
@@ -103,7 +103,7 @@ describe.runIf(enabled)('subtitle sync with the real ffmpeg', () => {
     const verdict = judge(
       evaluateTiming(speech, other, { offset: 0, scale: 1 }),
       evaluateTiming(speech, other, tr),
-      tr
+      transformMoves(tr)
     )
     expect(verdict.confidence).toBe('low')
   })

@@ -41,8 +41,9 @@ export function evaluateTiming(speech: Uint8Array, cues: Cue[], tr: TimingTransf
 }
 
 /** Splits the cues into 8 sections by time and checks each section's best local shift. */
-function sectionAgreement(coarse: Float32Array, cues: Cue[], tr: TimingTransform): number {
-  if (cues.length < 10) return 0
+function sectionAgreement(coarse: Float32Array, unsorted: Cue[], tr: TimingTransform): number {
+  if (unsorted.length < 10) return 0
+  const cues = [...unsorted].sort((a, b) => a.start - b.start)
   const sections = 8
   const first = cues[0].start
   const span = cues[cues.length - 1].end - first || 1
@@ -84,8 +85,7 @@ const MIN_IMPROVEMENT = 10
  * High: apply automatically. Medium: ask first. Low: change nothing.
  * If the original already scores high and the aligner barely moved it, it is already in sync.
  */
-export function judge(original: SyncMetrics, aligned: SyncMetrics, tr: TimingTransform): Verdict {
-  const moved = Math.abs(tr.offset) >= 0.1 || tr.scale !== 1
+export function judge(original: SyncMetrics, aligned: SyncMetrics, moved: boolean): Verdict {
   if (
     original.score >= HIGH_SCORE &&
     (!moved || aligned.score - original.score < MIN_IMPROVEMENT)
@@ -100,4 +100,28 @@ export function judge(original: SyncMetrics, aligned: SyncMetrics, tr: TimingTra
     return { confidence: 'medium', alreadyInSync: false }
   }
   return { confidence: 'low', alreadyInSync: false }
+}
+
+/** Whether a single shift and stretch changes the timing enough to matter. */
+export function transformMoves(tr: TimingTransform): boolean {
+  return Math.abs(tr.offset) >= 0.1 || tr.scale !== 1
+}
+
+/** Scores cues that already carry their final times. */
+export function evaluateCues(speech: Uint8Array, cues: Cue[]): SyncMetrics {
+  return evaluateTiming(speech, cues, { offset: 0, scale: 1 })
+}
+
+const MAX_CONFIDENT_SECTIONS = 3
+const MAX_SECTIONS = 6
+
+/**
+ * A subtitle split into many sections can be made to fit almost any audio, so a good score after
+ * many splits proves little. Real edits (a recap, an ad break) need one to three splits: more than
+ * that is capped at "ask first", and many more is refused.
+ */
+export function capBySections(confidence: SyncConfidence, sections: number): SyncConfidence {
+  if (sections > MAX_SECTIONS) return 'low'
+  if (sections > MAX_CONFIDENT_SECTIONS && confidence === 'high') return 'medium'
+  return confidence
 }

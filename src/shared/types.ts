@@ -187,13 +187,15 @@ export type SyncTarget =
 export type SyncConfidence = 'high' | 'medium' | 'low'
 
 export interface SyncReport {
-  engine: 'native'
+  engine: 'native' | 'alass'
   /** Seconds added to every subtitle time (after `scale`). */
   offsetSec: number
   /** Frame-rate correction; 1 when none. */
   scale: number
   /** Human-readable frame-rate change, e.g. "25 → 23.976 fps". */
   fpsChange?: string
+  /** Sections of the subtitle that were moved differently (alass splits); 1 or absent for a single shift. */
+  sections?: number
   score: number
   originalScore: number
   confidence: SyncConfidence

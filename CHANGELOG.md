@@ -41,6 +41,10 @@ GitHub release, so write it for the people who use the app.
   the player; your original subtitle file is never changed. Auto-sync no longer touches subtitles
   built into the video unless you ask it to.
 - Movies use the same subtitle sync panel as episodes.
+- Auto-sync also uses [alass](https://github.com/kaegi/alass), a subtitle aligner that handles
+  subtitles needing different shifts in different parts, for example after a recap or an ad break was
+  cut. It is bundled on Windows, Linux and macOS. Heimdall's own aligner is still used if alass is
+  missing or fails, and a result that needed many separate sections is never applied without asking.
 
 ### Removed
 - TheSubDB subtitle source. The service shut down years ago, so every download waited for it to time

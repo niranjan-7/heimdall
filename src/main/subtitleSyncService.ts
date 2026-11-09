@@ -6,18 +6,18 @@ import { app } from 'electron'
 import { StorageService } from './storageService'
 import { PlayerManager } from './player/playerManager'
 import { SyncWorker } from './syncWorker'
-import { getBinaryPath } from './binaries'
+import { getBinaryPath, getBundledBinary } from './binaries'
 import { Episode, Movie, SyncOutcome, SyncProgress, SyncReport, SyncTarget } from '../shared/types'
 import { extractSpeech } from './subsync/speechEnvelope'
 import {
   SubtitleFormat,
-  TimingTransform,
   formatFromPath,
   parseCues,
-  retimeSubtitle
+  retimeSubtitle,
+  retimeSubtitleCues
 } from './subsync/subtitleFormat'
-import { alignNative, describeScale } from './subsync/aligner'
-import { evaluateTiming, judge } from './subsync/verifier'
+import { Timing, findBestTiming } from './subsync/engine'
+import { runAlass } from './subsync/alassAligner'
 import { chooseSubtitleSource, isSyncedCopy, syncedCopyPath } from './subsync/subtitleSource'
 
 export interface SyncRunOptions {
@@ -36,7 +36,7 @@ interface PendingSync {
   target: SyncTarget
   content: string
   format: SubtitleFormat
-  transform: TimingTransform
+  timing: Timing
   report: SyncReport
 }
 
@@ -124,7 +124,7 @@ export class SubtitleSyncService {
       }
     }
 
-    const cues = parseCues(subtitle.content, subtitle.format)
+    const cues = parseCues(subtitle.content, subtitle.format, { fileOrder: true })
     if (cues.length < 10) {
       return { status: 'error', message: 'The subtitle has too few lines to sync reliably.' }
     }
@@ -136,24 +136,30 @@ export class SubtitleSyncService {
     this.onProgress({ stage: 'aligning', fraction: 0 })
     // Let the progress message reach the window before the (synchronous) search starts.
     await new Promise((r) => setTimeout(r, 0))
-    const transform = alignNative(speech, cues)
-    const original = evaluateTiming(speech, cues, { offset: 0, scale: 1 })
-    const aligned = evaluateTiming(speech, cues, transform)
-    const verdict = judge(original, aligned, transform)
+    const alass = getBundledBinary('alass-cli')
+    const { original, best, alassError } = await findBestTiming({
+      speech,
+      cues,
+      runAlass: alass ? () => runAlass(alass, speech, cues, { signal }) : undefined
+    })
+    if (signal.aborted) throw new Error('cancelled')
+    if (alassError) console.warn(`[subsync] alass failed, used the built-in aligner: ${alassError}`)
     this.onProgress({ stage: 'aligning', fraction: 1 })
 
-    const fps = describeScale(transform.scale)
+    const { verdict } = best
     const report: SyncReport = {
-      engine: 'native',
-      offsetSec: transform.offset,
-      scale: transform.scale,
-      fpsChange: fps ? `${fps.from} → ${fps.to} fps` : undefined,
-      score: aligned.score,
+      engine: best.engine,
+      offsetSec: best.offsetSec,
+      scale: best.scale,
+      fpsChange: best.fpsChange,
+      sections: best.sections > 1 ? best.sections : undefined,
+      score: best.metrics.score,
       originalScore: original.score,
       confidence: verdict.confidence,
       sourcePath: subtitle.sourcePath,
       at: Date.now()
     }
+    const aligned = best.metrics
 
     if (verdict.alreadyInSync) {
       return {
@@ -175,7 +181,7 @@ export class SubtitleSyncService {
       target,
       content: subtitle.content,
       format: subtitle.format,
-      transform,
+      timing: best.timing,
       report
     }
 
@@ -217,7 +223,11 @@ export class SubtitleSyncService {
       ? `${videoPath}.srt`
       : p.report.sourcePath
     const outPath = syncedCopyPath(videoPath, sourceForName, lang)
-    fs.writeFileSync(outPath, retimeSubtitle(p.content, p.format, p.transform), 'utf-8')
+    const retimed =
+      p.timing.kind === 'cues'
+        ? retimeSubtitleCues(p.content, p.format, p.timing.cues)
+        : retimeSubtitle(p.content, p.format, p.timing.transform)
+    fs.writeFileSync(outPath, retimed, 'utf-8')
 
     record.syncedSubtitlePath = outPath
     record.syncReport = p.report
@@ -467,14 +477,18 @@ function readText(filePath: string): string {
   return text.replace(/^\uFEFF/, '')
 }
 
-/** "Shifted −1.42 s and corrected 25 → 23.976 fps." */
-export function describeChange(report: Pick<SyncReport, 'offsetSec' | 'fpsChange'>): string {
+/** "Shifted −1.42 s and corrected 25 → 23.976 fps." Sections are for a recap or ad cut. */
+export function describeChange(
+  report: Pick<SyncReport, 'offsetSec' | 'fpsChange' | 'sections'>
+): string {
   const parts: string[] = []
   if (Math.abs(report.offsetSec) >= 0.005) {
     const sign = report.offsetSec > 0 ? '+' : '−'
     parts.push(`shifted ${sign}${Math.abs(report.offsetSec).toFixed(2)} s`)
   }
   if (report.fpsChange) parts.push(`corrected ${report.fpsChange}`)
+  if (report.sections && report.sections > 1)
+    parts.push(`re-timed ${report.sections} sections separately`)
   const text = parts.length ? parts.join(' and ') : 'kept the timing'
   return text.charAt(0).toUpperCase() + text.slice(1) + '.'
 }

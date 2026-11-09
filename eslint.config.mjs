@@ -6,7 +6,18 @@ import prettier from 'eslint-config-prettier'
 
 export default tseslint.config(
   {
-    ignores: ['node_modules', 'dist', 'out', 'build', 'landing', 'deploy', 'coverage', '*.config.*']
+    ignores: [
+      'node_modules',
+      'dist',
+      'out',
+      'build',
+      'landing',
+      'deploy',
+      'coverage',
+      '*.config.*',
+      // Stand-in programs that tests run as child processes (plain CommonJS scripts)
+      'tests/helpers/*.cjs'
+    ]
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

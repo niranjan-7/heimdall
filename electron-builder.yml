@@ -14,6 +14,8 @@ extraResources:
     to: bin
   - from: resources/shaders
     to: shaders
+  - from: resources/licenses
+    to: licenses
   - from: THIRD_PARTY_NOTICES.md
     to: THIRD_PARTY_NOTICES.md
 # Release file names have no spaces, so GitHub keeps them as written and electron-updater's

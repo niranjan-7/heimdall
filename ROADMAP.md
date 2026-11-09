@@ -385,7 +385,13 @@ Split into two PRs.
 - Tests: synthetic shifts (0.5–110 s), both fps directions, wrong episode, silence, formats, file choice, playlists. An ffmpeg end-to-end test (generated soundtrack) runs in CI on all three OSes.
 - Not done: Preview button, "apply to whole season" verification, cut/segment handling (a 90 s cut scores Medium today), worker thread (the search blocks the main process for about 0.5 s per 24-minute episode, so an estimated 2.5–3 s on a 2-hour film), selected audio track (uses the first one), real-media benchmark corpus (thresholds are tuned on synthetic data).
 
-**1.4b — bundle `alass`.** Not started. alass has release binaries only for Windows and Linux; macOS needs `cargo build` in CI for both architectures plus `lipo`. Plan: feed alass a reference subtitle built from our speech frames (avoids bundling ffprobe), run the same verifier on its result, and keep the native engine as the fallback.
+**1.4b — bundle `alass` (branch `phase-1-4b-alass`).** Implemented, but only the Heimdall side has run here (no Rust toolchain and no Linux/Windows on the dev Mac); the real alass runs for the first time in CI.
+- Windows x64 and Linux x64 use the v2.0.0 release binaries, pinned by SHA-256. macOS has no published binary: `scripts/build-alass.mjs` compiles the pinned v2.0.0 commit (`cargo build --locked`) for Apple Silicon and Intel; electron-builder merges them into the universal app. Cached in CI.
+- Heimdall gives alass the speech it detected as a reference subtitle (one line per stretch of speech) instead of the video, so alass needs neither ffmpeg nor ffprobe. alass returns a time for every line, so the result can contain several shifts (a cut recap or ad break) and a frame-rate correction.
+- `subsync/engine.ts` tries alass first, then the built-in aligner unless alass was confident, and keeps the better-scoring result. The verifier scores whichever wins. A result split into 4–6 sections is capped at "ask first" and more than 6 is refused, because a many-piece subtitle can be made to fit almost any audio.
+- If alass is missing, fails, times out (3 min) or returns the wrong number of lines, the built-in aligner is used. Cancel stops alass.
+- Tests: stand-in alass (arguments, order, failure, wrong line count, cancel, timeout), engine choice, per-line retiming for SRT/ASS/VTT; real-alass tests (shifts, 25→23.976, a 90 s cut, end to end) run in CI on all three OSes (`HEIMDALL_ALASS_TESTS`).
+- Not verified: alass compiling with today's Rust on macOS; the unsigned universal macOS app running the bundled alass-cli and ffmpeg on Apple Silicon (same open question as ffmpeg); real episodes.
 
 ---
 

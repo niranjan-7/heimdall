@@ -59,11 +59,25 @@ jobs:
         run: npm ci --ignore-scripts
 
       # Also a canary: fails if a pinned download disappears or its checksum changes.
-      - name: Fetch bundled ffmpeg for this OS
+      - name: Fetch bundled programs for this OS (ffmpeg, alass)
         run: node scripts/fetch-binaries.mjs --host
 
-      # HEIMDALL_FFMPEG_TESTS runs the tests that use the real ffmpeg (subtitle sync end to end).
+      # alass publishes no macOS binary, so it is compiled from a pinned source commit.
+      - name: Cache the alass build
+        if: runner.os == 'macOS'
+        uses: actions/cache@v4
+        with:
+          path: node_modules/.cache/heimdall-alass
+          key: alass-${{ runner.os }}-${{ hashFiles('scripts/binaries.lock.json', 'scripts/build-alass.mjs') }}
+
+      - name: Build alass for this Mac
+        if: runner.os == 'macOS'
+        run: node scripts/build-alass.mjs --host
+
+      # HEIMDALL_FFMPEG_TESTS and HEIMDALL_ALASS_TESTS run the tests that use the real ffmpeg and
+      # the real alass (subtitle sync end to end).
       - name: Unit tests
         run: npm test
         env:
           HEIMDALL_FFMPEG_TESTS: '1'
+          HEIMDALL_ALASS_TESTS: '1'

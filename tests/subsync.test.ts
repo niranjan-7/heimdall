@@ -10,7 +10,7 @@ import {
 import { FRAME_SEC, FrameEnergyMeter, detectSpeech } from '../src/main/subsync/speechEnvelope'
 import { alignNative, describeScale } from '../src/main/subsync/aligner'
 import { invert, makeCues, makeSpeech, rng } from './helpers/syncFixtures'
-import { evaluateTiming, judge } from '../src/main/subsync/verifier'
+import { evaluateTiming, judge, transformMoves } from '../src/main/subsync/verifier'
 
 const MINUTES = 24
 const truth = makeCues(MINUTES, 7)
@@ -20,7 +20,7 @@ function syncResult(subCues: Cue[]) {
   const tr = alignNative(speech, subCues)
   const original = evaluateTiming(speech, subCues, { offset: 0, scale: 1 })
   const aligned = evaluateTiming(speech, subCues, tr)
-  return { tr, original, aligned, verdict: judge(original, aligned, tr) }
+  return { tr, original, aligned, verdict: judge(original, aligned, transformMoves(tr)) }
 }
 
 /** Largest error, in seconds, between where the synced cues land and where they belong. */
@@ -74,7 +74,7 @@ describe('native aligner', () => {
     const verdict = judge(
       evaluateTiming(silent, broken, { offset: 0, scale: 1 }),
       evaluateTiming(silent, broken, tr),
-      tr
+      transformMoves(tr)
     )
     expect(verdict.confidence).toBe('low')
   })

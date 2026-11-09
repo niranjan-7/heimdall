@@ -36,8 +36,10 @@ Most media players require you to manually keep track of where you paused, battl
 ## 🚀 Features
 
 ### ⚡ Subtitle Auto-Sync
-- **Audio-based offset:** Uses the bundled FFmpeg to find where sound starts and stops in the episode, then picks the subtitle offset whose lines best overlap those sounds. It fixes a constant offset; it does not fix subtitles that drift over time. (A more accurate engine is planned for v1.5.0; see the [roadmap](ROADMAP.md).)
-- **No re-encoding:** The offset is sent to VLC or mpv while the video plays; your files are not changed.
+- **Matched to the audio:** The bundled FFmpeg finds where people speak in the whole episode, and Heimdall moves the subtitle so its lines sit on that speech.
+- **More than one shift:** It corrects a constant offset of up to two minutes, subtitles made for a different frame rate (for example 25 fps on a 23.976 fps video), and, with [alass](https://github.com/kaegi/alass), subtitles that need different shifts in different parts (a recap or ad break that was cut). alass is bundled on Windows, Linux and macOS; if it is missing or fails, Heimdall's own aligner handles a single shift and frame-rate correction.
+- **It checks its own work:** A separate check scores the subtitle before and after. It applies the sync only when it is confident, asks first when it is fairly sure, and changes nothing when it can't find a reliable match.
+- **Your file stays untouched:** The result is saved as a separate `.heimdall-synced` file next to the video, loaded by VLC or mpv, and can be undone.
 - **Nudge buttons:** Move subtitles 0.1 s earlier or later by hand.
 
 ### 🎬 Movies Library

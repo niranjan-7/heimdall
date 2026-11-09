@@ -70,7 +70,12 @@ function splitAssDialogue(line: string): [string, string, string, string] | null
   return [parts[0], parts[1], parts[2], parts.slice(3).join(',')]
 }
 
-export function parseCues(content: string, format: SubtitleFormat): Cue[] {
+/** Cues with end > start, sorted by start time unless `fileOrder` is set. */
+export function parseCues(
+  content: string,
+  format: SubtitleFormat,
+  opts: { fileOrder?: boolean } = {}
+): Cue[] {
   const cues: Cue[] = []
   for (const line of content.split(/\r?\n/)) {
     if (format === 'ass') {
@@ -87,39 +92,39 @@ export function parseCues(content: string, format: SubtitleFormat): Cue[] {
       if (start !== null && end !== null && end > start) cues.push({ start, end })
     }
   }
-  return cues.sort((a, b) => a.start - b.start)
+  return opts.fileOrder ? cues : cues.sort((a, b) => a.start - b.start)
 }
 
 export function applyTransform(t: number, tr: TimingTransform): number {
   return tr.scale * t + tr.offset
 }
 
+/** Decides the new time of the `index`-th cue (counting cues with end > start, in file order). */
+type CueTimer = (index: number, start: number, end: number) => Cue
+
 /**
  * Rewrites only the timestamps; text, styling and everything else stay as they were. Cues that end
- * before 0 are dropped (SRT cues renumbered), cues that start before 0 start at 0.
+ * before 0 are dropped (SRT cues renumbered), and times are never written below 0. Lines whose end
+ * is not after their start are left alone, matching what `parseCues` skips.
  */
-export function retimeSubtitle(
-  content: string,
-  format: SubtitleFormat,
-  tr: TimingTransform
-): string {
+function retimeWith(content: string, format: SubtitleFormat, timer: CueTimer): string {
   const newline = content.includes('\r\n') ? '\r\n' : '\n'
   const lines = content.split(/\r?\n/)
 
   if (format === 'ass') {
     const out: string[] = []
+    let cueIndex = 0
     for (const line of lines) {
       const parts = splitAssDialogue(line)
       const start = parts && parseAssTime(parts[1])
       const end = parts && parseAssTime(parts[2])
-      if (!parts || start === null || end === null) {
+      if (!parts || start === null || end === null || end <= start) {
         out.push(line)
         continue
       }
-      const s = applyTransform(start, tr)
-      const e = applyTransform(end, tr)
-      if (e <= 0) continue
-      out.push(`${parts[0]},${formatAssTime(s)},${formatAssTime(e)},${parts[3]}`)
+      const t = timer(cueIndex++, start, end)
+      if (t.end <= 0) continue
+      out.push(`${parts[0]},${formatAssTime(t.start)},${formatAssTime(t.end)},${parts[3]}`)
     }
     return out.join(newline)
   }
@@ -136,7 +141,8 @@ export function retimeSubtitle(
   }
 
   const out: string[][] = []
-  let index = 1
+  let number = 1
+  let cueIndex = 0
   for (const block of blocks) {
     if (block.length === 0) continue
     const timeIdx = block.findIndex((l) => SRT_VTT_LINE.test(l))
@@ -147,17 +153,74 @@ export function retimeSubtitle(
     const m = SRT_VTT_LINE.exec(block[timeIdx]) as RegExpExecArray
     const start = parseSrtVttTime(m[2]) as number
     const end = parseSrtVttTime(m[8]) as number
-    const s = applyTransform(start, tr)
-    const e = applyTransform(end, tr)
-    if (e <= 0) continue
-    const next = [...block]
-    next[timeIdx] = `${m[1]}${formatSrtVttTime(s, sep)}${m[7]}${formatSrtVttTime(e, sep)}${m[13]}`
-    if (format === 'srt' && timeIdx === 1 && /^\d+$/.test(next[0].trim())) {
-      next[0] = String(index)
+    if (end <= start) {
+      out.push(block)
+      continue
     }
-    index++
+    const t = timer(cueIndex++, start, end)
+    if (t.end <= 0) continue
+    const next = [...block]
+    next[timeIdx] =
+      `${m[1]}${formatSrtVttTime(t.start, sep)}${m[7]}${formatSrtVttTime(t.end, sep)}${m[13]}`
+    if (format === 'srt' && timeIdx === 1 && /^\d+$/.test(next[0].trim())) {
+      next[0] = String(number)
+    }
+    number++
     out.push(next)
   }
   const body = out.map((b) => b.join(newline)).join(newline + newline)
   return body + newline
+}
+
+/** Moves every cue by the same shift and stretch. */
+export function retimeSubtitle(
+  content: string,
+  format: SubtitleFormat,
+  tr: TimingTransform
+): string {
+  return retimeWith(content, format, (_i, start, end) => ({
+    start: applyTransform(start, tr),
+    end: applyTransform(end, tr)
+  }))
+}
+
+/**
+ * Gives each cue its own new time. `cues` must be in file order and have one entry per cue that
+ * `parseCues(content, format, { fileOrder: true })` returns; otherwise this throws.
+ */
+export function retimeSubtitleCues(content: string, format: SubtitleFormat, cues: Cue[]): string {
+  const expected = parseCues(content, format, { fileOrder: true }).length
+  if (cues.length !== expected) {
+    throw new Error(`Expected ${expected} cues but got ${cues.length}`)
+  }
+  return retimeWith(content, format, (i) => cues[i])
+}
+
+/**
+ * A minimal SRT made of the given cues, for external tools. Each cue's text is `label(i)` (default
+ * "-"); a tool that reorders lines can then be matched back by label.
+ */
+export function cuesToSrt(cues: Cue[], label: (index: number) => string = () => '-'): string {
+  return (
+    cues
+      .map(
+        (c, i) =>
+          `${i + 1}\n${formatSrtVttTime(c.start, ',')} --> ${formatSrtVttTime(c.end, ',')}\n${label(i)}\n`
+      )
+      .join('\n') + '\n'
+  )
+}
+
+/** Reads an SRT as {label, start, end} in the order it is written; label is the first text line. */
+export function parseLabeledSrt(content: string): { label: string; start: number; end: number }[] {
+  const out: { label: string; start: number; end: number }[] = []
+  const lines = content.split(/\r?\n/)
+  for (let i = 0; i < lines.length; i++) {
+    const m = SRT_VTT_LINE.exec(lines[i])
+    if (!m) continue
+    const start = parseSrtVttTime(m[2])
+    const end = parseSrtVttTime(m[8])
+    if (start !== null && end !== null) out.push({ label: (lines[i + 1] ?? '').trim(), start, end })
+  }
+  return out
 }

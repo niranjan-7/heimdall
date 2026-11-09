@@ -37,5 +37,47 @@
         "output": "ffmpeg"
       }
     }
+  },
+  "alass": {
+    "license": "GPL-3.0 (https://github.com/kaegi/alass/blob/master/LICENSE.txt)",
+    "targets": {
+      "win-x64": {
+        "version": "2.0.0",
+        "provider": "github.com/kaegi/alass release v2.0.0",
+        "url": "https://github.com/kaegi/alass/releases/download/v2.0.0/alass-windows64.zip",
+        "sha256": "e81a72f97f592910e909a2352d6b8c0de0801c51ac1383bad4ebf3f2ecdd2fd8",
+        "archive": "zip",
+        "member": "alass-windows64/bin/alass-cli.exe",
+        "output": "alass-cli.exe"
+      },
+      "linux-x64": {
+        "version": "2.0.0",
+        "provider": "github.com/kaegi/alass release v2.0.0",
+        "url": "https://github.com/kaegi/alass/releases/download/v2.0.0/alass-linux64",
+        "sha256": "7bd0b9ae7e035d3ba940eacffb21243614df36231d47f21f0b4ce42001ab7fcd",
+        "archive": "raw",
+        "output": "alass-cli"
+      },
+      "mac-arm64": {
+        "version": "2.0.0",
+        "provider": "built from source by scripts/build-alass.mjs",
+        "build": {
+          "repo": "https://github.com/kaegi/alass",
+          "commit": "c438ff6344b24319e6804ed42cceb606d63961ea",
+          "rustTarget": "aarch64-apple-darwin"
+        },
+        "output": "alass-cli"
+      },
+      "mac-x64": {
+        "version": "2.0.0",
+        "provider": "built from source by scripts/build-alass.mjs",
+        "build": {
+          "repo": "https://github.com/kaegi/alass",
+          "commit": "c438ff6344b24319e6804ed42cceb606d63961ea",
+          "rustTarget": "x86_64-apple-darwin"
+        },
+        "output": "alass-cli"
+      }
+    }
   }
 }

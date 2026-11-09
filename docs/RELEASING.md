@@ -83,7 +83,7 @@ gh release delete v1.5.0-rc.1 --cleanup-tag --yes
 
 You can also run the **Release** workflow by hand from the Actions tab (**Run workflow**). That builds every
 installer and keeps them as downloadable workflow artifacts for 3 days, without creating a release. The same
-build runs on any pull request that changes packaging (`electron-builder.yml`, the ffmpeg scripts, or the
+build runs on any pull request that changes packaging (`electron-builder.yml`, the ffmpeg and alass scripts, or the
 workflow itself).
 
 ## Checking the draft before publishing
@@ -126,3 +126,13 @@ The installers are not code-signed yet (signing needs paid certificates), so:
 - macOS cannot install updates by itself while unsigned. The app shows the new version and opens the download.
 - When certificates exist, add them as repository secrets (`CSC_LINK`, `CSC_KEY_PASSWORD`, and the Apple ones),
   never in the code.
+
+## Bundled programs
+
+`scripts/binaries.lock.json` pins every bundled program (ffmpeg, alass) by SHA-256. To update one,
+change its entry and run `npm run binaries -- --force`.
+
+alass has no published macOS binary, so the macOS job compiles it from the pinned commit with
+`node scripts/build-alass.mjs` (Rust is preinstalled on GitHub's macOS runners). To build it on your
+own Mac, install Rust from <https://rustup.rs>, then run `rustup target add aarch64-apple-darwin
+x86_64-apple-darwin` and `node scripts/build-alass.mjs --host`.
