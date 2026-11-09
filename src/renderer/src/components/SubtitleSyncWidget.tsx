@@ -37,6 +37,7 @@ function describeReport(r: SyncReport): string {
     parts.push(`${r.offsetSec > 0 ? '+' : '−'}${Math.abs(r.offsetSec).toFixed(2)} s`)
   }
   if (r.fpsChange) parts.push(r.fpsChange)
+  if (r.sections && r.sections > 1) parts.push(`${r.sections} sections`)
   return parts.join(', ') || 'no change'
 }
 

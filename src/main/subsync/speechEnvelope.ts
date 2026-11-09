@@ -188,7 +188,9 @@ export function extractSpeech(
         const d = /Duration:\s*(\d+:\d{2}:\d{2}(?:\.\d+)?)/.exec(stderrTail)
         if (d) duration = parseClock(d[1])
       }
-      const t = /time=\s*(\d+:\d{2}:\d{2}(?:\.\d+)?)/.exec(text) || /time=\s*(\d+:\d{2}:\d{2}(?:\.\d+)?)/.exec(stderrTail)
+      const t =
+        /time=\s*(\d+:\d{2}:\d{2}(?:\.\d+)?)/.exec(text) ||
+        /time=\s*(\d+:\d{2}:\d{2}(?:\.\d+)?)/.exec(stderrTail)
       if (t && duration > 0) opts.onProgress?.(Math.min(1, parseClock(t[1]) / duration))
     })
 

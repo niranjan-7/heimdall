@@ -71,3 +71,24 @@ export function describeScale(scale: number): { from: string; to: string } | nul
   const hit = FPS_CORRECTIONS.find((f) => f.scale !== 1 && Math.abs(f.scale - scale) < 1e-6)
   return hit ? { from: hit.from, to: hit.to } : null
 }
+
+/**
+ * The known frame-rate change closest to a measured stretch. 24 ↔ 23.976 differ from "no change"
+ * by only 0.1%, so the tolerance has to stay well under that and a stretch of 1 never matches.
+ */
+export function nearestFpsChange(
+  scale: number,
+  tolerance = 0.0004
+): { from: string; to: string } | null {
+  if (scale === 1) return null
+  let best: { from: string; to: string } | null = null
+  let bestDiff = tolerance
+  for (const f of FPS_CORRECTIONS) {
+    const diff = Math.abs(f.scale - scale)
+    if (f.scale !== 1 && diff < bestDiff) {
+      best = { from: f.from, to: f.to }
+      bestDiff = diff
+    }
+  }
+  return best
+}

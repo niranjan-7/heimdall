@@ -15,6 +15,7 @@ on:
       - .github/workflows/release.yml
       - electron-builder.yml
       - scripts/fetch-binaries.mjs
+      - scripts/build-alass.mjs
       - scripts/binaries.lock.json
       - scripts/release-info.mjs
 
@@ -127,8 +128,23 @@ jobs:
       - name: Install dependencies
         run: npm ci --ignore-scripts
 
-      - name: Fetch bundled ffmpeg
+      - name: Fetch bundled programs (ffmpeg, alass)
         run: node scripts/fetch-binaries.mjs ${{ matrix.fetch }}
+
+      # alass publishes no macOS binary, so it is compiled from a pinned source commit. The cache
+      # holds the source and its build output, keyed by the pinned versions.
+      - name: Cache the alass build
+        if: matrix.name == 'macOS'
+        uses: actions/cache@v4
+        with:
+          path: node_modules/.cache/heimdall-alass
+          key: alass-${{ runner.os }}-${{ hashFiles('scripts/binaries.lock.json', 'scripts/build-alass.mjs') }}
+
+      - name: Build alass for macOS (Apple Silicon and Intel)
+        if: matrix.name == 'macOS'
+        run: |
+          rustup target add aarch64-apple-darwin x86_64-apple-darwin
+          node scripts/build-alass.mjs --target mac-arm64 --target mac-x64
 
       - name: Build the app
         run: npx electron-vite build

@@ -1,6 +1,6 @@
 import { join } from 'path'
 import { describe, expect, it } from 'vitest'
-import { resolveBinaryPath } from '../src/main/binaries'
+import { findBundledBinary, resolveBinaryPath } from '../src/main/binaries'
 
 const base = {
   platform: 'linux' as NodeJS.Platform,
@@ -45,5 +45,22 @@ describe('resolveBinaryPath', () => {
 
   it('falls back to the system PATH when the bundled file is missing', () => {
     expect(resolveBinaryPath('ffmpeg', { ...base, exists: () => false })).toBe('ffmpeg')
+  })
+})
+
+describe('findBundledBinary', () => {
+  it('returns null instead of a PATH name when the program is not bundled', () => {
+    const opts = { ...base, resourcesPath: '/opt/Heimdall/resources', exists: () => false }
+    expect(findBundledBinary('alass-cli', opts)).toBeNull()
+    expect(resolveBinaryPath('alass-cli', opts)).toBe('alass-cli')
+  })
+
+  it('finds alass-cli next to ffmpeg, with .exe on Windows', () => {
+    expect(
+      findBundledBinary('alass-cli', { ...base, resourcesPath: '/opt/Heimdall/resources' })
+    ).toBe(join('/opt/Heimdall/resources', 'bin', 'alass-cli'))
+    expect(
+      findBundledBinary('alass-cli', { ...base, platform: 'win32', resourcesPath: 'C:\\App' })
+    ).toMatch(/bin[\\/]alass-cli\.exe$/)
   })
 })
