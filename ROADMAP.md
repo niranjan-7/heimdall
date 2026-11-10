@@ -445,6 +445,13 @@ Today series metadata only comes from AniList, so western TV gets nothing.
 3. Known hard cases to cover: `[Group] Show - 05v2 [1080p].mkv`, `Show S01E05E06`, `Show - 1047 (1080p)`, `Show.2023.S01E05`, `Show - 05.5` (recap), `NCOP/NCED`, `OVA`, `Special`, `[HASH12AB]`, movie years vs resolutions (`1080`), `Part 2` (movie part vs title).
 4. Consider adopting a proven parser (an npm port of **Anitomy**, the anime file-name parser Taiga uses — evaluate what's maintained) behind the same function signatures if the hand-rolled regexes keep failing.
 
+
+**Status: implemented on branch `phase-1-7-parser`.**
+- 1.7.a: no Trakt or Letterboxd mentions were left in the app, README or landing page; nothing to remove.
+- 1.7.b: all 13 `it.fails` bugs fixed and promoted; 173 file-name cases (110 episode, 63 movie). The known-bug lists stay (empty) for new finds.
+- Episode numbers come from a candidate picker (`SxxEyy`/`1x05` → "Episode N" → "N episode" → the number after the last " - ", else before " - ", else the last number). Extras (OVA, SP, NCOP/NCED, PV, `13.5` recaps) return `null`; `scanSeriesFolders` only falls back to file order when no file in the folder has a number, and sorts extras last.
+- Anitomy evaluated and not adopted: `anitomy-js` is a native node-gyp addon (breaks `--ignore-scripts` CI and needs an Electron rebuild per OS), `anitomyscript` (WASM) has not been updated since 2022.
+
 ---
 
 ## Phase 1.8 — Quick UI fixes that are really bugs

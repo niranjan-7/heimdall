@@ -29,8 +29,9 @@ describe('parseMovieFileName', () => {
   })
 })
 
-// Known bugs: these assert the CORRECT behaviour and are expected to fail until fixed.
-describe('known parser bugs (roadmap Phase 1.7)', () => {
+// Known bugs: assert the CORRECT behaviour and are expected to fail until fixed.
+// Add a row to the known-bugs list when you find one, then fix it and move the row up.
+describe.runIf(movieKnownBugs.length > 0)('known parser bugs', () => {
   for (const c of movieKnownBugs) {
     it.fails(`${c.input}: ${c.bug}`, () => {
       const parsed = parseMovieFileName(c.input)
