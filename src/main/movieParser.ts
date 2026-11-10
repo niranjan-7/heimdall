@@ -16,38 +16,62 @@ export interface MovieTechnicalSpecs {
   durationSec: number
 }
 
+const MOVIE_TAGS =
+  /\b(?:2160p|1440p|1080p|1080i|720p|576p|480p|4k|uhd|bluray|blu-ray|bdrip|brrip|bdremux|web-?dl|web-?rip|web|hdtv|hdrip|dvdrip|dvdscr|hdcam|camrip|hdts|telesync|hdtc|remux|imax|hdr10\+?|hdr|dv|10bit|8bit|x264|x265|h[ .]?264|h[ .]?265|hevc|avc|av1|xvid|aac(?:2[ .]0|5[ .]1)?|e?ac3|dts(?:-hd)?(?:[ .]ma)?|truehd|atmos|ddp?(?:2[ .]0|5[ .]1|7[ .]1)?|flac|extended|unrated|directors[ .]cut|theatrical|remastered|proper|repack|limited|internal|multi|dual[ -]?audio)\b/gi
+
+/** Latest plausible release year (titles like "Blade Runner 2049" are not years). */
+const maxReleaseYear = (): number => new Date().getFullYear() + 1
+
 export function parseMovieFileName(fileName: string): ParsedMovieInfo {
   const parsed = path.parse(fileName)
   let rawName = parsed.name
 
-  // 1. Detect multi-part indicators (e.g. CD1, Part 2, Disc 1)
+  // 1. Multi-part indicators (CD1, Part 2, Part.1, pt2, Disc 1). Cut out, keep the rest.
   let partNumber: number | null = null
-  const partMatch = /(?:[-._\s]+)(?:cd|part|pt|disc)\s*0?([1-9])\b/i.exec(rawName)
+  const partMatch = /(?:[-._\s]+)(?:cd|part|pt|disc|disk)[\s._-]*0?([1-9])(?![0-9])/i.exec(rawName)
   if (partMatch) {
     partNumber = parseInt(partMatch[1], 10)
-    rawName = rawName.substring(0, partMatch.index)
+    rawName =
+      rawName.slice(0, partMatch.index) + ' ' + rawName.slice(partMatch.index + partMatch[0].length)
   }
 
-  // 2. Detect release year (e.g. 1999, 2023)
+  // 2. Release year: prefer "(1999)", else the LAST plausible year-like number
+  //    that is not at the very start ("2001 A Space Odyssey 1968", "Blade Runner 2049 2017").
   let year: number | null = null
-  const yearMatch = /(?:[.\s_([])(19\d\d|20\d\d)(?:[.\s_)\]]|$)/.exec(rawName)
   let titleSegment = rawName
-  if (yearMatch) {
+  const maxYear = maxReleaseYear()
+  const plausible = (y: number): boolean => y >= 1888 && y <= maxYear
+  const paren = [...rawName.matchAll(/[([]((?:19|20)\d\d)[)\]]/g)].filter((m) =>
+    plausible(parseInt(m[1], 10))
+  )
+  const bare = [...rawName.matchAll(/(?<=[.\s_-])((?:19|20)\d\d)(?=[.\s_)\]-]|$)/g)].filter((m) =>
+    plausible(parseInt(m[1], 10))
+  )
+  const yearMatch =
+    paren.length > 0 ? paren[paren.length - 1] : bare.length > 0 ? bare[bare.length - 1] : null
+  if (yearMatch && yearMatch.index !== undefined) {
     year = parseInt(yearMatch[1], 10)
     titleSegment = rawName.substring(0, yearMatch.index)
   }
 
-  // 3. Clean title segment
+  // 3. Clean title segment. Without a year, everything from the first tag on is junk.
+  if (!yearMatch) {
+    MOVIE_TAGS.lastIndex = 0
+    const firstTag = MOVIE_TAGS.exec(titleSegment.replace(/[._]/g, ' '))
+    if (firstTag && firstTag.index > 0) titleSegment = titleSegment.slice(0, firstTag.index)
+  }
+  MOVIE_TAGS.lastIndex = 0
   let cleanTitle = titleSegment
     .replace(/\[[^\]]*\]/g, ' ')
-    .replace(/\([^)]*(?:1080p|720p|480p|2160p|4k|uhd|bluray|remux|x264|x265|hevc)[^)]*\)/gi, ' ')
-    .replace(
-      /\b(?:2160p|1080p|720p|480p|4k|uhd|bluray|bdrip|web-dl|webrip|web|remux|imax|hdr|10bit|x264|x265|hevc|av1|aac|dts|dts-hd|truehd|atmos|ddp|flac)\b/gi,
-      ' '
-    )
+    .replace(/\([^)]*\)/g, (m) => {
+      MOVIE_TAGS.lastIndex = 0
+      return MOVIE_TAGS.test(m) ? ' ' : m
+    })
     .replace(/[._]/g, ' ')
-    .replace(/[\s\-_]+$/, '') // strip trailing dashes, underscores, spaces
-    .replace(/^\s*[-_]+/, '') // strip leading dashes
+    .replace(MOVIE_TAGS, ' ')
+    .replace(/\(\s*\)/g, ' ')
+    .replace(/[\s\-_(]+$/, '') // trailing dashes, underscores, spaces, open parens
+    .replace(/^\s*[-_]+/, '') // leading dashes
     .replace(/\s+/g, ' ')
     .trim()
 

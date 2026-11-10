@@ -23,6 +23,18 @@ GitHub release, so write it for the people who use the app.
 - Heimdall now identifies itself to AnimeFillerList and makes at most one request per second.
 
 ### Fixed
+- Episode numbers are read correctly from many more file names:
+  - numbers in the show's name are no longer taken as the episode (`Mob Psycho 100 - 03` is
+    episode 3, not 100; same for `86 - Eighty Six - 05` and `Show 2 - 04`);
+  - re-releases like `05v2`, `1x05`, `S01 E09` and season names like `Season 3 - 05` work;
+  - OVAs, specials, recaps (`13.5`), trailers and creditless openings/endings no longer get a
+    made-up episode number, so they can't be mistaken for a real episode or sent to AniList. They are
+    listed after the regular episodes.
+- Episode titles no longer include leftover release tags (`WEB-DL`, `x265`, release group names) or
+  `(episode)`.
+- Movies: titles with a year-like number keep it (`Blade Runner 2049 (2017)` is from 2017),
+  `Part.1` / `Disc 2` are recognised as parts without losing the year, and `HDCAM`-style source tags
+  are removed from titles.
 - A failed or changed AnimeFillerList page no longer wipes the filler data you already had; the saved
   copy is kept and used.
 - When you are offline, filler data no longer gets in the way: the saved copy is shown if there is

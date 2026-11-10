@@ -18,8 +18,9 @@ describe('cleanEpisodeTitle', () => {
   }
 })
 
-// Known bugs: these assert the CORRECT behaviour and are expected to fail until fixed.
-describe('known parser bugs (roadmap Phase 1.7)', () => {
+// Known bugs: assert the CORRECT behaviour and are expected to fail until fixed.
+// Add a row to the known-bugs list when you find one, then fix it and move the row up.
+describe.runIf(episodeKnownBugs.length > 0)('known parser bugs', () => {
   for (const c of episodeKnownBugs) {
     it.fails(`${c.input}: ${c.bug}`, () => {
       expect(extractEpisodeNumber(c.input)).toBe(c.episode)

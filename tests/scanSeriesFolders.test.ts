@@ -55,6 +55,24 @@ describe('scanSeriesFolders', () => {
     expect(episodes.map((e) => e.episodeNumber)).toEqual([1, 2, 10])
   })
 
+  it('keeps extras unnumbered and after the episodes when other files are numbered', () => {
+    touch('Show - 02.mkv')
+    touch('Show - OVA.mkv')
+    touch('Show - 01.mkv')
+    touch('Show - NCOP1.mkv')
+
+    const { episodes } = scanSeriesFolders(root)
+    expect(episodes.map((e) => e.episodeNumber)).toEqual([1, 2, null, null])
+  })
+
+  it('numbers files by order when none of them has a number', () => {
+    touch('Alpha.mkv')
+    touch('Beta.mkv')
+
+    const { episodes } = scanSeriesFolders(root)
+    expect(episodes.map((e) => e.episodeNumber)).toEqual([1, 2])
+  })
+
   it('uses one "All Episodes" season when there are no subfolders', () => {
     touch('Show - 01.mkv')
     touch('Show - 02.mkv')
