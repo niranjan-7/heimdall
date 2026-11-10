@@ -70,6 +70,30 @@ export interface Series {
   aniListTotalEpisodes?: number | null
   aniListProgress?: number | null
   aniListStatus?: string | null
+  /** animefillerlist.com show slug. `null` with source `manual` means the user unlinked it. */
+  fillerSlug?: string | null
+  /** How `fillerSlug` was chosen. Once set, automatic matching never runs again. */
+  fillerMatchSource?: 'auto' | 'manual'
+  /** Added to local episode numbers to get the filler page's absolute numbering. */
+  fillerEpisodeOffset?: number
+}
+
+export interface FillerShowOption {
+  slug: string
+  title: string
+  /** Match score in [0, 1] when the option is a suggestion. */
+  score?: number
+}
+
+export interface FillerShowPreview {
+  slug: string
+  totalEpisodes: number
+  fillerCount: number
+  fillerPercentage: number
+  mangaCanonCount: number
+  animeCanonCount: number
+  mixedCanonCount: number
+  lastSyncedAt: number
 }
 
 export interface Movie {

@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Series, Episode, VlcStateUpdate } from '../../../shared/types'
 import { formatTime } from '../utils/formatters'
 import { SubtitleSyncWidget } from './SubtitleSyncWidget'
+import { FillerMatchModal } from './FillerMatchModal'
 import {
   Play,
   SkipForward,
@@ -13,7 +14,8 @@ import {
   Clock,
   Sparkles,
   BookOpen,
-  HardDrive
+  HardDrive,
+  Link2
 } from 'lucide-react'
 
 interface HeroBannerProps {
@@ -48,12 +50,14 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
   const [syncingAniList, setSyncingAniList] = useState(false)
 
   const [fetchingFiller, setFetchingFiller] = useState(false)
+  const [fillerMatchOpen, setFillerMatchOpen] = useState(false)
 
   const handleFetchFiller = async () => {
     if (fetchingFiller) return
     setFetchingFiller(true)
     try {
-      const updated = await window.api.fetchSeriesFillerData(series.id)
+      // Refresh ignores the cache TTL; a first fetch uses the cache if there is one.
+      const updated = await window.api.fetchSeriesFillerData(series.id, Boolean(series.fillerStats))
       if (updated && onSeriesUpdated) {
         onSeriesUpdated(updated)
       }
@@ -186,13 +190,15 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
               ) : null}
 
               {series.fillerStats && (
-                <span
-                  title={`${series.fillerStats.fillerCount} filler episodes out of ${series.episodes.length} total (${series.fillerStats.mangaCanonCount} Manga Canon, ${series.fillerStats.mixedCanonCount} Mixed, ${series.fillerStats.animeCanonCount} Anime Canon)`}
-                  className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-rose-500/15 text-rose-300 border border-rose-500/30 flex items-center gap-1.5 shadow-sm"
+                <button
+                  type="button"
+                  onClick={() => setFillerMatchOpen(true)}
+                  title={`${series.fillerStats.fillerCount} filler episodes on ${series.fillerSlug || 'AnimeFillerList'} (${series.fillerStats.mangaCanonCount} Manga Canon, ${series.fillerStats.mixedCanonCount} Mixed, ${series.fillerStats.animeCanonCount} Anime Canon). Click to fix the match.`}
+                  className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 flex items-center gap-1.5 shadow-sm cursor-pointer"
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
                   {series.fillerStats.fillerCount} Fillers ({series.fillerStats.fillerPercentage}%)
-                </span>
+                </button>
               )}
 
               {isAniList ? (
@@ -244,11 +250,20 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
               <button
                 onClick={handleFetchFiller}
                 disabled={fetchingFiller}
-                title="Fetch or refresh manga canon & filler breakdown from AnimeFillerList"
+                title={series.fillerStats ? "Download the filler list again from AnimeFillerList" : "Fetch manga canon & filler breakdown from AnimeFillerList"}
                 className="px-3 py-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900/50 text-rose-300 hover:text-rose-100 border border-rose-800/40 text-xs font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-50 cursor-pointer shadow-sm"
               >
                 <BookOpen className={`w-3.5 h-3.5 text-rose-400 ${fetchingFiller ? 'animate-spin' : ''}`} />
-                {fetchingFiller ? 'Fetching...' : series.fillerStats ? 'Refresh Filler Guide' : 'Fetch Filler Guide'}
+                {fetchingFiller ? 'Fetching...' : series.fillerStats ? 'Refresh Filler Data' : 'Fetch Filler Guide'}
+              </button>
+
+              <button
+                onClick={() => setFillerMatchOpen(true)}
+                title="Pick the right AnimeFillerList show, set an episode offset, or unlink"
+                className="px-3 py-1.5 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-zinc-100 border border-zinc-700/60 text-xs font-medium flex items-center gap-1.5 transition-colors"
+              >
+                <Link2 className="w-3.5 h-3.5 text-rose-400" />
+                Fix Filler Match
               </button>
 
               <button
@@ -367,6 +382,13 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
           </div>
         )}
       </div>
+
+      <FillerMatchModal
+        isOpen={fillerMatchOpen}
+        series={series}
+        onClose={() => setFillerMatchOpen(false)}
+        onMatched={(updated) => onSeriesUpdated?.(updated)}
+      />
 
       {/* Subtitle sync */}
       {resumeEpisode && (

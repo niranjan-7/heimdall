@@ -326,45 +326,83 @@ async function syncAllSeriesToAniList(): Promise<{
   }
 }
 
+/** Copies filler fields from an enriched copy onto the latest stored series. */
+function mergeFillerFields(latest: Series, enriched: Series): Series {
+  latest.fillerSlug = enriched.fillerSlug
+  latest.fillerMatchSource = enriched.fillerMatchSource
+  latest.fillerEpisodeOffset = enriched.fillerEpisodeOffset
+  latest.fillerStats = enriched.fillerStats
+  latest.lastFillerSyncAt = enriched.lastFillerSyncAt
+  if (enriched.aniListStatus) latest.aniListStatus = enriched.aniListStatus
+  const byId = new Map(enriched.episodes.map((e) => [e.id, e]))
+  for (const ep of latest.episodes) {
+    const src = byId.get(ep.id)
+    ep.fillerType = src?.fillerType
+    ep.fillerLabel = src?.fillerLabel
+  }
+  latest.updatedAt = Date.now()
+  return latest
+}
+
+/**
+ * Matches (if needed) and loads filler data for a series. Never throws and
+ * never blocks the UI: network work runs on a copy and is merged afterwards.
+ * `force` ignores the cache TTL ("Refresh filler data").
+ */
 async function syncSeriesFillerData(
   seriesId: string,
-  notify = false
+  notify = false,
+  force = false
 ): Promise<Series | null> {
   try {
     const series = storageService.getSeries(seriesId)
     if (!series) return null
 
-    const enriched = await fillerService.enrichSeries(series)
-    storageService.addOrUpdateSeries(enriched)
+    const working: Series = JSON.parse(JSON.stringify(series))
+    const { series: enriched, unavailable } = await fillerService.enrichSeries(working, { force })
+    const latest = storageService.getSeries(seriesId)
+    if (!latest) return null
+    const merged = mergeFillerFields(latest, enriched)
+    storageService.addOrUpdateSeries(merged)
 
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('series:updated', enriched)
+      mainWindow.webContents.send('series:updated', merged)
       if (notify) {
-        const stats = enriched.fillerStats
-        if (stats) {
+        const name = merged.aniListTitle || merged.title
+        const stats = merged.fillerStats
+        if (unavailable) {
+          mainWindow.webContents.send('app:notification', {
+            type: 'info',
+            message: stats
+              ? `Filler data unavailable right now — showing the saved copy for ${name}`
+              : 'Filler data unavailable right now'
+          })
+        } else if (stats) {
           mainWindow.webContents.send('app:notification', {
             type: 'success',
-            message: `🍃 Loaded filler guide for ${enriched.aniListTitle || enriched.title} (${stats.fillerCount} filler episodes identified)`
+            message: `🍃 Loaded filler guide for ${name} (${stats.fillerCount} filler episodes identified)`
           })
         } else {
           mainWindow.webContents.send('app:notification', {
             type: 'info',
-            message: `No filler breakdown found for ${enriched.aniListTitle || enriched.title}`
+            message: merged.fillerMatchSource
+              ? `Filler guide is unlinked for ${name}`
+              : `No filler guide found for ${name} — use "Fix filler match" to pick one`
           })
         }
       }
     }
 
-    return enriched
+    return merged
   } catch (err: any) {
     console.error('[FillerService] Error syncing filler data:', err)
     if (notify && mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('app:notification', {
-        type: 'error',
-        message: `Failed to load filler guide: ${err?.message || 'Error'}`
+        type: 'info',
+        message: 'Filler data unavailable right now'
       })
     }
-    return null
+    return storageService.getSeries(seriesId) || null
   }
 }
 
@@ -842,9 +880,11 @@ function registerIpcHandlers(): void {
       const series = storageService.getSeries(seriesId)
       if (!series) throw new Error('Series not found')
 
+      const previousAniListId = series.aniListId
       series.aniListId = media.id
       series.coverImage = media.coverImage || null
       series.bannerImage = media.bannerImage || null
+      if (previousAniListId !== media.id) fillerService.resetAutoMatch(series)
       series.aniListTitle = media.title || null
       if (media.title) {
         series.title = media.title
@@ -876,9 +916,43 @@ function registerIpcHandlers(): void {
     return await syncAllSeriesToAniList()
   })
 
-  ipcMain.handle('filler:fetch-series', async (_event, seriesId: string) => {
-    return await syncSeriesFillerData(seriesId, true)
+  ipcMain.handle('filler:fetch-series', async (_event, seriesId: string, force?: boolean) => {
+    return await syncSeriesFillerData(seriesId, true, Boolean(force))
   })
+
+  ipcMain.handle('filler:search-shows', async (_event, seriesId: string, query: string) => {
+    const series = storageService.getSeries(seriesId)
+    if (!series) return []
+    try {
+      return await fillerService.searchForSeries(series, String(query || ''))
+    } catch (err) {
+      console.warn('[FillerService] Search failed:', err)
+      return []
+    }
+  })
+
+  ipcMain.handle('filler:preview-show', async (_event, slug: string) => {
+    try {
+      return await fillerService.previewShow(String(slug))
+    } catch {
+      return null
+    }
+  })
+
+  ipcMain.handle(
+    'filler:set-match',
+    async (_event, seriesId: string, match: { slug: string | null; episodeOffset?: number }) => {
+      const series = storageService.getSeries(seriesId)
+      if (!series) throw new Error('Series not found')
+      series.fillerSlug = match.slug || null
+      series.fillerMatchSource = 'manual'
+      const offset = Number(match.episodeOffset)
+      series.fillerEpisodeOffset = Number.isFinite(offset) ? Math.trunc(offset) : 0
+      series.updatedAt = Date.now()
+      storageService.addOrUpdateSeries(series)
+      return await syncSeriesFillerData(seriesId, true)
+    }
+  )
 
   ipcMain.handle('anilist:unlink-series', async (_event, seriesId: string) => {
     const series = storageService.getSeries(seriesId)
@@ -888,6 +962,7 @@ function registerIpcHandlers(): void {
     series.coverImage = null
     series.bannerImage = null
     series.aniListTitle = null
+    fillerService.resetAutoMatch(series)
     series.title = basename(series.rootPath)
     series.updatedAt = Date.now()
     storageService.addOrUpdateSeries(series)
@@ -1007,7 +1082,7 @@ app.whenReady().then(() => {
   storageService = new StorageService()
   discordService = new DiscordService(storageService)
   anilistService = new AniListService()
-  fillerService = new FillerService()
+  fillerService = new FillerService(anilistService)
   thumbnailService = new ThumbnailService(storageService)
   syncWorker = new SyncWorker(storageService, discordService, anilistService, () => mainWindow)
   vlcController = new VlcController(storageService, syncWorker)

@@ -7,6 +7,29 @@ GitHub release, so write it for the people who use the app.
 
 ## [Unreleased]
 
+### Added
+- **Fix filler match**: a new button in the series header (and a click on the "Fillers" badge) opens
+  a window where you can search AnimeFillerList, see each show's episode and filler counts, pick the
+  right one, or unlink the filler guide. Your choice is remembered and never guessed again.
+- Episode offset for filler data: if your files are numbered per season (`S02E01`) but AnimeFillerList
+  counts from the first season, Heimdall works out the offset from AniList's earlier seasons, and you
+  can change it in the Fix filler match window.
+
+### Changed
+- Filler guides are now matched using the series' AniList titles (English, Romaji and alternative
+  titles) instead of the folder name, so far more shows find the right page.
+- "Refresh Filler Guide" is now "Refresh Filler Data" and always downloads the list again. Otherwise
+  filler data is kept for 14 days for shows still airing and 90 days for finished shows.
+- Heimdall now identifies itself to AnimeFillerList and makes at most one request per second.
+
+### Fixed
+- A failed or changed AnimeFillerList page no longer wipes the filler data you already had; the saved
+  copy is kept and used.
+- When you are offline, filler data no longer gets in the way: the saved copy is shown if there is
+  one, and otherwise a quiet "filler data unavailable" note.
+- Changing a series' AniList match now also updates its filler guide, and episodes no longer keep
+  stale filler labels after the guide changes.
+
 ## [1.5.0] - 2026-11-10
 
 ### Added
