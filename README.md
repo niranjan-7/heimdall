@@ -17,7 +17,7 @@
 
 ---
 
-## 🌐 Live Animated Landing Page
+## 🌐 Landing Page
 
 See the app and its features on the landing page:
 
@@ -86,7 +86,7 @@ Most media players require you to manually keep track of where you paused, battl
 | **Players** | [mpv](https://mpv.io/) (JSON IPC) and [VLC](https://www.videolan.org/vlc/) (HTTP interface), installed separately |
 | **Audio and video tools** | [FFmpeg](https://ffmpeg.org/) (bundled; subtitle sync, thumbnails, file details) |
 | **Phone Remote** | Node.js HTTP server + Server-Sent Events |
-| **Landing Page** | Vite + Framer Motion + Vercel Deployment |
+| **Landing Page** | Vite + React + three.js + Framer Motion, deployed on Vercel |
 | **Packaging and updates** | [electron-builder](https://www.electron.build/) + [electron-updater](https://www.electron.build/auto-update), GitHub Actions |
 
 ---
