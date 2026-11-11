@@ -1,4 +1,6 @@
 import React from 'react'
+import { motion } from 'framer-motion'
+import { useMotion } from '../motion/MotionProvider'
 import { Series, Movie, UITheme } from '../../../shared/types'
 import {
   Eye,
@@ -44,6 +46,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   currentTheme,
   onThemeCycle
 }) => {
+  const { enabled: motionEnabled } = useMotion()
   return (
     <aside className="w-72 h-screen flex flex-col liquid-glass-panel border-r border-white/10 select-none shrink-0 relative z-10">
       {/* Brand Header */}
@@ -138,9 +141,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       : 'bg-white/[0.03] hover:bg-white/[0.08] border border-transparent hover:border-white/10 backdrop-blur-md'
                   }`}
                 >
-                  {isSelected && (
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-bifrost-amber to-amber-600" />
-                  )}
+                  {isSelected &&
+                    (motionEnabled ? (
+                      <motion.div
+                        layoutId="sidebar-active-bar"
+                        transition={{ type: 'spring', stiffness: 500, damping: 40 }}
+                        className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-bifrost-amber to-amber-600"
+                      />
+                    ) : (
+                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-bifrost-amber to-amber-600" />
+                    ))}
 
                   {series.coverImage ? (
                     <img

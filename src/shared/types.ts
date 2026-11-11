@@ -131,6 +131,9 @@ export type Anime4KGpu = 'high' | 'low'
 
 export type UITheme = 'liquid_glass' | 'classic_dark' | 'oled_black'
 
+/** UI animation intensity. `off` disables all decorative motion. */
+export type MotionLevel = 'off' | 'reduced' | 'full'
+
 /** Stable gets normal releases; Beta also gets pre-releases (e.g. 2.0.0-beta.1). */
 export type UpdateChannel = 'stable' | 'beta'
 export type StealthPlaybackMode = 'none' | 'minimize' | 'tray'
@@ -158,6 +161,7 @@ export interface AppSettings {
   enableThumbnails: boolean
   enableLiquidGlass?: boolean
   uiTheme?: UITheme
+  motionLevel?: MotionLevel
   dimFillerEpisodes?: boolean
   tmdbApiKey?: string
   enableRemoteServer?: boolean

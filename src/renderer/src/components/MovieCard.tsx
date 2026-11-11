@@ -6,6 +6,8 @@ import { Play, Check, Edit3, Star, Film, Radio, Layers } from 'lucide-react'
 interface MovieCardProps {
   movie: Movie
   isCurrentPlaying: boolean
+  /** Position in the grid, used to stagger the entrance animation. */
+  index?: number
   onPlay: (movieId: string) => void
   onToggleWatched: (movieId: string, e: React.MouseEvent) => void
   onFixMatch: (movie: Movie, e: React.MouseEvent) => void
@@ -14,6 +16,7 @@ interface MovieCardProps {
 export const MovieCard: React.FC<MovieCardProps> = ({
   movie,
   isCurrentPlaying,
+  index = 0,
   onPlay,
   onToggleWatched,
   onFixMatch
@@ -25,7 +28,8 @@ export const MovieCard: React.FC<MovieCardProps> = ({
   return (
     <div
       onClick={() => onPlay(movie.id)}
-      className={`group relative rounded-2xl border transition-all duration-300 cursor-pointer overflow-hidden flex flex-col justify-between ${
+      style={{ '--i': Math.min(index, 14) } as React.CSSProperties}
+      className={`motion-rise motion-lift group relative rounded-2xl border transition-all duration-300 cursor-pointer overflow-hidden flex flex-col justify-between ${
         isCurrentPlaying
           ? 'liquid-glass border-bifrost-amber ring-2 ring-bifrost-amber/40 shadow-xl shadow-bifrost-amber/25 scale-[1.01]'
           : movie.completed

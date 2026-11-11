@@ -141,10 +141,11 @@ export const MovieGrid: React.FC<MovieGridProps> = ({
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 pb-8">
-          {filteredMovies.map((movie) => (
+          {filteredMovies.map((movie, index) => (
             <div key={movie.id} onClick={() => onSelectMovie(movie)}>
               <MovieCard
                 movie={movie}
+                index={index}
                 isCurrentPlaying={currentPlayingMovieId === movie.id}
                 onPlay={onPlayMovie}
                 onToggleWatched={onToggleWatched}

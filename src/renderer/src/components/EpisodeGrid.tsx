@@ -345,9 +345,10 @@ export const EpisodeGrid: React.FC<EpisodeGridProps> = ({
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 pb-8">
-          {filteredEpisodes.map((episode) => (
+          {filteredEpisodes.map((episode, index) => (
             <EpisodeCard
               key={episode.id}
+              index={index}
               episode={episode}
               isCurrentPlaying={currentPlayingEpisodeId === episode.id}
               isSelectionMode={isSelectionMode}
