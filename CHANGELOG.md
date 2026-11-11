@@ -7,6 +7,8 @@ GitHub release, so write it for the people who use the app.
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-11-10
+
 ### Added
 - **Fix filler match**: a new button in the series header (and a click on the "Fillers" badge) opens
   a window where you can search AnimeFillerList, see each show's episode and filler counts, pick the
