@@ -9,6 +9,8 @@ interface EpisodeCardProps {
   isSelectionMode?: boolean
   isSelected?: boolean
   dimFiller?: boolean
+  /** Position in the grid, used to stagger the entrance animation. */
+  index?: number
   onPlay: (episodeId: string) => void
   onToggleWatched: (episodeId: string, e: React.MouseEvent) => void
   onResetProgress: (episodeId: string, e: React.MouseEvent) => void
@@ -21,6 +23,7 @@ export const EpisodeCard: React.FC<EpisodeCardProps> = ({
   isSelectionMode = false,
   isSelected = false,
   dimFiller = true,
+  index = 0,
   onPlay,
   onToggleWatched,
   onResetProgress,
@@ -43,7 +46,8 @@ export const EpisodeCard: React.FC<EpisodeCardProps> = ({
   return (
     <div
       onClick={handleCardClick}
-      className={`group relative rounded-2xl border transition-all duration-300 cursor-pointer overflow-hidden flex flex-col justify-between ${
+      style={{ '--i': Math.min(index, 14) } as React.CSSProperties}
+      className={`motion-rise motion-lift group relative rounded-2xl border transition-all duration-300 cursor-pointer overflow-hidden flex flex-col justify-between ${
         isSelected
           ? 'liquid-glass-selected ring-2 ring-amber-400/70 shadow-2xl shadow-amber-500/30'
           : isCurrentPlaying

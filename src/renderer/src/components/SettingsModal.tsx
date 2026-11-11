@@ -293,8 +293,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in">
-      <div className="w-full max-w-xl max-h-[90vh] flex flex-col rounded-2xl liquid-glass border border-white/10 shadow-2xl overflow-hidden backdrop-blur-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 motion-overlay">
+      <div className="motion-panel w-full max-w-xl max-h-[90vh] flex flex-col rounded-2xl liquid-glass border border-white/10 shadow-2xl overflow-hidden backdrop-blur-2xl">
         {/* Header */}
         <div className="p-5 border-b border-surface-border flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -1056,6 +1056,53 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
                   True pitch-black #000000, max contrast with vivid amber accents
                 </p>
               </button>
+            </div>
+          </div>
+
+          {/* UI Motion */}
+          <div className="p-4 rounded-xl bg-zinc-950/60 border border-surface-border space-y-3">
+            <div className="flex items-center gap-2.5">
+              <div className="p-1.5 rounded-lg bg-amber-500/15 text-amber-400">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wider">
+                  Interface Motion
+                </h4>
+                <p className="text-[11px] text-zinc-400">
+                  Entrance, hover and transition animations. Also turned off automatically when your
+                  OS asks to reduce motion
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2.5">
+              {(
+                [
+                  { id: 'off', label: 'Off', desc: 'No animation' },
+                  { id: 'reduced', label: 'Subtle', desc: 'Fades and gentle lifts' },
+                  { id: 'full', label: 'Full', desc: 'Everything, more energy' }
+                ] as const
+              ).map((opt) => {
+                const active = (settings.motionLevel ?? 'reduced') === opt.id
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setSettings({ ...settings, motionLevel: opt.id })}
+                    className={`p-3 rounded-xl border text-left transition-all ${
+                      active
+                        ? 'bg-amber-500/15 border-amber-500/70 ring-1 ring-amber-500/50 shadow-lg'
+                        : 'bg-zinc-900/60 border-surface-border hover:border-zinc-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-bold text-zinc-100">{opt.label}</span>
+                      {active && <Check className="w-3.5 h-3.5 text-amber-400" />}
+                    </div>
+                    <p className="text-[10px] text-zinc-400 leading-snug">{opt.desc}</p>
+                  </button>
+                )
+              })}
             </div>
           </div>
 

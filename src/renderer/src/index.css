@@ -335,3 +335,47 @@
   background: #121212 !important;
   border-color: #f59e0b !important;
 }
+
+
+/* ==========================================================================
+   UI Motion (Settings -> Motion). Driven by data-motion on the app root:
+   off | reduced | full. All rules are transform/opacity only.
+   ========================================================================== */
+@keyframes motion-rise {
+  from { opacity: 0; transform: translate3d(0, 10px, 0) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes motion-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes motion-pop {
+  from { opacity: 0; transform: translate3d(0, 14px, 0) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+
+[data-motion='reduced'] .motion-rise,
+[data-motion='full'] .motion-rise {
+  animation: motion-rise 0.4s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 28ms);
+}
+[data-motion='reduced'] .motion-overlay,
+[data-motion='full'] .motion-overlay {
+  animation: motion-fade 0.2s ease-out backwards;
+}
+[data-motion='reduced'] .motion-panel,
+[data-motion='full'] .motion-panel {
+  animation: motion-pop 0.32s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+[data-motion='reduced'] .motion-lift:hover,
+[data-motion='full'] .motion-lift:hover {
+  transform: translate3d(0, -3px, 0);
+}
+[data-motion='full'] .motion-lift:hover {
+  transform: translate3d(0, -5px, 0) scale(1.012);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-rise, .motion-overlay, .motion-panel { animation: none !important; }
+  .motion-lift:hover { transform: none !important; }
+}

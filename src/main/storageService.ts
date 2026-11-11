@@ -31,6 +31,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   enableLiquidGlass: false,
   dimFillerEpisodes: true,
   uiTheme: 'classic_dark',
+  motionLevel: 'reduced',
   enableRemoteServer: false,
   remotePort: 42125,
   updateChannel: 'stable',

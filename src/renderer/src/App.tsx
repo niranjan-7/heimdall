@@ -12,6 +12,8 @@ import { AniListSearchModal } from './components/AniListSearchModal'
 import { MovieMatchModal } from './components/MovieMatchModal'
 import { MobileRemoteModal } from './components/MobileRemoteModal'
 import { LiquidGlassSvgFilter } from './components/ui/LiquidGlass'
+import { MotionProvider } from './motion/MotionProvider'
+import { HeroTransition } from './motion/HeroTransition'
 import { Eye, AlertCircle, Film, CheckCircle2, Info, Clapperboard } from 'lucide-react'
 
 export const App: React.FC = () => {
@@ -408,7 +410,10 @@ export const App: React.FC = () => {
   }
 
   return (
+    <MotionProvider level={appSettings?.motionLevel}>
+      {(motion) => (
     <div
+      data-motion={motion.level}
       className={`flex h-screen text-zinc-100 overflow-hidden font-sans relative theme-${currentTheme.replace('_', '-')} ${
         isLiquidGlass ? 'bg-black/10' : isOled ? 'bg-black' : 'bg-[#0c0d12]'
       }`}
@@ -497,6 +502,7 @@ export const App: React.FC = () => {
           // Series View
           currentSeries ? (
             <div>
+              <HeroTransition id={currentSeries.id}>
               <HeroBanner
                 series={currentSeries}
                 activeVlcState={activeVlcState}
@@ -511,6 +517,7 @@ export const App: React.FC = () => {
                 onSeriesUpdated={loadLibrary}
                 onOpenFreeSpace={handleOpenFreeSpace}
               />
+              </HeroTransition>
               <EpisodeGrid
                 series={currentSeries}
                 currentPlayingEpisodeId={
@@ -545,6 +552,7 @@ export const App: React.FC = () => {
           // Movies View
           currentMovie ? (
             <div>
+              <HeroTransition id={currentMovie.id}>
               <MovieHeroBanner
                 movie={currentMovie}
                 activeVlcState={activeVlcState}
@@ -554,6 +562,7 @@ export const App: React.FC = () => {
                 onNotification={showToast}
                 onDelayUpdated={loadLibrary}
               />
+              </HeroTransition>
               <MovieGrid
                 movies={library.movies || []}
                 currentPlayingMovieId={
@@ -642,6 +651,8 @@ export const App: React.FC = () => {
         />
       )}
     </div>
+      )}
+    </MotionProvider>
   )
 }
 export default App
